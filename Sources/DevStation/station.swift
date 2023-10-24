@@ -29,6 +29,11 @@ struct Rootview : View {
             Text("hello \(evm_state.name)")
             Text("World")
             Button {
+                NSApp.terminate(nil)
+            } label :{
+                Text("Quit")
+            }
+            Button {
                 print("a button was pressed")
                 EVMBridge.CallGoFromSwift()
                 print("called go from swift")
@@ -47,14 +52,14 @@ struct Rootview : View {
 
 
 @_cdecl("speak_from_go")
-public func speak() {
+public func speak(num: Int32) {
 //    let del = NSApplication.shared.delegate as! AppDelegate
     // let rootView = NSApplication.shared.mainWindow?.contentView as? Rootview
     // rootView?.evm_state.stack.append("Called from golang, please update")
     // let is_main = Thread.isMainThread
     // print("did it updated? \(rootView) is it main thread \(is_main)")
 
-    EVMState.shared.name = "somethign else now"
+    EVMState.shared.name = "somethign else now \(num)"
 
     DispatchQueue.main.async {
         // let is_main = Thread.isMainThread

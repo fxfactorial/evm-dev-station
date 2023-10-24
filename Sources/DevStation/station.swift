@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import EVMBridge
+import EVMUI
 
 @main
 struct DevStation : App {
@@ -22,7 +23,6 @@ class EVMState : ObservableObject {
 
 struct Rootview : View {
     @StateObject var evm_state = EVMState.shared
-
 
     var body : some View {
         VStack {
@@ -46,6 +46,8 @@ struct Rootview : View {
                     
                 }
             }
+            EVMDevCenter()
+
         }.frame(width: 400, height: 300, alignment: .center)
     }
 }

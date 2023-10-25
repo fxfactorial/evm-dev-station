@@ -23,11 +23,13 @@ class EVMState : ObservableObject {
 
 struct Rootview : View {
     @StateObject var evm_state = EVMState.shared
-
+    @State private var words = ""
+    
     var body : some View {
         VStack {
             Text("hello \(evm_state.name)")
-            Text("World")
+            TextField("some input test", text: $words)
+                .lineLimit(5, reservesSpace: true)
             Button {
                 NSApp.terminate(nil)
             } label :{
@@ -75,7 +77,10 @@ public func speak(num: Int32) {
 final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        print("yes did laynch application")
+        // critical otherwise won't be able to get input into gui, instead via CLI
+        NSApp.setActivationPolicy(.regular)
+        NSApp.windows[0].makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
 }

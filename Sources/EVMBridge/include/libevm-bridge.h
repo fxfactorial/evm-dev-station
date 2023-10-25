@@ -19,7 +19,7 @@ typedef struct { const char *p; ptrdiff_t n; } _GoString_;
 /* Start of preamble from import "C" comments.  */
 
 
-#line 13 "main.go"
+#line 3 "main.go"
 
 extern void speak_from_go(int);
 
@@ -79,6 +79,9 @@ typedef struct { void *data; GoInt len; GoInt cap; } GoSlice;
 extern "C" {
 #endif
 
+extern int NewEVMSession();
+extern int CreateNewContract(int sessionID, char* contractByteCode, int contractByteCodeLength, char* senderC, char* value, GoString test);
+extern int RunCodeOnContract(int sessionID, char* calldata, int calldataLength, char* callerAddr);
 extern void CallGoFromSwift();
 
 #ifdef __cplusplus

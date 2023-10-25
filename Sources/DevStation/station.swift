@@ -23,34 +23,16 @@ class EVMState : ObservableObject {
 
 struct Rootview : View {
     @StateObject var evm_state = EVMState.shared
-    @State private var words = ""
     
     var body : some View {
         VStack {
-            Text("hello \(evm_state.name)")
-            TextField("some input test", text: $words)
-                .lineLimit(5, reservesSpace: true)
             Button {
                 NSApp.terminate(nil)
             } label :{
                 Text("Quit")
             }
-            Button {
-                print("a button was pressed")
-                EVMBridge.CallGoFromSwift()
-                print("called go from swift")
-            } label : {
-                Text("call into goland which should call back into swift code")
-            }
-            List {
-                ForEach(evm_state.stack, id: \.self) { item in
-                    Text(item)
-                    
-                }
-            }
             EVMDevCenter()
-
-        }.frame(width: 400, height: 300, alignment: .center)
+        }.frame(width: 1024, height: 760, alignment: .center)
     }
 }
 

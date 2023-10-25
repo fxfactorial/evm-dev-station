@@ -17,53 +17,120 @@ struct BlockContext : View {
     }
 }
 
+class EVMState : ObservableObject {
+    @Published var calldata : String = ""
+}
+
+struct ExecutedEVMCode: Identifiable {
+    let id = UUID()
+    
+    let pc: String
+    let op_name : String
+    let opcode: String
+    let gas: Int
+    let gas_cost: Int
+    let depth : Int
+    let refund: Int
+}
+
 public struct EVMDevCenter: View {
 
     @State private var bytecode_add = false
+    @State private var new_contract_name = ""
+    @State private var new_contract_bytecode = ""
+    @State private var current_code_running = ""
+    @State private var current_tab = 0
+    @State private var calldata = ""
 
+    @State private var execed_operations: [ExecutedEVMCode] = [
+        .init(pc: "0x07c9", op_name: "DUP2", opcode: "0x81", gas: 20684, gas_cost: 3, depth: 3, refund: 0),
+        .init(pc: "0x07c9", op_name: "JUMP", opcode: "0x56", gas: 20684, gas_cost: 8, depth: 3, refund: 0)
+    ]
+    
     public init() {
 
     }
 
     public var body: some View {
-        VStack {
-            Text("Hello, Wormore")
-            Text("hello evm dever!")
-            Button {
-                bytecode_add.toggle()
-            } label: {
-                Text("add contract bytecode")
+        
+        TabView(selection: $current_tab,
+                content:  {
+            VStack {
+                HStack {
+                    Table(execed_operations) {
+                        TableColumn("PC", value: \.pc)
+                        TableColumn("OPNAME", value: \.op_name)
+                        TableColumn("OPCODE", value: \.opcode)
+                    }
+                    VStack {
+                        Button {
+                            bytecode_add.toggle()
+                        } label: {
+                            Text("add contract bytecode")
+                        }
+                        Text("Continue")
+                    }
+                }
+                HStack {
+                    Text("current input")
+                    TextField("call data", text: $calldata)
+                }
             }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .sheet(isPresented: $bytecode_add) {
-            print("sheet dismissed")
-        } content: {
-            NewContractByteCode()
-        }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .sheet(isPresented: $bytecode_add) {
+                print("sheet dismissed")
+            } content: {
+                NewContractByteCode(
+                    contract_name: $new_contract_name,
+                    contract_bytecode: $new_contract_bytecode
+                )
+            }
+
+                .tabItem { Text("live dev") }.tag(0)
+            TraceView().tabItem { Text("TraceView (goevmlab)") }.tag(1)
+        })
+        .padding(10)
+    }
+}
+
+struct TraceView: View {
+    var body : some View {
+        Text("placeholder")
     }
 }
 
 struct NewContractByteCode: View {
-    @State private var contract_name = ""
-    @State private var contract_bytecode = ""
+    @Binding var contract_name : String
+    @Binding var contract_bytecode : String
+    @Environment(\.dismiss) var dismiss
     
     var body: some View {
         VStack {
             TextField("new contract name...", text:$contract_name)
             TextField("contract bytecode...", text: $contract_bytecode, axis: .vertical)
                 .lineLimit(20, reservesSpace: true)
+            Button {
+                print("dismiss")
+                dismiss()
+            } label: {
+                Text("Add")
+                    .padding(5)
+                    .scaledToFill()
+            }
         }.padding()
-        .frame(width: 500, height: 400)
+        .frame(width: 500, height: 450)
     }
 }
 
 #Preview("dev center") {
-        EVMDevCenter()
+    EVMDevCenter().frame(width: 1024, height: 760)
 }
 
 #Preview("New Contract bytecode") {
-    NewContractByteCode()
+    NewContractByteCode(
+        contract_name: .constant(""),
+        contract_bytecode: .constant("")
+    )
 }
 
 #Preview("BlockContext") {

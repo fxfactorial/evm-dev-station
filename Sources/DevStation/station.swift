@@ -31,6 +31,11 @@ struct Rootview : View {
             } label :{
                 Text("Quit")
             }
+            Button {
+                EVMBridge.CallGoFromSwift()
+            } label: {
+                Text("Called go \(EVMState.shared.name)")
+            }
             EVMDevCenter()
         }.frame(width: 1024, height: 760, alignment: .center)
     }
@@ -45,9 +50,9 @@ public func speak(num: Int32) {
     // let is_main = Thread.isMainThread
     // print("did it updated? \(rootView) is it main thread \(is_main)")
 
-    EVMState.shared.name = "somethign else now \(num)"
 
     DispatchQueue.main.async {
+        EVMState.shared.name = "somethign else now \(num)"
         // let is_main = Thread.isMainThread
 
         // rootView?.evm_state.stack.append("Called from golang, please update in async queue")

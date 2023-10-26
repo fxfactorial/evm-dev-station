@@ -79,7 +79,16 @@ typedef struct { void *data; GoInt len; GoInt cap; } GoSlice;
 extern "C" {
 #endif
 
+extern void TestReceiveGoString(GoString input);
 extern int NewEVMSession();
+extern void NewGlobalEVM();
+
+/* Return type for DeployNewContract */
+struct DeployNewContract_return {
+	GoSlice r0;
+	GoInterface r1;
+};
+extern struct DeployNewContract_return DeployNewContract(GoString bytecode);
 extern int CreateNewContract(int sessionID, char* contractByteCode, int contractByteCodeLength, char* senderC, char* value, GoString test);
 extern int RunCodeOnContract(int sessionID, char* calldata, int calldataLength, char* callerAddr);
 extern void CallGoFromSwift();

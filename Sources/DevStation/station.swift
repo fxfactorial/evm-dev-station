@@ -21,6 +21,27 @@ class EVMState : ObservableObject {
     static let shared = EVMState()
 }
 
+
+final class EVM: EVMDriver{
+    static let shared = EVM()
+
+    
+    func create_new_contract(code: String) {
+        print("from the offical one yes it finally works?")
+        var data = Data(code.utf8)
+        let value = data.withUnsafeBytes { $0.baseAddress }!
+        let result = value.assumingMemoryBound(to: CChar.self)
+        let wrapped = GoString(p: result, n: code.count)
+        //        let wrapped = GoString(p: code.data(using: .utf8), n: code.count)
+//        EVMBridge.DeployNewContract(bytecode: GoString)
+
+    }
+
+    func new_evm_singleton() {
+        EVMBridge.NewGlobalEVM()
+    }
+}
+
 struct Rootview : View {
     @StateObject var evm_state = EVMState.shared
     
@@ -32,11 +53,22 @@ struct Rootview : View {
                 Text("Quit")
             }
             Button {
+                let code = "these are some words to be passed over to golang"
+                var data = Data(code.utf8)
+                let value = data.withUnsafeBytes { $0.baseAddress }!
+                let result = value.assumingMemoryBound(to: CChar.self)
+                let wrapped = GoString(p: result, n: code.count)
+                EVMBridge.TestReceiveGoString(wrapped)
+
+            } label: {
+                Text("test calling golang with a c made string as GoString")
+            }
+            Button {
                 EVMBridge.CallGoFromSwift()
             } label: {
                 Text("Called go \(EVMState.shared.name)")
             }
-            EVMDevCenter()
+            EVMDevCenter(driver: EVM.shared)
         }.frame(width: 1024, height: 760, alignment: .center)
     }
 }
@@ -62,12 +94,14 @@ public func speak(num: Int32) {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
+    var evm_driver: EVMDriver = EVM.shared
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // critical otherwise won't be able to get input into gui, instead via CLI
         NSApp.setActivationPolicy(.regular)
         NSApp.windows[0].makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        evm_driver.new_evm_singleton()
     }
 
 }

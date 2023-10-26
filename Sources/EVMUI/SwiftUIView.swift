@@ -7,6 +7,11 @@
 
 import SwiftUI
 
+public protocol EVMDriver {
+    func create_new_contract(code: String)
+    func new_evm_singleton()
+}
+
 struct BlockContext : View {
     @State fileprivate var coinbase: String = "0x..."
     
@@ -33,7 +38,7 @@ struct ExecutedEVMCode: Identifiable {
     let refund: Int
 }
 
-public struct EVMDevCenter: View {
+public struct EVMDevCenter<Driver: EVMDriver> : View {
 
     @State private var bytecode_add = false
     @State private var new_contract_name = ""
@@ -41,16 +46,18 @@ public struct EVMDevCenter: View {
     @State private var current_code_running = ""
     @State private var current_tab = 0
     @State private var calldata = ""
-
+    let d : Driver
+    
     @State private var execed_operations: [ExecutedEVMCode] = [
         .init(pc: "0x07c9", op_name: "DUP2", opcode: "0x81", gas: 20684, gas_cost: 3, depth: 3, refund: 0),
         .init(pc: "0x07c9", op_name: "JUMP", opcode: "0x56", gas: 20684, gas_cost: 8, depth: 3, refund: 0)
     ]
     
-    public init() {
-
+    public init(driver : Driver) {
+        d = driver
     }
 
+    
     public var body: some View {
         
         TabView(selection: $current_tab,
@@ -122,8 +129,19 @@ struct NewContractByteCode: View {
     }
 }
 
+class StubEVMDriver: EVMDriver {
+    func create_new_contract(code: String) {
+        print("stubbed out create new contract")
+    }
+
+    func new_evm_singleton() {
+        // 
+    }
+}
+
 #Preview("dev center") {
-    EVMDevCenter().frame(width: 1024, height: 760)
+    EVMDevCenter(driver: StubEVMDriver())
+        .frame(width: 1024, height: 760)
 }
 
 #Preview("New Contract bytecode") {

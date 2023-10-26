@@ -1,6 +1,6 @@
 //
 //  SwiftUIView.swift
-//  
+//
 //
 //  Created by Edgar Aroutiounian on 10/24/23.
 //
@@ -38,8 +38,25 @@ struct ExecutedEVMCode: Identifiable {
     let refund: Int
 }
 
-public struct EVMDevCenter<Driver: EVMDriver> : View {
 
+struct LoadedContract : Identifiable, Hashable {
+    let name : String
+    let bytecode: String
+    let address : String
+    let id = UUID() // maybe just the address next time
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+}
+
+extension Collection {
+    /// Returns the element at the specified index if it exists, otherwise nil.
+    subscript (safe index: Index) -> Element? {
+        return indices.contains(index) ? self[index] : nil
+    }
+}
+public struct EVMDevCenter<Driver: EVMDriver> : View {
+    
     @State private var bytecode_add = false
     @State private var new_contract_name = ""
     @State private var new_contract_bytecode = ""
@@ -56,7 +73,16 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     public init(driver : Driver) {
         d = driver
     }
-
+    
+    
+    @State private var loaded_contracts : [LoadedContract] = [
+        .init(name: "uniswapv3", bytecode: "123", address: "0x1256"),
+        .init(name: "compound", bytecode: "456", address: "0x1234")
+    ]
+    
+    //     @StateObject private var loaded_contracts = LoadedContracts()
+    
+    @State private var selected_contract_idx : LoadedContract?
     
     public var body: some View {
         
@@ -64,10 +90,26 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                 content:  {
             VStack {
                 HStack {
-                    Table(execed_operations) {
-                        TableColumn("PC", value: \.pc)
-                        TableColumn("OPNAME", value: \.op_name)
-                        TableColumn("OPCODE", value: \.opcode)
+                    NavigationStack {
+                        List(loaded_contracts, id:\.self, selection: $selected_contract_idx) { item in
+                            Text(item.name)
+                        }.frame(maxWidth: 200)
+                    }
+                    VStack {
+                        if let contract = selected_contract_idx {
+                            NavigationLink(value: contract) {
+                                Text("\(contract.bytecode)")
+                                    .lineLimit(20, reservesSpace: true)
+                                    .frame(maxWidth:.infinity)
+                            }
+                        } else {
+                            Text("select something ")
+                        }
+                        Table(execed_operations) {
+                            TableColumn("PC", value: \.pc)
+                            TableColumn("OPNAME", value: \.op_name)
+                            TableColumn("OPCODE", value: \.opcode)
+                        }
                     }
                     VStack {
                         Button {
@@ -92,8 +134,8 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                     contract_bytecode: $new_contract_bytecode
                 )
             }
-
-                .tabItem { Text("live dev") }.tag(0)
+            
+            .tabItem { Text("live dev") }.tag(0)
             TraceView().tabItem { Text("TraceView (goevmlab)") }.tag(1)
         })
         .padding(10)
@@ -125,7 +167,7 @@ struct NewContractByteCode: View {
                     .scaledToFill()
             }
         }.padding()
-        .frame(width: 500, height: 450)
+            .frame(width: 500, height: 450)
     }
 }
 
@@ -133,9 +175,9 @@ class StubEVMDriver: EVMDriver {
     func create_new_contract(code: String) {
         print("stubbed out create new contract")
     }
-
+    
     func new_evm_singleton() {
-        // 
+        //
     }
 }
 

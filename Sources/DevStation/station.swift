@@ -54,12 +54,11 @@ struct Rootview : View {
             }
             Button {
                 let code = "these are some words to be passed over to golang"
-                var data = Data(code.utf8)
+                let data = Data(code.utf8)
                 let value = data.withUnsafeBytes { $0.baseAddress }!
                 let result = value.assumingMemoryBound(to: CChar.self)
                 let wrapped = GoString(p: result, n: code.count)
                 EVMBridge.TestReceiveGoString(wrapped)
-
             } label: {
                 Text("test calling golang with a c made string as GoString")
             }

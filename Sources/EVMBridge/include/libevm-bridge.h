@@ -93,7 +93,13 @@ extern struct NewContractResult DeployNewContract(GoString bytecode);
 extern int CreateNewContract(int sessionID, char* contractByteCode, int contractByteCodeLength, char* senderC, char* value, GoString test);
 extern int RunCodeOnContract(int sessionID, char* calldata, int calldataLength, char* callerAddr);
 extern void CallGoFromSwift();
-extern GoSlice AvailableEIPS();
+
+/* Return type for AvailableEIPS */
+struct AvailableEIPS_return {
+	int* r0;
+	GoInt r1;
+};
+extern struct AvailableEIPS_return AvailableEIPS();
 
 #ifdef __cplusplus
 }

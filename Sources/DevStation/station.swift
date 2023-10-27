@@ -2,6 +2,7 @@ import SwiftUI
 import AppKit
 import EVMBridge
 import EVMUI
+import DevStationCommon
 
 @main
 struct DevStation : App {
@@ -13,14 +14,6 @@ struct DevStation : App {
         }
     }
 }
-
-
-class EVMState : ObservableObject {
-    @Published var stack = [String]()
-    @Published var name = "INITIAL"
-    static let shared = EVMState()
-}
-
 
 final class EVM: EVMDriver{
     static let shared = EVM()
@@ -43,33 +36,37 @@ final class EVM: EVMDriver{
     func new_evm_singleton() {
         EVMBridge.NewGlobalEVM()
     }
+
+    func available_eips() -> [Int] {
+        let eips = EVMBridge.AvailableEIPS()
+        let elem_count = Int(eips.r1)
+        let rebound = eips.r0.withMemoryRebound(to: Int.self, capacity: elem_count) {
+            Array(UnsafeBufferPointer(start: $0, count: elem_count))
+        }
+        print("in swift - available eips actually was \(rebound)")
+        defer {
+            free(eips.r0)
+        }
+        return rebound
+        // let converted = convert(length: elem_count,
+        //                         data: UnsafePointer(eips.data))
+
+
+//        let loaded = eips.data.
+    }
+
+
+
+}
+
+func convert(length: Int, data: UnsafePointer<Int>) -> [Int] {
+    let buffer = UnsafeBufferPointer(start: data, count: length);
+    return Array(buffer)
 }
 
 struct Rootview : View {
-    @StateObject var evm_state = EVMState.shared
-    
     var body : some View {
         VStack {
-            // Button {
-            //     NSApp.terminate(nil)
-            // } label :{
-            //     Text("Quit")
-            // }
-            // Button {
-            //     let code = "these are some words to be passed over to golang"
-            //     let data = Data(code.utf8)
-            //     let value = data.withUnsafeBytes { $0.baseAddress }!
-            //     let result = value.assumingMemoryBound(to: CChar.self)
-            //     let wrapped = GoString(p: result, n: code.count)
-            //     EVMBridge.TestReceiveGoString(wrapped)
-            // } label: {
-            //     Text("test calling golang with a c made string as GoString")
-            // }
-            // Button {
-            //     EVMBridge.CallGoFromSwift()
-            // } label: {
-            //     Text("Called go \(EVMState.shared.name)")
-            // }
             EVMDevCenter(driver: EVM.shared)
         }.frame(width: 1024, height: 760, alignment: .center)
     }
@@ -86,7 +83,7 @@ public func speak(num: Int32) {
 
 
     DispatchQueue.main.async {
-        EVMState.shared.name = "somethign else now \(num)"
+        // EVMState.shared.name = "somethign else now \(num)"
         // let is_main = Thread.isMainThread
 
         // rootView?.evm_state.stack.append("Called from golang, please update in async queue")

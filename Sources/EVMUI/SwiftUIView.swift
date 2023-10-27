@@ -6,11 +6,7 @@
 //
 
 import SwiftUI
-
-public protocol EVMDriver {
-    func create_new_contract(code: String) throws
-    func new_evm_singleton()
-}
+import DevStationCommon
 
 struct BlockContext : View {
     @State fileprivate var coinbase: String = ""
@@ -72,7 +68,7 @@ public enum EVMError : Error {
 
 
 public struct EVMDevCenter<Driver: EVMDriver> : View {
-
+    
     @State private var bytecode_add = false
     @State private var new_contract_name = ""
     @State private var new_contract_bytecode = ""
@@ -80,6 +76,8 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     @State private var current_code_running = ""
     @State private var current_tab = 0
     @State private var calldata = ""
+    @State private var present_eips_sheet = false
+    
     let d : Driver
     
     @State private var execed_operations: [ExecutedEVMCode] = [
@@ -97,9 +95,10 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
         .init(name: "compound", bytecode: "456", address: "0x1234"),
         sample_contract
     ]
-        
+    
     @State private var selected_contract_idx : LoadedContract?
     @State private var deploy_contract_result = ""
+    @State var eips_used : [EIP] = []
     
     public var body: some View {
         
@@ -117,6 +116,11 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             }
                             .frame(maxWidth: 200)
                             .padding([.trailing, .leading])
+                            Button {
+                                bytecode_add.toggle()
+                            } label: {
+                                Text("Add Contract")
+                            }
                         }
                     }
                     VStack {
@@ -127,10 +131,10 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                         .font(.system(size: 14, weight: .bold))
                                     ScrollView {
                                         Text(contract.bytecode)
-                                          .lineLimit(nil)
-//                                          .lineLimit(20, reservesSpace: true)
-                                          .frame(maxWidth:.infinity, maxHeight:.infinity)
-                                          .background()
+                                            .lineLimit(nil)
+                                        //                                          .lineLimit(20, reservesSpace: true)
+                                            .frame(maxWidth:.infinity, maxHeight:.infinity)
+                                            .background()
                                     }
                                 }
                             } else {
@@ -156,9 +160,11 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                     Text(deploy_contract_result)
                                 }
                             }
-                              .background()
-                              .frame(width: 200)
+                            .background()
+                            .frame(width: 200)
                         }
+                        Text("Executed Operations")
+                            .font(.system(size: 14, weight: .bold))
                         Table(execed_operations) {
                             TableColumn("PC", value: \.pc)
                             TableColumn("OPNAME", value: \.op_name)
@@ -166,29 +172,33 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                         }
                     }
                     VStack {
-
-                            BlockContext()
+                        BlockContext()
                             .frame(maxWidth: 300)
                             .background()
-
+                        
                         VStack {
-                            Text("Controls")
+                            Text("Running Controls")
                                 .font(.system(size: 14, weight: .bold))
                                 .help("load state/contract")
-                            Button {
-                                bytecode_add.toggle()
-                            } label: {
-                                Text("add contract bytecode")
-                            }
                             Text("Continue")
                         }
                         .background()
                         .padding()
-                        Spacer()
                         VStack {
-                            StateDBDetails(kind: .InMemory)
+                            Text("EVM Configuration")
+                                .font(.system(size: 14, weight: .bold))
+                            VStack {
+                                Button {
+                                    present_eips_sheet.toggle()
+                                } label: {
+                                    Text("EIPS enabled")
+                                }
+                                Text("Something")
+                            }
+                            .padding()
+                            .background()
                         }
-                        .background()
+                        StateDBDetails(kind: .InMemory)
                         .padding()
                     }.frame(maxHeight: .infinity, alignment: .topLeading)
                 }
@@ -198,6 +208,12 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .sheet(isPresented: $present_eips_sheet,
+                   onDismiss: {
+                print("dismissed something")
+            }, content: {
+                KnownEIPs(known_eips: $eips_used)
+            })
             .sheet(isPresented: $bytecode_add) {
                 print("sheet dismissed")
             } content: {
@@ -218,7 +234,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                     
                     loaded_contracts.append(LoadedContract(
                         name: new_contract_name,
-                        bytecode: new_contract_bytecode, 
+                        bytecode: new_contract_bytecode,
                         address: "")
                     )
                     print("removed the sheet")
@@ -230,6 +246,11 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
         }).onAppear {
             // TODO only during dev at the moment
             selected_contract_idx = loaded_contracts[2]
+            // only needs to happen once
+            let all = d.available_eips()
+            for item in all {
+                eips_used.append(EIP(num: item, enabled: true))
+            }
         }
         .padding(10)
     }
@@ -244,27 +265,43 @@ struct TraceView: View {
 enum StateDBKind: String {
     case InMemory = "in memory state"
     case GethDB = "geth based leveldb"
-//    var description: String {
-//        switch self {
-//        case .InMemory:
-//            return "in memory state"
-//        case .GethDB:
-//            return "geth based leveldb"
-//        }
-//    }
+    //    var description: String {
+    //        switch self {
+    //        case .InMemory:
+    //            return "in memory state"
+    //        case .GethDB:
+    //            return "geth based leveldb"
+    //        }
+    //    }
 }
 
 struct StateDBDetails: View {
     let kind: StateDBKind
+    let block_number: Int = 12_000_000
+    let state_root : String = "0x01"
+
     var body: some View {
         VStack {
             Text("State used by EVM")
                 .font(.system(size: 14, weight: .bold))
-            HStack {
-                Text("Kind: ")
-                Text(kind.rawValue)
-            }
-        }
+            VStack {
+                HStack {
+                    Text("Kind: ")
+                    Spacer()
+                    Text(kind.rawValue)
+                }
+                HStack {
+                    Text("BlockNumber: ")
+                    Spacer()
+                    Text("\(block_number)")
+                }
+                HStack {
+                    Text("State Root Hash:")
+                    Spacer()
+                    Text(state_root)
+                }
+            }.background()
+        }.frame(alignment: .center)
     }
 }
 
@@ -285,7 +322,6 @@ struct NewContractByteCode: View {
                     .lineLimit(20, reservesSpace: true)
             }
             Button {
-                print("dismiss")
                 dismiss()
             } label: {
                 Text("Add")
@@ -305,6 +341,11 @@ class StubEVMDriver: EVMDriver {
     func new_evm_singleton() {
         //
     }
+
+    func available_eips() -> [Int] {
+        return [12, 14, 15]
+    }
+
 }
 
 struct EIP : Identifiable {
@@ -314,42 +355,62 @@ struct EIP : Identifiable {
 }
 
 struct KnownEIPs: View {
-    @State var known_eips : [EIP]
-
+    @Binding var known_eips : [EIP]
+    @State var enable_all = false
+    @Environment(\.dismiss) var dismiss
+    
     var body : some View {
-        Table(known_eips) {
-            TableColumn("EIP") { d in
-                Text("\(d.num)")
+        VStack {
+            HStack {
+                Toggle(isOn: $enable_all) {
+                    Text("enable all EIPs")
+                }
+                Button {
+                    dismiss()
+                } label: {
+                    Text("Ok")
+                }
             }
-            TableColumn("Enabled") { d in
-                // SO ELEGANT! custom binding on the fly!
-                Toggle("", isOn: Binding<Bool>(
-                   get: {
-                       return d.enabled
-                   },
-                   set: {
-                       if let index = known_eips.firstIndex(where: { $0.id == d.id }) {
-                           known_eips[index].enabled = $0
-                       }
-                   }
-                ))
+            Table(known_eips) {
+                TableColumn("EIP") { d in
+                    Text(String(d.num))
+                }
+                TableColumn("Enabled") { d in
+                    // SO ELEGANT! custom binding on the fly!
+                    Toggle("", isOn: Binding<Bool>(
+                        get: {
+                            if enable_all {
+                                return true
+                            }
+                            return d.enabled
+                        },
+                        set: {
+                            if let index = known_eips.firstIndex(where: { $0.id == d.id }) {
+                                known_eips[index].enabled = $0
+                            }
+                        }
+                    ))
+                }
             }
         }
+        .padding()
+        .frame(width: 500, height: 450)
     }
 }
 
-#Preview("enabled EIPs") {
-    KnownEIPs(known_eips: [
-        EIP(num: 12, enabled: false),
-        EIP(num: 32, enabled: true),
-        EIP(num: 44, enabled: false)
-    ])
-}
 
 #Preview("dev center") {
     EVMDevCenter(driver: StubEVMDriver())
         .frame(width: 1024, height: 760)
+    
+}
 
+#Preview("enabled EIPs") {
+    KnownEIPs(known_eips: .constant([
+        EIP(num: 1223, enabled: false),
+        EIP(num: 1559, enabled: true),
+        EIP(num: 44, enabled: false)]
+    ))
 }
 
 #Preview("New Contract bytecode") {

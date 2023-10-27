@@ -307,6 +307,45 @@ class StubEVMDriver: EVMDriver {
     }
 }
 
+struct EIP : Identifiable {
+    let id = UUID()
+    let num : Int
+    var enabled: Bool
+}
+
+struct KnownEIPs: View {
+    @State var known_eips : [EIP]
+
+    var body : some View {
+        Table(known_eips) {
+            TableColumn("EIP") { d in
+                Text("\(d.num)")
+            }
+            TableColumn("Enabled") { d in
+                // SO ELEGANT! custom binding on the fly!
+                Toggle("", isOn: Binding<Bool>(
+                   get: {
+                       return d.enabled
+                   },
+                   set: {
+                       if let index = known_eips.firstIndex(where: { $0.id == d.id }) {
+                           known_eips[index].enabled = $0
+                       }
+                   }
+                ))
+            }
+        }
+    }
+}
+
+#Preview("enabled EIPs") {
+    KnownEIPs(known_eips: [
+        EIP(num: 12, enabled: false),
+        EIP(num: 32, enabled: true),
+        EIP(num: 44, enabled: false)
+    ])
+}
+
 #Preview("dev center") {
     EVMDevCenter(driver: StubEVMDriver())
         .frame(width: 1024, height: 760)

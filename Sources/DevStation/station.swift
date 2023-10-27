@@ -47,26 +47,26 @@ struct Rootview : View {
     
     var body : some View {
         VStack {
-            Button {
-                NSApp.terminate(nil)
-            } label :{
-                Text("Quit")
-            }
-            Button {
-                let code = "these are some words to be passed over to golang"
-                let data = Data(code.utf8)
-                let value = data.withUnsafeBytes { $0.baseAddress }!
-                let result = value.assumingMemoryBound(to: CChar.self)
-                let wrapped = GoString(p: result, n: code.count)
-                EVMBridge.TestReceiveGoString(wrapped)
-            } label: {
-                Text("test calling golang with a c made string as GoString")
-            }
-            Button {
-                EVMBridge.CallGoFromSwift()
-            } label: {
-                Text("Called go \(EVMState.shared.name)")
-            }
+            // Button {
+            //     NSApp.terminate(nil)
+            // } label :{
+            //     Text("Quit")
+            // }
+            // Button {
+            //     let code = "these are some words to be passed over to golang"
+            //     let data = Data(code.utf8)
+            //     let value = data.withUnsafeBytes { $0.baseAddress }!
+            //     let result = value.assumingMemoryBound(to: CChar.self)
+            //     let wrapped = GoString(p: result, n: code.count)
+            //     EVMBridge.TestReceiveGoString(wrapped)
+            // } label: {
+            //     Text("test calling golang with a c made string as GoString")
+            // }
+            // Button {
+            //     EVMBridge.CallGoFromSwift()
+            // } label: {
+            //     Text("Called go \(EVMState.shared.name)")
+            // }
             EVMDevCenter(driver: EVM.shared)
         }.frame(width: 1024, height: 760, alignment: .center)
     }

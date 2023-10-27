@@ -8,16 +8,26 @@
 import SwiftUI
 
 public protocol EVMDriver {
-    func create_new_contract(code: String)
+    func create_new_contract(code: String) throws
     func new_evm_singleton()
 }
 
 struct BlockContext : View {
-    @State fileprivate var coinbase: String = "0x..."
+    @State fileprivate var coinbase: String = ""
+    @State fileprivate var base_gas: String = ""
     
     var body : some View {
         VStack {
-            TextField("Coinbase", text: $coinbase)
+            Text("Block Context")
+                .font(.system(size: 14, weight: .bold))
+            HStack {
+                Text("Coinbase")
+                TextField("0x..", text: $coinbase)
+            }
+            HStack {
+                Text("Base Gas Price")
+                TextField("base gas", text: $base_gas)
+            }
         }
     }
 }
@@ -55,11 +65,14 @@ extension Collection {
         return indices.contains(index) ? self[index] : nil
     }
 }
+
+
 public struct EVMDevCenter<Driver: EVMDriver> : View {
-    
+
     @State private var bytecode_add = false
     @State private var new_contract_name = ""
     @State private var new_contract_bytecode = ""
+    @State private var new_contract_abi = ""
     @State private var current_code_running = ""
     @State private var current_tab = 0
     @State private var calldata = ""
@@ -79,9 +92,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
         .init(name: "uniswapv3", bytecode: "123", address: "0x1256"),
         .init(name: "compound", bytecode: "456", address: "0x1234")
     ]
-    
-    //     @StateObject private var loaded_contracts = LoadedContracts()
-    
+        
     @State private var selected_contract_idx : LoadedContract?
     
     public var body: some View {
@@ -91,19 +102,34 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
             VStack {
                 HStack {
                     NavigationStack {
-                        List(loaded_contracts, id:\.self, selection: $selected_contract_idx) { item in
-                            Text(item.name)
-                        }.frame(maxWidth: 200)
+                        VStack {
+                            Text("Loaded contracts")
+                                .font(.system(size:14, weight: .bold))
+                                .help("interact with contracts loaded")
+                            List(loaded_contracts, id:\.self, selection: $selected_contract_idx) { item in
+                                Text(item.name)
+                            }
+                            .frame(maxWidth: 200)
+                            .padding([.trailing, .leading])
+                        }
                     }
                     VStack {
-                        if let contract = selected_contract_idx {
-                            NavigationLink(value: contract) {
-                                Text("\(contract.bytecode)")
-                                    .lineLimit(20, reservesSpace: true)
-                                    .frame(maxWidth:.infinity)
+                        HStack {
+                            if let contract = selected_contract_idx {
+                                VStack {
+                                    Text("Contract bytecode")
+                                        .font(.system(size: 14, weight: .bold))
+                                    Text("\(contract.bytecode)")
+                                        .lineLimit(20, reservesSpace: true)
+                                        .frame(maxWidth:.infinity, maxHeight:.infinity)
+                                        .background()
+                                }
+                            } else {
+                                Text("select a contract from sidebar ")
                             }
-                        } else {
-                            Text("select something ")
+                            VStack {
+                                Text("Loaded Details")
+                            }
                         }
                         Table(execed_operations) {
                             TableColumn("PC", value: \.pc)
@@ -112,13 +138,31 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                         }
                     }
                     VStack {
-                        Button {
-                            bytecode_add.toggle()
-                        } label: {
-                            Text("add contract bytecode")
+
+                            BlockContext()
+                            .frame(maxWidth: 300)
+                            .background()
+
+                        VStack {
+                            Text("Controls")
+                                .font(.system(size: 14, weight: .bold))
+                                .help("load state/contract")
+                            Button {
+                                bytecode_add.toggle()
+                            } label: {
+                                Text("add contract bytecode")
+                            }
+                            Text("Continue")
                         }
-                        Text("Continue")
-                    }
+                        .background()
+                        .padding()
+                        Spacer()
+                        VStack {
+                            StateDBDetails(kind: .InMemory)
+                        }
+                        .background()
+                        .padding()
+                    }.frame(maxHeight: .infinity, alignment: .topLeading)
                 }
                 HStack {
                     Text("current input")
@@ -131,13 +175,34 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
             } content: {
                 NewContractByteCode(
                     contract_name: $new_contract_name,
-                    contract_bytecode: $new_contract_bytecode
-                )
+                    contract_bytecode: $new_contract_bytecode,
+                    contract_abi: $new_contract_abi
+                ).onDisappear {
+                    if new_contract_name.isEmpty || new_contract_bytecode.isEmpty {
+                        return
+                    }
+                    
+                    do {
+                        try d.create_new_contract(code: new_contract_bytecode)
+                    } catch {
+                        return
+                    }
+                    
+                    loaded_contracts.append(LoadedContract(
+                        name: new_contract_name,
+                        bytecode: new_contract_bytecode, 
+                        address: "")
+                    )
+                    print("removed the sheet")
+                }
             }
             
             .tabItem { Text("live dev") }.tag(0)
             TraceView().tabItem { Text("TraceView (goevmlab)") }.tag(1)
-        })
+        }).onAppear {
+            // TODO only during dev at the moment
+            selected_contract_idx = loaded_contracts[0]
+        }
         .padding(10)
     }
 }
@@ -148,16 +213,49 @@ struct TraceView: View {
     }
 }
 
+enum StateDBKind: String {
+    case InMemory = "in memory state"
+    case GethDB = "geth based leveldb"
+//    var description: String {
+//        switch self {
+//        case .InMemory:
+//            return "in memory state"
+//        case .GethDB:
+//            return "geth based leveldb"
+//        }
+//    }
+}
+
+struct StateDBDetails: View {
+    let kind: StateDBKind
+    var body: some View {
+        VStack {
+            Text("State used by EVM")
+                .font(.system(size: 14, weight: .bold))
+            HStack {
+                Text("Kind: ")
+                Text(kind.rawValue)
+            }
+        }
+    }
+}
+
 struct NewContractByteCode: View {
     @Binding var contract_name : String
     @Binding var contract_bytecode : String
+    @Binding var contract_abi: String
+    
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
         VStack {
             TextField("new contract name...", text:$contract_name)
-            TextField("contract bytecode...", text: $contract_bytecode, axis: .vertical)
-                .lineLimit(20, reservesSpace: true)
+            HStack {
+                TextField("contract bytecode...", text: $contract_bytecode, axis: .vertical)
+                    .lineLimit(20, reservesSpace: true)
+                TextField("optional contract ABI...", text: $contract_abi, axis: .vertical)
+                    .lineLimit(20, reservesSpace: true)
+            }
             Button {
                 print("dismiss")
                 dismiss()
@@ -172,7 +270,7 @@ struct NewContractByteCode: View {
 }
 
 class StubEVMDriver: EVMDriver {
-    func create_new_contract(code: String) {
+    func create_new_contract(code: String) throws {
         print("stubbed out create new contract")
     }
     
@@ -184,12 +282,14 @@ class StubEVMDriver: EVMDriver {
 #Preview("dev center") {
     EVMDevCenter(driver: StubEVMDriver())
         .frame(width: 1024, height: 760)
+
 }
 
 #Preview("New Contract bytecode") {
     NewContractByteCode(
         contract_name: .constant(""),
-        contract_bytecode: .constant("")
+        contract_bytecode: .constant(""),
+        contract_abi: .constant("")
     )
 }
 

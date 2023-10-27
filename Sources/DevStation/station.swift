@@ -24,17 +24,20 @@ class EVMState : ObservableObject {
 
 final class EVM: EVMDriver{
     static let shared = EVM()
-
     
-    func create_new_contract(code: String) {
-        print("from the offical one yes it finally works?")
-        var data = Data(code.utf8)
+    func create_new_contract(code: String) throws {
+        let data = Data(code.utf8)
         let value = data.withUnsafeBytes { $0.baseAddress }!
         let result = value.assumingMemoryBound(to: CChar.self)
         let wrapped = GoString(p: result, n: code.count)
-        //        let wrapped = GoString(p: code.data(using: .utf8), n: code.count)
-//        EVMBridge.DeployNewContract(bytecode: GoString)
-
+        let result_deploy = EVMBridge.DeployNewContract(wrapped)
+        if result_deploy.is_error {
+            let error_wrapped = Data(bytes: result_deploy.error_reason, count: result_deploy.error_reason_size)
+            let error_str = String(bytes: error_wrapped, encoding: .utf8)!
+            print("received error in swift code! \(error_str)")
+            throw EVMError.deploy_issue(reason: error_str)
+        } 
+//        print("recevied what \(result_deploy)")
     }
 
     func new_evm_singleton() {

@@ -66,6 +66,10 @@ extension Collection {
     }
 }
 
+public enum EVMError : Error {
+    case deploy_issue(reason: String)
+}
+
 
 public struct EVMDevCenter<Driver: EVMDriver> : View {
 
@@ -90,10 +94,12 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     
     @State private var loaded_contracts : [LoadedContract] = [
         .init(name: "uniswapv3", bytecode: "123", address: "0x1256"),
-        .init(name: "compound", bytecode: "456", address: "0x1234")
+        .init(name: "compound", bytecode: "456", address: "0x1234"),
+        sample_contract
     ]
         
     @State private var selected_contract_idx : LoadedContract?
+    @State private var deploy_contract_result = ""
     
     public var body: some View {
         
@@ -119,17 +125,39 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                 VStack {
                                     Text("Contract bytecode")
                                         .font(.system(size: 14, weight: .bold))
-                                    Text("\(contract.bytecode)")
-                                        .lineLimit(20, reservesSpace: true)
-                                        .frame(maxWidth:.infinity, maxHeight:.infinity)
-                                        .background()
+                                    ScrollView {
+                                        Text(contract.bytecode)
+                                          .lineLimit(nil)
+//                                          .lineLimit(20, reservesSpace: true)
+                                          .frame(maxWidth:.infinity, maxHeight:.infinity)
+                                          .background()
+                                    }
                                 }
                             } else {
                                 Text("select a contract from sidebar ")
                             }
                             VStack {
                                 Text("Loaded Details")
+                                Button {
+                                    if let contract = selected_contract_idx {
+                                        do {
+                                            try d.create_new_contract(code: contract.bytecode)
+                                        } catch EVMError.deploy_issue(let reason){
+                                            deploy_contract_result = reason
+                                        }  catch {
+                                            //
+                                        }
+                                    }
+                                } label: {
+                                    Text("Try deploy contract")
+                                }
+                                HStack {
+                                    Text("deploy result")
+                                    Text(deploy_contract_result)
+                                }
                             }
+                              .background()
+                              .frame(width: 200)
                         }
                         Table(execed_operations) {
                             TableColumn("PC", value: \.pc)
@@ -201,7 +229,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
             TraceView().tabItem { Text("TraceView (goevmlab)") }.tag(1)
         }).onAppear {
             // TODO only during dev at the moment
-            selected_contract_idx = loaded_contracts[0]
+            selected_contract_idx = loaded_contracts[2]
         }
         .padding(10)
     }

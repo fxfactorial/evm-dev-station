@@ -15,10 +15,16 @@ struct DevStation : App {
     }
 }
 
+extension String {
+    func toHexEncodedString(uppercase: Bool = true, prefix: String = "", separator: String = "") -> String {
+        return unicodeScalars.map { prefix + .init($0.value, radix: 16, uppercase: uppercase) } .joined(separator: separator)
+    }
+}
+
 final class EVM: EVMDriver{
     static let shared = EVM()
     
-    func create_new_contract(code: String) throws {
+    func create_new_contract(code: String) throws -> String {
         let data = Data(code.utf8)
         let value = data.withUnsafeBytes { $0.baseAddress }!
         let result = value.assumingMemoryBound(to: CChar.self)
@@ -26,11 +32,15 @@ final class EVM: EVMDriver{
         let result_deploy = EVMBridge.DeployNewContract(wrapped)
         if result_deploy.is_error {
             let error_wrapped = Data(bytes: result_deploy.error_reason, count: result_deploy.error_reason_size)
+            free(result_deploy.error_reason)
             let error_str = String(bytes: error_wrapped, encoding: .utf8)!
-            print("received error in swift code! \(error_str)")
             throw EVMError.deploy_issue(reason: error_str)
         } 
-//        print("recevied what \(result_deploy)")
+
+        let new_addr = Data(bytes: result_deploy.new_contract_addr, count: 42)
+        let addr_str = String(bytes: new_addr, encoding: .utf8)!
+        free(result_deploy.new_contract_addr)
+        return addr_str
     }
 
     func new_evm_singleton() {
@@ -43,20 +53,9 @@ final class EVM: EVMDriver{
         let rebound = eips.r0.withMemoryRebound(to: Int.self, capacity: elem_count) {
             Array(UnsafeBufferPointer(start: $0, count: elem_count))
         }
-        print("in swift - available eips actually was \(rebound)")
-        defer {
-            free(eips.r0)
-        }
+        free(eips.r0)
         return rebound
-        // let converted = convert(length: elem_count,
-        //                         data: UnsafePointer(eips.data))
-
-
-//        let loaded = eips.data.
     }
-
-
-
 }
 
 func convert(length: Int, data: UnsafePointer<Int>) -> [Int] {

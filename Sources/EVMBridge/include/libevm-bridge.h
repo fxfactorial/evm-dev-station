@@ -27,7 +27,7 @@ struct NewContractResult {
    bool is_error;
    char* error_reason;
    size_t error_reason_size;
-   char new_contract_addr[20];
+   char* new_contract_addr;
 };
 
 #line 1 "cgo-generated-wrapper"

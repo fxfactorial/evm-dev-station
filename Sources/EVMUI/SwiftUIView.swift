@@ -16,14 +16,18 @@ struct BlockContext : View {
         VStack {
             Text("Block Context")
                 .font(.system(size: 14, weight: .bold))
-            HStack {
-                Text("Coinbase")
-                TextField("0x..", text: $coinbase)
+            VStack {
+                HStack {
+                    Text("Coinbase")
+                    TextField("0x..", text: $coinbase)
+                }
+                HStack {
+                    Text("Base Gas Price")
+                    TextField("base gas", text: $base_gas)
+                }
             }
-            HStack {
-                Text("Base Gas Price")
-                TextField("base gas", text: $base_gas)
-            }
+            .padding()
+            .background()
         }
     }
 }
@@ -48,7 +52,7 @@ struct ExecutedEVMCode: Identifiable {
 struct LoadedContract : Identifiable, Hashable {
     let name : String
     let bytecode: String
-    let address : String
+    var address : String
     let id = UUID() // maybe just the address next time
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
@@ -96,7 +100,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
         sample_contract
     ]
     
-    @State private var selected_contract_idx : LoadedContract?
+    @State private var selected_contract : LoadedContract?
     @State private var deploy_contract_result = ""
     @State var eips_used : [EIP] = []
     
@@ -111,7 +115,8 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             Text("Loaded contracts")
                                 .font(.system(size:14, weight: .bold))
                                 .help("interact with contracts loaded")
-                            List(loaded_contracts, id:\.self, selection: $selected_contract_idx) { item in
+                            List(loaded_contracts, id:\.self, 
+                                 selection: $selected_contract) { item in
                                 Text(item.name)
                             }
                             .frame(maxWidth: 200)
@@ -125,14 +130,13 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                     }
                     VStack {
                         HStack {
-                            if let contract = selected_contract_idx {
+                            if let contract = selected_contract {
                                 VStack {
                                     Text("Contract bytecode")
                                         .font(.system(size: 14, weight: .bold))
                                     ScrollView {
                                         Text(contract.bytecode)
                                             .lineLimit(nil)
-                                        //                                          .lineLimit(20, reservesSpace: true)
                                             .frame(maxWidth:.infinity, maxHeight:.infinity)
                                             .background()
                                     }
@@ -141,26 +145,39 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                 Text("select a contract from sidebar ")
                             }
                             VStack {
-                                Text("Loaded Details")
-                                Button {
-                                    if let contract = selected_contract_idx {
-                                        do {
-                                            try d.create_new_contract(code: contract.bytecode)
-                                        } catch EVMError.deploy_issue(let reason){
-                                            deploy_contract_result = reason
-                                        }  catch {
-                                            //
+                                Text("Contract Details")
+                                    .font(.system(size: 14, weight: .bold))
+                                VStack {
+                                    Button {
+                                        if var contract = selected_contract {
+                                            do {
+                                                contract.address = try d.create_new_contract(
+                                                    code: contract.bytecode
+                                                )
+                                            } catch EVMError.deploy_issue(let reason){
+                                                deploy_contract_result = reason
+                                            }  catch {
+                                                return
+                                            }
+                                        }
+                                    } label: {
+                                        Text("Try deploy contract")
+                                    }
+                                    HStack {
+                                        Text("deploy result")
+                                        Text(deploy_contract_result)
+                                    }
+                                    HStack {
+                                        Text("Deployed Addr")
+                                        Spacer()
+                                        if let contract = selected_contract {
+                                            Text(contract.address)
+                                        } else {
+                                            Text("N/A")
                                         }
                                     }
-                                } label: {
-                                    Text("Try deploy contract")
-                                }
-                                HStack {
-                                    Text("deploy result")
-                                    Text(deploy_contract_result)
-                                }
+                                }.background()
                             }
-                            .background()
                             .frame(width: 200)
                         }
                         Text("Executed Operations")
@@ -174,8 +191,6 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                     VStack {
                         BlockContext()
                             .frame(maxWidth: 300)
-                            .background()
-                        
                         VStack {
                             Text("Running Controls")
                                 .font(.system(size: 14, weight: .bold))
@@ -245,7 +260,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
             TraceView().tabItem { Text("TraceView (goevmlab)") }.tag(1)
         }).onAppear {
             // TODO only during dev at the moment
-            selected_contract_idx = loaded_contracts[2]
+            selected_contract = loaded_contracts[2]
             // only needs to happen once
             let all = d.available_eips()
             for item in all {
@@ -300,7 +315,9 @@ struct StateDBDetails: View {
                     Spacer()
                     Text(state_root)
                 }
-            }.background()
+            }
+            .padding()
+            .background()
         }.frame(alignment: .center)
     }
 }
@@ -334,8 +351,9 @@ struct NewContractByteCode: View {
 }
 
 class StubEVMDriver: EVMDriver {
-    func create_new_contract(code: String) throws {
+    func create_new_contract(code: String) throws -> String {
         print("stubbed out create new contract")
+        return "0x01"
     }
     
     func new_evm_singleton() {

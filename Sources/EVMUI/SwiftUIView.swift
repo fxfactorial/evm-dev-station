@@ -154,7 +154,8 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                                 contract.address = try d.create_new_contract(
                                                     code: contract.bytecode
                                                 )
-                                                print("Should be saying \(contract.address) on screen")
+                                                // needed to cause ui update
+                                                selected_contract = contract
                                             } catch EVMError.deploy_issue(let reason){
                                                 deploy_contract_result = reason
                                             }  catch {
@@ -220,10 +221,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             .padding()
                     }.frame(maxHeight: .infinity, alignment: .topLeading)
                 }
-                HStack {
-                    Text("current input")
-                    TextField("call data", text: $calldata)
-                }
+                RunningEVM()
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .sheet(isPresented: $present_eips_sheet,
@@ -351,21 +349,6 @@ struct NewContractByteCode: View {
     }
 }
 
-class StubEVMDriver: EVMDriver {
-    func create_new_contract(code: String) throws -> String {
-        return "0x01"
-    }
-    
-    func new_evm_singleton() {
-        //
-    }
-    
-    func available_eips() -> [Int] {
-        return [12, 14, 15]
-    }
-    
-}
-
 struct EIP : Identifiable {
     let id = UUID()
     let num : Int
@@ -416,11 +399,57 @@ struct KnownEIPs: View {
     }
 }
 
+struct RunningEVM: View {
+    @State private var calldata = ""
+    @State private var msg_value = ""
+    @State private var call_return_value = ""
+    
+    var body: some View {
+        VStack {
+            Text("Live Contract Interaction")
+            HStack {
+                VStack {
+                    HStack {
+                        Text("Input")
+                            .frame(width: 120, alignment: .leading)
+                        TextField("calldata", text: $calldata)
+                    }
+                    HStack {
+                        Text("Value")
+                            .frame(width: 120, alignment: .leading)
+                        TextField("msg value", text: $msg_value)
+                    }
+                    HStack {
+                        Text("Return value")
+                            .frame(width: 120, alignment: .leading)
+                        TextField("last call return value", text: $call_return_value)
+                            .disabled(true)
+                    }
+                }
+                VStack {
+                    Button {
+                        print("run contract")
+                    } label: {
+                        Text("Run contract")
+                    }
+                    Text("more")
+                }
+            }
+            .padding()
+            .background()
+        }
+    }
+}
+
 
 #Preview("dev center") {
     EVMDevCenter(driver: StubEVMDriver())
         .frame(width: 1024, height: 760)
     
+}
+
+#Preview("running EVM") {
+    RunningEVM()
 }
 
 #Preview("enabled EIPs") {

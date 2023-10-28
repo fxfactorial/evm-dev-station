@@ -30,6 +30,15 @@ struct NewContractResult {
    char* new_contract_addr;
 };
 
+struct CallContractResult {
+   char* error_reason;
+   size_t error_reason_size;
+   char* call_return_value;
+   size_t call_return_size;
+};
+
+
+
 #line 1 "cgo-generated-wrapper"
 
 
@@ -89,6 +98,8 @@ extern "C" {
 extern void TestReceiveGoString(GoString input);
 extern int NewEVMSession();
 extern void NewGlobalEVM();
+extern void EnableCallback();
+extern struct CallContractResult CallEVM(GoString calldataSwift, GoString targetAddrSwift, GoString msgValueSwift);
 extern struct NewContractResult DeployNewContract(GoString bytecode);
 extern int CreateNewContract(int sessionID, char* contractByteCode, int contractByteCodeLength, char* senderC, char* value, GoString test);
 extern int RunCodeOnContract(int sessionID, char* calldata, int calldataLength, char* callerAddr);

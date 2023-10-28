@@ -104,6 +104,13 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     @State private var deploy_contract_result = ""
     @State var eips_used : [EIP] = []
     
+    private func running_evm(calldata: String, msg_value: String) -> String {
+        print("kicking off running evm \(calldata) \(msg_value) \(selected_contract!.address)")
+        let call_result = d.call(calldata: calldata, target_addr: selected_contract!.address, msg_value: msg_value)
+        print(call_result)
+        return "!23"
+    }
+    
     public var body: some View {
         
         TabView(selection: $current_tab,
@@ -221,7 +228,20 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             .padding()
                     }.frame(maxHeight: .infinity, alignment: .topLeading)
                 }
-                RunningEVM()
+                RunningEVM(target_addr: Binding<String>(
+                    get: {
+                        if let contract = selected_contract {
+                            return contract.address
+                        }
+                        return ""
+                    },
+                    set: {
+                        if var contract = selected_contract {
+                            contract.address = $0
+                            selected_contract = contract
+                        }
+                    }
+                ), running_evm_handler: running_evm)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .sheet(isPresented: $present_eips_sheet,
@@ -399,10 +419,33 @@ struct KnownEIPs: View {
     }
 }
 
+struct ABIEncode: View {
+
+    var body: some View {
+        VStack {
+            Text("some kind of encoder?")
+        }
+    }
+}
+
 struct RunningEVM: View {
     @State private var calldata = ""
     @State private var msg_value = ""
     @State private var call_return_value = ""
+    @State private var error_msg_evm = ""
+    @State private var error_msg_contract_eval = ""
+    @Binding var target_addr: String
+    // TODO should do binding on whom to run code against - that is -
+    // I could be blindly runnign against any contract or against the
+    // one we just deployed
+    let running_evm_handler: (String, String) -> String
+//    let evm_callback_hook:
+    
+    func dev_mode() {
+        // entry_point(address,uint256)
+        calldata = "f4bd333800000000000000000000000001010101010101010101010101010101010101010000000000000000000000000000000000000000000000004563918244f40000"
+        msg_value = "6000000000000000000"
+    }
     
     var body: some View {
         VStack {
@@ -420,6 +463,11 @@ struct RunningEVM: View {
                         TextField("msg value", text: $msg_value)
                     }
                     HStack {
+                        Text("Target Addr")
+                          .frame(width: 120, alignment: .leading)
+                        TextField("target addr", text: $target_addr)
+                    }
+                    HStack {
                         Text("Return value")
                             .frame(width: 120, alignment: .leading)
                         TextField("last call return value", text: $call_return_value)
@@ -428,11 +476,27 @@ struct RunningEVM: View {
                 }
                 VStack {
                     Button {
-                        print("run contract")
+                        print("calling run evm handler \(calldata)-\(msg_value)")
+                        let result = running_evm_handler(calldata, msg_value)
+                        call_return_value = result
                     } label: {
                         Text("Run contract")
                     }
-                    Text("more")
+                    Button {
+                        dev_mode()
+                    } label: {
+                        Text("enable dev values")
+                    }
+                    Toggle(isOn: Binding<Bool>(
+                        get: {
+                            true
+                        },
+                        set: {
+                            $0
+                        }
+                    ), label: {
+                        Text("EVM hook")
+                    })
                 }
             }
             .padding()
@@ -449,7 +513,10 @@ struct RunningEVM: View {
 }
 
 #Preview("running EVM") {
-    RunningEVM()
+    RunningEVM(target_addr: .constant("")) { input, msg_value in
+        print("no op")
+        return ""
+    }
 }
 
 #Preview("enabled EIPs") {

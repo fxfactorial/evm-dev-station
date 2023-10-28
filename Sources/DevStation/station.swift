@@ -19,7 +19,28 @@ extension String {
     func toHexEncodedString(uppercase: Bool = true, prefix: String = "", separator: String = "") -> String {
         return unicodeScalars.map { prefix + .init($0.value, radix: 16, uppercase: uppercase) } .joined(separator: separator)
     }
+
+    func to_go_string() -> GoString {
+        let code = self
+        let data = Data(code.utf8)
+        let value = data.withUnsafeBytes { $0.baseAddress }!
+        let result = value.assumingMemoryBound(to: CChar.self)
+        let wrapped = GoString(p: result, n: self.count)
+        return wrapped
+    }
+
+    func to_go_string2() -> GoString {
+        let wrapped = self.data(using: .ascii)?.withUnsafeBytes {
+            $0.baseAddress?.assumingMemoryBound(to: CChar.self)
+        }!
+        let as_g = GoString(p: wrapped, n: self.count)
+        return as_g
+    }
+
+
 }
+
+
 
 final class EVM: EVMDriver {
     static let shared = EVM()
@@ -56,6 +77,36 @@ final class EVM: EVMDriver {
         free(eips.r0)
         return rebound
     }
+    
+    func call(calldata: String, target_addr: String, msg_value: String) -> EVMCallResult {
+        let calldata_gstr = calldata.to_go_string2()
+        let target_addr_gstr = target_addr.to_go_string2()
+        let msg_value_gstr = msg_value.to_go_string2()
+
+//        GoString
+        print("about to call \(calldata_gstr) \(target_addr_gstr) \(msg_value_gstr)")
+
+        let result_call = EVMBridge.CallEVM(
+          calldata_gstr,
+          target_addr_gstr,
+          msg_value_gstr
+        )
+        if result_call.error_reason_size > 0 {
+            let error_wrapped = Data(bytes: result_call.error_reason, count: result_call.error_reason_size)
+            let error_str = String(bytes: error_wrapped, encoding: .utf8)!
+            free(result_call.error_reason)
+            return .failure(reason: error_str)
+        }
+
+        if result_call.call_return_size > 0 {
+            let result_wrapped = Data(bytes: result_call.call_return_value, count: result_call.call_return_size)
+            let result_str = String(bytes: result_wrapped, encoding: .utf8)!
+            free(result_call.call_return_value)
+            return .success(return_value: result_str)
+        }
+        return .success(return_value: "")
+    }
+    
 }
 
 func convert(length: Int, data: UnsafePointer<Int>) -> [Int] {
@@ -71,7 +122,6 @@ struct Rootview : View {
     }
 }
 
-
 @_cdecl("speak_from_go")
 public func speak(num: Int32) {
     //    let del = NSApplication.shared.delegate as! AppDelegate
@@ -80,7 +130,7 @@ public func speak(num: Int32) {
     // let is_main = Thread.isMainThread
     // print("did it updated? \(rootView) is it main thread \(is_main)")
 
-
+    print("program counter called from golang what what \(num)")
     DispatchQueue.main.async {
         // EVMState.shared.name = "somethign else now \(num)"
         // let is_main = Thread.isMainThread

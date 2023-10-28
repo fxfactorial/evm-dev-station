@@ -21,7 +21,7 @@ extension String {
     }
 }
 
-final class EVM: EVMDriver{
+final class EVM: EVMDriver {
     static let shared = EVM()
     
     func create_new_contract(code: String) throws -> String {
@@ -74,7 +74,7 @@ struct Rootview : View {
 
 @_cdecl("speak_from_go")
 public func speak(num: Int32) {
-//    let del = NSApplication.shared.delegate as! AppDelegate
+    //    let del = NSApplication.shared.delegate as! AppDelegate
     // let rootView = NSApplication.shared.mainWindow?.contentView as? Rootview
     // rootView?.evm_state.stack.append("Called from golang, please update")
     // let is_main = Thread.isMainThread

@@ -49,7 +49,7 @@ struct ExecutedEVMCode: Identifiable {
 }
 
 
-struct LoadedContract : Identifiable, Hashable {
+struct LoadedContract : Hashable, Identifiable {
     let name : String
     let bytecode: String
     var address : String
@@ -115,12 +115,12 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             Text("Loaded contracts")
                                 .font(.system(size:14, weight: .bold))
                                 .help("interact with contracts loaded")
-                            List(loaded_contracts, id:\.self, 
+                            List(loaded_contracts, id:\.self,
                                  selection: $selected_contract) { item in
                                 Text(item.name)
                             }
-                            .frame(maxWidth: 200)
-                            .padding([.trailing, .leading])
+                                 .frame(maxWidth: 200)
+                                 .padding([.trailing, .leading])
                             Button {
                                 bytecode_add.toggle()
                             } label: {
@@ -154,6 +154,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                                 contract.address = try d.create_new_contract(
                                                     code: contract.bytecode
                                                 )
+                                                print("Should be saying \(contract.address) on screen")
                                             } catch EVMError.deploy_issue(let reason){
                                                 deploy_contract_result = reason
                                             }  catch {
@@ -176,7 +177,9 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                             Text("N/A")
                                         }
                                     }
-                                }.background()
+                                }
+                                .padding()
+                                .background()
                             }
                             .frame(width: 200)
                         }
@@ -214,7 +217,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             .background()
                         }
                         StateDBDetails(kind: .InMemory)
-                        .padding()
+                            .padding()
                     }.frame(maxHeight: .infinity, alignment: .topLeading)
                 }
                 HStack {
@@ -225,39 +228,37 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .sheet(isPresented: $present_eips_sheet,
                    onDismiss: {
-                print("dismissed something")
+                // just hold onto it
             }, content: {
                 KnownEIPs(known_eips: $eips_used)
             })
             .sheet(isPresented: $bytecode_add) {
-                print("sheet dismissed")
+                if new_contract_name.isEmpty || new_contract_bytecode.isEmpty {
+                    return
+                }
+                var new_addr: String
+
+                do {
+                    new_addr = try d.create_new_contract(code: new_contract_bytecode)
+                } catch {
+                    return
+                }
+                
+                loaded_contracts.append(LoadedContract(
+                    name: new_contract_name,
+                    bytecode: new_contract_bytecode,
+                    address: new_addr)
+                )
             } content: {
                 NewContractByteCode(
                     contract_name: $new_contract_name,
                     contract_bytecode: $new_contract_bytecode,
                     contract_abi: $new_contract_abi
-                ).onDisappear {
-                    if new_contract_name.isEmpty || new_contract_bytecode.isEmpty {
-                        return
-                    }
-                    
-                    do {
-                        try d.create_new_contract(code: new_contract_bytecode)
-                    } catch {
-                        return
-                    }
-                    
-                    loaded_contracts.append(LoadedContract(
-                        name: new_contract_name,
-                        bytecode: new_contract_bytecode,
-                        address: "")
-                    )
-                    print("removed the sheet")
-                }
+                )
             }
             
             .tabItem { Text("live dev") }.tag(0)
-            TraceView().tabItem { Text("TraceView (goevmlab)") }.tag(1)
+            TraceView().tabItem { Text("TraceView") }.tag(1)
         }).onAppear {
             // TODO only during dev at the moment
             selected_contract = loaded_contracts[2]
@@ -294,7 +295,7 @@ struct StateDBDetails: View {
     let kind: StateDBKind
     let block_number: Int = 12_000_000
     let state_root : String = "0x01"
-
+    
     var body: some View {
         VStack {
             Text("State used by EVM")
@@ -352,18 +353,17 @@ struct NewContractByteCode: View {
 
 class StubEVMDriver: EVMDriver {
     func create_new_contract(code: String) throws -> String {
-        print("stubbed out create new contract")
         return "0x01"
     }
     
     func new_evm_singleton() {
         //
     }
-
+    
     func available_eips() -> [Int] {
         return [12, 14, 15]
     }
-
+    
 }
 
 struct EIP : Identifiable {
@@ -428,7 +428,7 @@ struct KnownEIPs: View {
         EIP(num: 1223, enabled: false),
         EIP(num: 1559, enabled: true),
         EIP(num: 44, enabled: false)]
-    ))
+                                   ))
 }
 
 #Preview("New Contract bytecode") {

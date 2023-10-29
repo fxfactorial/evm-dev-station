@@ -135,17 +135,30 @@ struct Rootview : View {
     }
 }
 
-@_cdecl("speak_from_go")
-public func speak(num: Int32) {
-    //    let del = NSApplication.shared.delegate as! AppDelegate
-    // let rootView = NSApplication.shared.mainWindow?.contentView as? Rootview
-    // rootView?.evm_state.stack.append("Called from golang, please update")
-    // let is_main = Thread.isMainThread
-    // print("did it updated? \(rootView) is it main thread \(is_main)")
-    print("program counter called from golang what what \(num)")
+@_cdecl("evm_run_callback")
+public func evm_run_callback(
+  num: Int32,
+  // TODO Remember to free the pointers to cchar
+  opcode_name: UnsafeMutablePointer<CChar>,
+  opcode_hex: UnsafeMutablePointer<CChar>,
+  gas_cost: Int
+) {
+    let opcode = String(cString: opcode_name)
+    let opcode_num = String(cString: opcode_hex)
+    free(opcode_name)
+    free(opcode_hex)
+
     DispatchQueue.main.async {
-        ExecutedOperations.shared.execed_operations.append(ExecutedEVMCode(pc: "\(num)", op_name: "foo", opcode: "bar", gas: 123, gas_cost: 2, depth: 3, refund: 0))
-        // rootView?.evm_state.stack.append("Called from golang, please update in async queue")
+        ExecutedOperations.shared.execed_operations.append(
+          ExecutedEVMCode(pc: "\(num)",
+                          op_name: opcode,
+                          opcode: opcode_num,
+                          gas: gas_cost,
+                          gas_cost: gas_cost,
+                          depth: 3,
+                          refund: 0
+          )
+        )
     }
 }
 

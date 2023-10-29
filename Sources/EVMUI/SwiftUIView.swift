@@ -181,6 +181,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             TableColumn("PC", value: \.pc)
                             TableColumn("OPNAME", value: \.op_name)
                             TableColumn("OPCODE", value: \.opcode)
+                            TableColumn("GAS", value: \.gas_cost)
                         }.onReceive(ExecutedOperations.shared.$execed_operations, perform: { item in
                             // print("got a new value")
                         })
@@ -526,7 +527,14 @@ struct RunningEVM<Driver: EVMDriver>: View {
 
 #Preview("dev center") {
     EVMDevCenter(driver: StubEVMDriver())
-        .frame(width: 1024, height: 760)
+      .frame(width: 1024, height: 760)
+      .onAppear {
+          let dummy_items : [ExecutedEVMCode] = [
+            .init(pc: "0x07c9", op_name: "DUP2", opcode: "0x81", gas: 20684, gas_cost: 3, depth: 3, refund: 0),
+            .init(pc: "0x07c9", op_name: "JUMP", opcode: "0x56", gas: 20684, gas_cost: 8, depth: 3, refund: 0)
+          ]
+          ExecutedOperations.shared.execed_operations.append(contentsOf: dummy_items)
+      }
     
 }
 

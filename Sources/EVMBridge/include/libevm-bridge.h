@@ -22,7 +22,7 @@ typedef struct { const char *p; ptrdiff_t n; } _GoString_;
 #line 3 "main.go"
 
 #include <stdbool.h>
-extern void speak_from_go(int);
+extern void evm_run_callback(int, char*, char*, int);
 struct NewContractResult {
    bool is_error;
    char* error_reason;
@@ -103,6 +103,7 @@ extern void TestReceiveGoString(GoString input);
 extern int NewEVMSession();
 extern void NewGlobalEVM();
 extern void EnableCallback(GoUint8 status);
+extern void EnableStopOnCall(GoUint8 enable);
 extern struct SetAccountBalanceResult SetAccountBalance(GoString account, GoString balance);
 extern struct CallContractResult CallEVM(GoString calldataSwift, GoString targetAddrSwift, GoString msgValueSwift);
 extern struct NewContractResult DeployNewContract(GoString bytecode);

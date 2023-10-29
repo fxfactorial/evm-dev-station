@@ -20,22 +20,23 @@ public protocol EVMDriver {
 
 public struct ExecutedEVMCode: Identifiable{
     public let id = UUID()
+    // easiest when they are all strings
     public let pc: String
     public let op_name : String
     public let opcode: String
-    public let gas: Int
-    public let gas_cost: Int
-    public let depth : Int
-    public let refund: Int
+    public let gas: String
+    public let gas_cost: String
+    public let depth : String
+    public let refund: String
 
     public init(pc: String, op_name: String, opcode: String, gas: Int, gas_cost: Int, depth: Int, refund: Int) {
         self.pc = pc
         self.op_name = op_name
         self.opcode = opcode
-        self.gas = gas
-        self.gas_cost = gas_cost
-        self.depth = depth
-        self.refund = refund
+        self.gas = "\(gas)"
+        self.gas_cost = "\(gas_cost)"
+        self.depth = "\(depth)"
+        self.refund = "\(refund)"
     }
 }
 
@@ -46,9 +47,6 @@ public struct ExecutedEVMCode: Identifiable{
 public class ExecutedOperations : ObservableObject {
     public static let shared = ExecutedOperations()
     
-    @Published public var execed_operations: [ExecutedEVMCode] = [
-        .init(pc: "0x07c9", op_name: "DUP2", opcode: "0x81", gas: 20684, gas_cost: 3, depth: 3, refund: 0),
-        .init(pc: "0x07c9", op_name: "JUMP", opcode: "0x56", gas: 20684, gas_cost: 8, depth: 3, refund: 0)
-    ]
+    @Published public var execed_operations: [ExecutedEVMCode] = []
     
 }

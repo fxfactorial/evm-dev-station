@@ -32,21 +32,6 @@ struct BlockContext : View {
     }
 }
 
-class EVMState : ObservableObject {
-    @Published var calldata : String = ""
-}
-
-struct ExecutedEVMCode: Identifiable {
-    let id = UUID()
-    
-    let pc: String
-    let op_name : String
-    let opcode: String
-    let gas: Int
-    let gas_cost: Int
-    let depth : Int
-    let refund: Int
-}
 
 
 struct LoadedContract : Hashable, Identifiable {
@@ -71,6 +56,7 @@ public enum EVMError : Error {
 }
 
 
+
 public struct EVMDevCenter<Driver: EVMDriver> : View {
     
     @State private var bytecode_add = false
@@ -86,11 +72,6 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     
     let d : Driver
     
-    @State private var execed_operations: [ExecutedEVMCode] = [
-        .init(pc: "0x07c9", op_name: "DUP2", opcode: "0x81", gas: 20684, gas_cost: 3, depth: 3, refund: 0),
-        .init(pc: "0x07c9", op_name: "JUMP", opcode: "0x56", gas: 20684, gas_cost: 8, depth: 3, refund: 0)
-    ]
-    
     public init(driver : Driver) {
         d = driver
     }
@@ -105,6 +86,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     @State private var selected_contract : LoadedContract?
     @State private var deploy_contract_result = ""
     @State var eips_used : [EIP] = []
+    @ObservedObject private var execed_ops = ExecutedOperations.shared
     
     private func running_evm(calldata: String, msg_value: String) -> EVMCallResult {
         print("kicking off running evm \(calldata) \(msg_value) \(selected_contract!.address)")
@@ -193,13 +175,15 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             }
                             .frame(width: 200)
                         }
-                        Text("Executed Operations")
+                        Text("Executed Operations \(execed_ops.execed_operations.count)")
                             .font(.system(size: 14, weight: .bold))
-                        Table(execed_operations) {
+                        Table(execed_ops.execed_operations) {
                             TableColumn("PC", value: \.pc)
                             TableColumn("OPNAME", value: \.op_name)
                             TableColumn("OPCODE", value: \.opcode)
-                        }
+                        }.onReceive(ExecutedOperations.shared.$execed_operations, perform: { item in
+                            // print("got a new value")
+                        })
                     }
                     VStack {
                         BlockContext()
@@ -246,7 +230,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                 ),
                            msg_sender: $msg_sender,
                            msg_sender_eth_balance: $msg_sender_eth_balance,
-                           running_evm_handler: running_evm)
+                           d: d)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .sheet(isPresented: $present_eips_sheet,
@@ -433,7 +417,7 @@ struct ABIEncode: View {
     }
 }
 
-struct RunningEVM: View {
+struct RunningEVM<Driver: EVMDriver>: View {
     @State private var calldata = ""
     @State private var msg_value = ""
     @State private var call_return_value = ""
@@ -444,11 +428,8 @@ struct RunningEVM: View {
     @Binding var target_addr: String
     @Binding var msg_sender: String
     @Binding var msg_sender_eth_balance: String
-    // TODO should do binding on whom to run code against - that is -
-    // I could be blindly runnign against any contract or against the
-    // one we just deployed
-    let running_evm_handler: (String, String) -> EVMCallResult
-    //    let evm_callback_hook:
+    let d : Driver
+    @State private var _hack_redraw_hook = false
     
     func dev_mode() {
         // entry_point(address,uint256)
@@ -503,7 +484,11 @@ struct RunningEVM: View {
                 VStack {
                     Button {
                         print("calling run evm handler \(calldata)-\(msg_value)")
-                        let result = running_evm_handler(calldata, msg_value)
+                        let result = d.call(
+                            calldata: calldata,
+                            target_addr: target_addr,
+                            msg_value: msg_value
+                        )
                         switch result {
                         case .failure(reason: let r):
                             error_msg_evm = r
@@ -521,10 +506,11 @@ struct RunningEVM: View {
                     }
                     Toggle(isOn: Binding<Bool>(
                         get: {
-                            true
+                            d.exec_callback_enabled()
                         },
                         set: {
-                            $0
+                            d.enable_exec_callback(yes_no: $0)
+                            _hack_redraw_hook = $0
                         }
                     ), label: {
                         Text("EVM hook")
@@ -548,10 +534,9 @@ struct RunningEVM: View {
     RunningEVM(
         target_addr: .constant(""),
         msg_sender: .constant(""),
-        msg_sender_eth_balance: .constant("")) { input, msg_value in
-            print("no op")
-            return .success(return_value: "")
-        }
+        msg_sender_eth_balance: .constant(""),
+        d: StubEVMDriver()
+    )
 }
 
 #Preview("enabled EIPs") {

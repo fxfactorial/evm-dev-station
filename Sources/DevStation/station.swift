@@ -105,7 +105,21 @@ final class EVM: EVMDriver {
         }
         return .success(return_value: "")
     }
+
+    fileprivate var _cb_enabled : Bool = false
+
+    func enable_exec_callback(yes_no: Bool) {
+        if yes_no {
+            EVMBridge.EnableCallback(GoUint8(1))
+        } else {
+            EVMBridge.EnableCallback(GoUint8(0))
+        }
+        _cb_enabled = yes_no
+    }
     
+    func exec_callback_enabled() -> Bool {
+        return _cb_enabled
+    }
 }
 
 func convert(length: Int, data: UnsafePointer<Int>) -> [Int] {
@@ -128,20 +142,15 @@ public func speak(num: Int32) {
     // rootView?.evm_state.stack.append("Called from golang, please update")
     // let is_main = Thread.isMainThread
     // print("did it updated? \(rootView) is it main thread \(is_main)")
-
     print("program counter called from golang what what \(num)")
     DispatchQueue.main.async {
-        // EVMState.shared.name = "somethign else now \(num)"
-        // let is_main = Thread.isMainThread
-
+        ExecutedOperations.shared.execed_operations.append(ExecutedEVMCode(pc: "\(num)", op_name: "foo", opcode: "bar", gas: 123, gas_cost: 2, depth: 3, refund: 0))
         // rootView?.evm_state.stack.append("Called from golang, please update in async queue")
-        // print("in async queue \(is_main)")
     }
-
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
-    var evm_driver: EVMDriver = EVM.shared
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    var evm_driver: any EVMDriver = EVM.shared
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // critical otherwise won't be able to get input into gui, instead via CLI

@@ -102,7 +102,7 @@ extern "C" {
 extern void TestReceiveGoString(GoString input);
 extern int NewEVMSession();
 extern void NewGlobalEVM();
-extern void EnableCallback();
+extern void EnableCallback(GoUint8 status);
 extern struct SetAccountBalanceResult SetAccountBalance(GoString account, GoString balance);
 extern struct CallContractResult CallEVM(GoString calldataSwift, GoString targetAddrSwift, GoString msgValueSwift);
 extern struct NewContractResult DeployNewContract(GoString bytecode);

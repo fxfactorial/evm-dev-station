@@ -82,7 +82,6 @@ final class EVM: EVMDriver {
         let calldata_gstr = calldata.to_go_string2()
         let target_addr_gstr = target_addr.to_go_string2()
         let msg_value_gstr = msg_value.to_go_string2()
-
 //        GoString
         print("about to call \(calldata_gstr) \(target_addr_gstr) \(msg_value_gstr)")
 
@@ -118,7 +117,7 @@ struct Rootview : View {
     var body : some View {
         VStack {
             EVMDevCenter(driver: EVM.shared)
-        }.frame(width: 1024, height: 760, alignment: .center)
+        }.frame(width: 1480, height: 760, alignment: .center)
     }
 }
 

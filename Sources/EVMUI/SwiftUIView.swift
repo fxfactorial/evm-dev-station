@@ -81,6 +81,8 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     @State private var current_tab = 0
     @State private var calldata = ""
     @State private var present_eips_sheet = false
+    @State private var msg_sender = ""
+    @State private var msg_sender_eth_balance = ""
     
     let d : Driver
     
@@ -104,11 +106,11 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     @State private var deploy_contract_result = ""
     @State var eips_used : [EIP] = []
     
-    private func running_evm(calldata: String, msg_value: String) -> String {
+    private func running_evm(calldata: String, msg_value: String) -> EVMCallResult {
         print("kicking off running evm \(calldata) \(msg_value) \(selected_contract!.address)")
         let call_result = d.call(calldata: calldata, target_addr: selected_contract!.address, msg_value: msg_value)
         print(call_result)
-        return "!23"
+        return call_result
     }
     
     public var body: some View {
@@ -241,7 +243,10 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             selected_contract = contract
                         }
                     }
-                ), running_evm_handler: running_evm)
+                ),
+                           msg_sender: $msg_sender,
+                           msg_sender_eth_balance: $msg_sender_eth_balance,
+                           running_evm_handler: running_evm)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .sheet(isPresented: $present_eips_sheet,
@@ -255,7 +260,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                     return
                 }
                 var new_addr: String
-
+                
                 do {
                     new_addr = try d.create_new_contract(code: new_contract_bytecode)
                 } catch {
@@ -420,7 +425,7 @@ struct KnownEIPs: View {
 }
 
 struct ABIEncode: View {
-
+    
     var body: some View {
         VStack {
             Text("some kind of encoder?")
@@ -434,12 +439,16 @@ struct RunningEVM: View {
     @State private var call_return_value = ""
     @State private var error_msg_evm = ""
     @State private var error_msg_contract_eval = ""
+    // These can be updated from outside this view
+    // as the EVM runs
     @Binding var target_addr: String
+    @Binding var msg_sender: String
+    @Binding var msg_sender_eth_balance: String
     // TODO should do binding on whom to run code against - that is -
     // I could be blindly runnign against any contract or against the
     // one we just deployed
-    let running_evm_handler: (String, String) -> String
-//    let evm_callback_hook:
+    let running_evm_handler: (String, String) -> EVMCallResult
+    //    let evm_callback_hook:
     
     func dev_mode() {
         // entry_point(address,uint256)
@@ -464,7 +473,7 @@ struct RunningEVM: View {
                     }
                     HStack {
                         Text("Target Addr")
-                          .frame(width: 120, alignment: .leading)
+                            .frame(width: 120, alignment: .leading)
                         TextField("target addr", text: $target_addr)
                     }
                     HStack {
@@ -474,11 +483,34 @@ struct RunningEVM: View {
                             .disabled(true)
                     }
                 }
+                VStack{
+                    HStack {
+                        Text("Sender Addr")
+                            .frame(width: 120, alignment: .leading)
+                        TextField("msg.sender", text: $msg_sender)
+                    }
+                    HStack {
+                        Text("Sender eth balance")
+                            .frame(width: 120, alignment: .leading)
+                        TextField("eth balance", text: $msg_sender_eth_balance)
+                    }
+                    HStack {
+                        Text("EVM Error")
+                            .frame(width: 120, alignment: .leading)
+                        TextField("last failure message", text: $error_msg_evm)
+                    }
+                }.padding()
                 VStack {
                     Button {
                         print("calling run evm handler \(calldata)-\(msg_value)")
                         let result = running_evm_handler(calldata, msg_value)
-                        call_return_value = result
+                        switch result {
+                        case .failure(reason: let r):
+                            error_msg_evm = r
+                        case .success(return_value: let r):
+                            error_msg_evm = ""
+                            call_return_value = r
+                        }
                     } label: {
                         Text("Run contract")
                     }
@@ -513,10 +545,13 @@ struct RunningEVM: View {
 }
 
 #Preview("running EVM") {
-    RunningEVM(target_addr: .constant("")) { input, msg_value in
-        print("no op")
-        return ""
-    }
+    RunningEVM(
+        target_addr: .constant(""),
+        msg_sender: .constant(""),
+        msg_sender_eth_balance: .constant("")) { input, msg_value in
+            print("no op")
+            return .success(return_value: "")
+        }
 }
 
 #Preview("enabled EIPs") {

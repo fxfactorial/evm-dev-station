@@ -265,8 +265,9 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                 )
             }
             
-            .tabItem { Text("live dev") }.tag(0)
-            TraceView().tabItem { Text("TraceView") }.tag(1)
+            .tabItem { Text("Live Dev") }.tag(0)
+            StateInspector(d: d)
+                .tabItem { Text("State Inspector") }.tag(1)
         }).onAppear {
             // TODO only during dev at the moment
             selected_contract = loaded_contracts[2]
@@ -280,7 +281,8 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     }
 }
 
-struct TraceView: View {
+struct StateInspector: View {
+    let d : EVMDriver
     var body : some View {
         Text("placeholder")
     }
@@ -514,7 +516,7 @@ struct RunningEVM<Driver: EVMDriver>: View {
                             _hack_redraw_hook = $0
                         }
                     ), label: {
-                        Text("EVM hook")
+                        Text("Record Executed Operations")
                     })
                 }
             }
@@ -527,15 +529,19 @@ struct RunningEVM<Driver: EVMDriver>: View {
 
 #Preview("dev center") {
     EVMDevCenter(driver: StubEVMDriver())
-      .frame(width: 1024, height: 760)
-      .onAppear {
-          let dummy_items : [ExecutedEVMCode] = [
-            .init(pc: "0x07c9", op_name: "DUP2", opcode: "0x81", gas: 20684, gas_cost: 3, depth: 3, refund: 0),
-            .init(pc: "0x07c9", op_name: "JUMP", opcode: "0x56", gas: 20684, gas_cost: 8, depth: 3, refund: 0)
-          ]
-          ExecutedOperations.shared.execed_operations.append(contentsOf: dummy_items)
-      }
-    
+        .frame(width: 1224, height: 760)
+        .onAppear {
+            let dummy_items : [ExecutedEVMCode] = [
+                .init(pc: "0x07c9", op_name: "DUP2", opcode: "0x81", gas: 20684, gas_cost: 3, depth: 3, refund: 0),
+                .init(pc: "0x07c9", op_name: "JUMP", opcode: "0x56", gas: 20684, gas_cost: 8, depth: 3, refund: 0)
+            ]
+            ExecutedOperations.shared.execed_operations.append(contentsOf: dummy_items)
+        }
+}
+
+#Preview("state inspect") {
+    StateInspector(d: StubEVMDriver())
+        .frame(width: 768, height: 480)
 }
 
 #Preview("running EVM") {

@@ -81,6 +81,7 @@ struct RotatingDotAnimation: View {
 public struct EVMDevCenter<Driver: EVMDriver> : View {
     
     @State private var bytecode_add = false
+    // TODO refactor these into a stateobject
     @State private var new_contract_name = ""
     @State private var new_contract_bytecode = ""
     @State private var new_contract_abi = ""
@@ -92,7 +93,8 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     @State private var msg_sender = ""
     @State private var msg_sender_eth_balance = ""
     @State private var show_loading_db = false
-
+    @State private var db_loaded_from_chain = false
+    
     let d : Driver
     
     public init(driver : Driver) {
@@ -110,6 +112,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     @State private var deploy_contract_result = ""
     @State var eips_used : [EIP] = []
     @ObservedObject private var execed_ops = ExecutedOperations.shared
+    @StateObject private var current_block_header = CurrentBlockHeader()
     
     private func running_evm(calldata: String, msg_value: String) -> EVMCallResult {
         print("kicking off running evm \(calldata) \(msg_value) \(selected_contract!.address)")
@@ -117,6 +120,8 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
         print(call_result)
         return call_result
     }
+    
+    @State private var present_load_contract_sheet = false
     
     public var body: some View {
         
@@ -138,8 +143,14 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             Button {
                                 bytecode_add.toggle()
                             } label: {
-                                Text("Add Contract")
+                                Text("Add New Contract")
                             }
+                            Button {
+                                present_load_contract_sheet.toggle()
+                            } label: {
+                                Text("Load Contract from chain")
+                            }.disabled(!db_loaded_from_chain)
+                                .help("must first load an existing blockchain database")
                         }
                     }
                     VStack {
@@ -205,7 +216,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             TableColumn("OPNAME", value: \.op_name)
                             TableColumn("OPCODE", value: \.opcode)
                             TableColumn("GAS", value: \.gas_cost)
-                        }.onReceive(ExecutedOperations.shared.$execed_operations, 
+                        }.onReceive(ExecutedOperations.shared.$execed_operations,
                                     perform: { item in
                             // print("got a new value")
                         })
@@ -231,7 +242,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             }
                             .padding()
                             .background()
-
+                            
                         }
                         VStack {
                             Text("EVM Configuration")
@@ -247,8 +258,9 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             .padding()
                             .background()
                         }
-                        StateDBDetails(kind: .InMemory)
-                            .padding()
+                        StateDBDetails()
+                            .environmentObject(current_block_header)
+                        .padding()
                     }.frame(maxHeight: .infinity, alignment: .topLeading)
                 }
                 RunningEVM(target_addr: Binding<String>(
@@ -270,6 +282,16 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                            d: d)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            
+            .sheet(isPresented: $present_load_contract_sheet, onDismiss: {
+                // something
+            }, content: {
+                LoadContractFromChain(do_load: { name, addr in
+                    //
+                })
+            })
+            
+            
             .sheet(isPresented: $present_load_db_sheet, onDismiss: {
                 //
             }, content: {
@@ -278,18 +300,54 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                     withAnimation {
                         show_loading_db = true
                     }
-                    Task {
+                    
+                    Task.detached {
+                        defer {
+                            Task {
+                                await MainActor.run {
+                                    withAnimation {
+                                        show_loading_db = false
+                                    }
+                                }
+                            }
+                        }
+                        
                         do {
-                            let load_result = try d.load_chaindata(
+                            // no idea why having this needless awaits just for preview to work - very dumb
+                            try await d.load_chaindata(
                                 pathdir: chaindata_dir,
                                 db_kind: db_kind
                             )
+                            let head = try await d.load_chainhead()
+                            let decoder = JSONDecoder()
+                            guard let blk_header = try? decoder.decode(
+                                BlockHeader.self,
+                                from: head.data(using: .utf8)!) else {
+                                // should not be happening
+                                return
+                            }
+                            guard let head_number = UInt32(
+                                blk_header.number.dropFirst(2),
+                                radix: 16
+                            ) else {
+                                print("problem converting \(blk_header.number)")
+                                return
+                            }
+                            
+                            DispatchQueue.main.async {
+                                current_block_header.block_number = head_number
+                                current_block_header.db_backing = .GethDB
+                                current_block_header.state_root = blk_header.stateRoot
+                                db_loaded_from_chain = true
+                            }
+                            
+                            print("head is \(head) -> \(blk_header)")
                         } catch {
-                            print("some kind of problem")
+                            print("some kind of problem \(error)")
+                            return
                         }
-                        withAnimation {
-                            show_loading_db = false
-                        }
+                        
+                        
                     }
                 }
             })
@@ -347,24 +405,9 @@ struct StateInspector: View {
     }
 }
 
-enum StateDBKind: String {
-    case InMemory = "in memory state"
-    case GethDB = "geth based leveldb"
-    //    var description: String {
-    //        switch self {
-    //        case .InMemory:
-    //            return "in memory state"
-    //        case .GethDB:
-    //            return "geth based leveldb"
-    //        }
-    //    }
-}
-
 struct StateDBDetails: View {
-    let kind: StateDBKind
-    let block_number: Int = 12_000_000
-    let state_root : String = "0x01"
-    
+    @EnvironmentObject var current_head : CurrentBlockHeader
+//    @EnvironmentObject var
     var body: some View {
         VStack {
             Text("State used by EVM")
@@ -373,17 +416,17 @@ struct StateDBDetails: View {
                 HStack {
                     Text("Kind: ")
                     Spacer()
-                    Text(kind.rawValue)
+                    Text(current_head.db_backing.rawValue)
                 }
                 HStack {
                     Text("BlockNumber: ")
                     Spacer()
-                    Text("\(block_number)")
+                    Text("\(current_head.block_number)")
                 }
                 HStack {
-                    Text("State Root Hash:")
+                    Text("State Root")
                     Spacer()
-                    Text(state_root)
+                    Text(current_head.state_root)
                 }
             }
             .padding()
@@ -479,6 +522,46 @@ struct ABIEncode: View {
     }
 }
 
+struct LoadContractFromChain : View {
+    let do_load: (String, String) -> Void
+    @State private var contract_name = ""
+    @State private var contract_addr = ""
+    @Environment(\.dismiss) var dismiss
+    
+    
+    var body: some View {
+        VStack {
+            HStack {
+                Text("Contract Name")
+                TextField("nickname", text: $contract_name)
+            }
+            HStack {
+                Text("Contract Address")
+                TextField("0x...", text: $contract_addr)
+            }
+            HStack {
+                Button {
+                    do_load(contract_name, contract_addr)
+                    dismiss()
+                } label: {
+                    Text("Load Contract")
+                        .help("could take a second please wait")
+                }
+                Button { dismiss() } label : { Text("Cancel") }
+            }
+        }
+        .padding()
+        .frame(width: 460, height: 220)
+    }
+    
+}
+
+#Preview("load from chain") {
+    LoadContractFromChain { _, _ in
+        //
+    }
+}
+
 struct LoadExistingDB : View {
     let d : EVMDriver
     @Environment(\.dismiss) var dismiss
@@ -519,7 +602,8 @@ struct LoadExistingDB : View {
                 }
                 Spacer()
                 Button {
-                    finished((db_kind: selected_option, chaindata: chaindata_dir))
+                    finished((db_kind: selected_option,
+                              chaindata: chaindata_dir))
                     dismiss()
                 } label: {
                     Text("Ok")
@@ -657,7 +741,7 @@ struct RunningEVM<Driver: EVMDriver>: View {
     LoadExistingDB(d: StubEVMDriver(), finished: { _, _ in
         //
     })
-        .frame(width: 480, height: 380)
+    .frame(width: 480, height: 380)
 }
 
 

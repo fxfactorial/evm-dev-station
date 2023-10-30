@@ -49,6 +49,13 @@ struct LoadChainDataResult {
   size_t error_reason_size;
 };
 
+struct ChainHeadResult {
+  char *error_reason;
+  size_t error_reason_size;
+  char *chain_head_json;
+  size_t chain_head_json_size;
+};
+
 
 #line 1 "cgo-generated-wrapper"
 
@@ -106,7 +113,15 @@ typedef struct { void *data; GoInt len; GoInt cap; } GoSlice;
 extern "C" {
 #endif
 
-extern struct LoadChainDataResult LoadChainData(GoString pathDir, GoString kind);
+extern struct ChainHeadResult ChainHead();
+
+/* Return type for LoadCodeFromState */
+struct LoadCodeFromState_return {
+	char* r0;
+	int r1;
+};
+extern struct LoadCodeFromState_return LoadCodeFromState(GoString addr);
+extern struct LoadChainDataResult LoadChainData(GoString pathDir, GoInt dbKind);
 extern void TestReceiveGoString(GoString input);
 extern int NewEVMSession();
 extern void NewGlobalEVM();

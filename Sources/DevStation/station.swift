@@ -37,6 +37,17 @@ extension String {
         return as_g
     }
 
+    func to_go_string3() -> GoString {
+        let wrapped = self.data(using: .utf8)?.withUnsafeBytes {
+            $0.baseAddress?.assumingMemoryBound(to: CChar.self)
+        }!
+        let as_g = GoString(p: wrapped, n: self.count)
+        return as_g
+    }
+
+
+//        GoString(
+
 
 }
 
@@ -123,8 +134,29 @@ final class EVM: EVMDriver {
     
     func load_chaindata(pathdir: String, db_kind: String) throws {
         let started = Date.now
-        print("starting loading chain \(started) - \(pathdir) - \(db_kind)")
-        let result = EVMBridge.LoadChainData(pathdir.to_go_string2(), db_kind.to_go_string())
+        print("swift starting loading chain \(started) - \(pathdir) - \(db_kind)")
+        let db_kind = db_kind.trimmingCharacters(in: .whitespacesAndNewlines)
+        let pathdir = pathdir.trimmingCharacters(in: .whitespacesAndNewlines)
+//        print(db_kind.debugDescription)
+//        print(pathdir.debugDescription)
+//        let wrapped_kind = db_kind.data(using: .ascii)?.withUnsafeBytes {
+//            $0.baseAddress?.assumingMemoryBound(to: CChar.self)
+//        }!
+//        UnsafeBufferPointer(start: <#T##UnsafePointer<Element>?#>, count: <#T##Int#>)
+//        let r = UnsafePointer<CChar>(db_kind.utf8CString)
+        // later ask on swift forums whats going on with small strings
+//        let db_g = GoString(p: wrapped_kind, n: db_kind.count)
+//        let db = db_kind.to_go_string()
+        let path = pathdir.to_go_string2()
+//        EVMBridge.TestReceiveGoString(db_g)
+//        EVMBridge.TestReceiveGoString(path)
+        let kind = switch db_kind {
+        case "pebble":GoInt(0)
+        case "leveldb":GoInt(1)
+        default:
+            throw EVMError.load_chaindata_problem("db kind wasnt pebble or leveldb")
+        }
+        let result = EVMBridge.LoadChainData(path, kind)
         let finished = Date.now
         print("finished loading chain \(finished)")
         if result.error_reason_size > 0 {
@@ -134,7 +166,19 @@ final class EVM: EVMDriver {
             throw EVMError.load_chaindata_problem(error_str)
 //            return .failure(reason: error_str)
         }
+    }
+    
+    func load_chainhead() throws -> String {
+        let result = EVMBridge.ChainHead()
+        print("print result \(result)")
+        let wrapped = String(cString: result.chain_head_json)
+        free(result.chain_head_json)
+        print("wrapped loaded \(wrapped)")
+        return wrapped
+    }
 
+    func load_contract(addr: String) throws {
+        
     }
 }
 

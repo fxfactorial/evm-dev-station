@@ -55,7 +55,31 @@ public enum EVMError : Error {
     case deploy_issue(reason: String)
 }
 
-
+struct RotatingDotAnimation: View {
+    
+    @State private var startAnimation = false
+    @State private var duration = 1.0 // Works as speed, since it repeats forever
+    
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(lineWidth: 4)
+                .foregroundColor(.blue.opacity(0.5))
+                .frame(width: 35, height: 35, alignment: .center)
+            Circle()
+                .fill(.blue)
+                .frame(width: 12, height: 12, alignment: .center)
+                .offset(x: -9)
+                .rotationEffect(.degrees(startAnimation ? 360 : 0))
+                .animation(.easeInOut(duration: duration).repeatForever(autoreverses: false),
+                           value: startAnimation
+                )
+        }
+        .onAppear {
+            self.startAnimation.toggle()
+        }
+    }
+}
 
 public struct EVMDevCenter<Driver: EVMDriver> : View {
     
@@ -70,6 +94,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     @State private var present_load_db_sheet = false
     @State private var msg_sender = ""
     @State private var msg_sender_eth_balance = ""
+    @State private var show_loading_db = false
 
     let d : Driver
     
@@ -193,16 +218,23 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                         VStack {
                             Text("Load Blockchain")
                                 .font(.title)
-                            //                                .font(.system(size: 14, weight: .bold))
                                 .help("load state/contract")
-                            Button {
-                                present_load_db_sheet.toggle()
-                            } label: {
-                                Text("load existing db")
+                            VStack {
+                                HStack {
+                                    if show_loading_db {
+                                        RotatingDotAnimation()
+                                    }
+                                    Button {
+                                        present_load_db_sheet.toggle()
+                                    } label: {
+                                        Text("load existing db")
+                                    }
+                                }
                             }
+                            .padding()
+                            .background()
+
                         }
-                        .background()
-                        .padding()
                         VStack {
                             Text("EVM Configuration")
                                 .font(.system(size: 14, weight: .bold))
@@ -245,6 +277,9 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
             }, content: {
                 LoadExistingDB(d:d) { db_kind, chaindata_dir in
                     print("got the \(db_kind) - \(chaindata_dir)")
+                    withAnimation {
+                        show_loading_db = true
+                    }
                 }
             })
             .sheet(isPresented: $present_eips_sheet,

@@ -24,7 +24,7 @@ public protocol EVMDriver {
     func call(calldata: String, target_addr: String, msg_value: String) -> EVMCallResult
     func load_chaindata(pathdir: String, db_kind: String) throws
     func load_chainhead() throws -> String
-    func load_contract(addr: String) throws
+    func load_contract(addr: String) throws -> String
 }
 
 public struct ExecutedEVMCode: Identifiable{
@@ -62,7 +62,7 @@ public class ExecutedOperations : ObservableObject {
 
 public enum DBKind: String {
     case InMemory = "in memory state"
-    case GethDB = "geth based leveldb"
+    case GethDB = "geth created chaindata"
     //    var description: String {
     //        switch self {
     //        case .InMemory:

@@ -30,10 +30,11 @@ extension String {
     }
 
     func to_go_string2() -> GoString {
-        let wrapped = self.data(using: .ascii)?.withUnsafeBytes {
+        let copy = String(self)
+        let wrapped = copy.data(using: .ascii)?.withUnsafeBytes {
             $0.baseAddress?.assumingMemoryBound(to: CChar.self)
         }!
-        let as_g = GoString(p: wrapped, n: self.count)
+        let as_g = GoString(p: wrapped, n: copy.count)
         return as_g
     }
 
@@ -147,6 +148,7 @@ final class EVM: EVMDriver {
         // later ask on swift forums whats going on with small strings
 //        let db_g = GoString(p: wrapped_kind, n: db_kind.count)
 //        let db = db_kind.to_go_string()
+        
         let path = pathdir.to_go_string2()
 //        EVMBridge.TestReceiveGoString(db_g)
 //        EVMBridge.TestReceiveGoString(path)
@@ -177,8 +179,12 @@ final class EVM: EVMDriver {
         return wrapped
     }
 
-    func load_contract(addr: String) throws {
-        
+    func load_contract(addr: String) throws -> String {
+        let result = EVMBridge.LoadCodeFromState(addr.to_go_string2())
+        let wrapped = Data(bytes: result.r0, count: Int(result.r1))
+        let contract = String(bytes: wrapped, encoding: .utf8)!
+        free(result.r0)
+        return contract
     }
 }
 

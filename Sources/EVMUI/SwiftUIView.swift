@@ -287,7 +287,24 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                 // something
             }, content: {
                 LoadContractFromChain(do_load: { name, addr in
-                    //
+                    
+//                    Task.detached {
+                        guard let code = try? d.load_contract(addr: addr) else {
+                            print("problem loading contract")
+                            return
+                        }
+
+                        print("here is the actual contract loaded from chain", code)
+
+                        DispatchQueue.main.async {
+                            loaded_contracts.append(
+                                .init(name: name, bytecode: code, address: addr)
+                            )
+                            withAnimation {
+                                selected_contract = loaded_contracts.last
+                            }
+                        }
+//                    }
                 })
             })
             
@@ -551,7 +568,7 @@ struct LoadContractFromChain : View {
             }
         }
         .padding()
-        .frame(width: 460, height: 220)
+        .frame(width: 490, height: 220)
     }
     
 }

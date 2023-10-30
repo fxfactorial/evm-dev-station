@@ -43,7 +43,7 @@ class StubEVMDriver: EVMDriver {
         return ""
     }
 
-    func load_contract(addr: String) throws {
-        //
+    func load_contract(addr: String) throws -> String{
+        return ""
     }
 }

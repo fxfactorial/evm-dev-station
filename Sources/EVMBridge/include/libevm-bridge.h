@@ -120,7 +120,7 @@ struct LoadCodeFromState_return {
 	char* r0;
 	int r1;
 };
-extern struct LoadCodeFromState_return LoadCodeFromState(GoString addr);
+extern struct LoadCodeFromState_return LoadCodeFromState(GoString addrSwift);
 extern struct LoadChainDataResult LoadChainData(GoString pathDir, GoInt dbKind);
 extern void TestReceiveGoString(GoString input);
 extern int NewEVMSession();

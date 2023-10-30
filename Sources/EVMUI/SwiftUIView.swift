@@ -51,9 +51,6 @@ extension Collection {
     }
 }
 
-public enum EVMError : Error {
-    case deploy_issue(reason: String)
-}
 
 struct RotatingDotAnimation: View {
     
@@ -208,7 +205,8 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             TableColumn("OPNAME", value: \.op_name)
                             TableColumn("OPCODE", value: \.opcode)
                             TableColumn("GAS", value: \.gas_cost)
-                        }.onReceive(ExecutedOperations.shared.$execed_operations, perform: { item in
+                        }.onReceive(ExecutedOperations.shared.$execed_operations, 
+                                    perform: { item in
                             // print("got a new value")
                         })
                     }
@@ -279,6 +277,19 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                     print("got the \(db_kind) - \(chaindata_dir)")
                     withAnimation {
                         show_loading_db = true
+                    }
+                    Task {
+                        do {
+                            let load_result = try d.load_chaindata(
+                                pathdir: chaindata_dir,
+                                db_kind: db_kind
+                            )
+                        } catch {
+                            print("some kind of problem")
+                        }
+                        withAnimation {
+                            show_loading_db = false
+                        }
                     }
                 }
             })

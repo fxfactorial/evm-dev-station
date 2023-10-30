@@ -120,6 +120,22 @@ final class EVM: EVMDriver {
     func exec_callback_enabled() -> Bool {
         return _cb_enabled
     }
+    
+    func load_chaindata(pathdir: String, db_kind: String) throws {
+        let started = Date.now
+        print("starting loading chain \(started) - \(pathdir) - \(db_kind)")
+        let result = EVMBridge.LoadChainData(pathdir.to_go_string2(), db_kind.to_go_string())
+        let finished = Date.now
+        print("finished loading chain \(finished)")
+        if result.error_reason_size > 0 {
+            let error_wrapped = Data(bytes: result.error_reason, count: result.error_reason_size)
+            let error_str = String(bytes: error_wrapped, encoding: .utf8)!
+            free(result.error_reason)
+            throw EVMError.load_chaindata_problem(error_str)
+//            return .failure(reason: error_str)
+        }
+
+    }
 }
 
 func convert(length: Int, data: UnsafePointer<Int>) -> [Int] {
@@ -134,6 +150,12 @@ struct Rootview : View {
         }.frame(width: 1480, height: 760, alignment: .center)
     }
 }
+
+//@_cdecl("chain_load_finished")
+//public func chain_load_finished() {
+//    let when_done = Date.now
+//    print("finished loading chain at \(when_done)")
+//}
 
 @_cdecl("evm_run_callback")
 public func evm_run_callback(

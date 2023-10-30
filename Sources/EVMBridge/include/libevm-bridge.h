@@ -23,6 +23,8 @@ typedef struct { const char *p; ptrdiff_t n; } _GoString_;
 
 #include <stdbool.h>
 extern void evm_run_callback(int, char*, char*, int);
+extern void chain_load_finished();
+
 struct NewContractResult {
    bool is_error;
    char* error_reason;

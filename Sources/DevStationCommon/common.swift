@@ -5,6 +5,13 @@ public enum EVMCallResult {
     case failure(reason: String)
 }
 
+public enum EVMError : Error {
+    case deploy_issue(reason: String)
+    case load_chaindata_problem(String)
+}
+
+// TODO rename to backend golang code interface, something cause
+// we also load up the database and such
 public protocol EVMDriver {
 
     // not sure how to do this as the get,set way without turning into existential type/observable later
@@ -15,7 +22,7 @@ public protocol EVMDriver {
     func new_evm_singleton()
     func available_eips() -> [Int]
     func call(calldata: String, target_addr: String, msg_value: String) -> EVMCallResult
-
+    func load_chaindata(pathdir: String, db_kind: String) throws
 }
 
 public struct ExecutedEVMCode: Identifiable{

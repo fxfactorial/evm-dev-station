@@ -34,4 +34,8 @@ class StubEVMDriver: EVMDriver, ObservableObject {
     func exec_callback_enabled() -> Bool {
         _cb_enabled
     }
+
+    func load_chaindata(pathdir: String, db_kind: String) throws {
+        //
+    }
 }

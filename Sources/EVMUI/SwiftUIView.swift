@@ -15,7 +15,7 @@ struct BlockContext : View {
     var body : some View {
         VStack {
             Text("Block Context")
-                .font(.system(size: 14, weight: .bold))
+                .font(.title)
             VStack {
                 HStack {
                     Text("Coinbase")
@@ -67,9 +67,10 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     @State private var current_tab = 0
     @State private var calldata = ""
     @State private var present_eips_sheet = false
+    @State private var present_load_db_sheet = false
     @State private var msg_sender = ""
     @State private var msg_sender_eth_balance = ""
-    
+
     let d : Driver
     
     public init(driver : Driver) {
@@ -104,7 +105,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                     NavigationStack {
                         VStack {
                             Text("Loaded contracts")
-                                .font(.system(size:14, weight: .bold))
+                                .font(.title)
                                 .help("interact with contracts loaded")
                             List(loaded_contracts, id:\.self,
                                  selection: $selected_contract) { item in
@@ -124,7 +125,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             if let contract = selected_contract {
                                 VStack {
                                     Text("Contract bytecode")
-                                        .font(.system(size: 14, weight: .bold))
+                                        .font(.title)
                                     ScrollView {
                                         Text(contract.bytecode)
                                             .lineLimit(nil)
@@ -137,7 +138,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             }
                             VStack {
                                 Text("Contract Details")
-                                    .font(.system(size: 14, weight: .bold))
+                                    .font(.title)
                                 VStack {
                                     Button {
                                         if var contract = selected_contract {
@@ -175,8 +176,8 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             }
                             .frame(width: 200)
                         }
-                        Text("Executed Operations \(execed_ops.execed_operations.count)")
-                            .font(.system(size: 14, weight: .bold))
+                        Text("\(execed_ops.execed_operations.count) Executed Operations")
+                            .font(.title)
                         Table(execed_ops.execed_operations) {
                             TableColumn("PC", value: \.pc)
                             TableColumn("OPNAME", value: \.op_name)
@@ -188,12 +189,17 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                     }
                     VStack {
                         BlockContext()
-                            .frame(maxWidth: 300)
+                            .frame(maxWidth: 240)
                         VStack {
-                            Text("Running Controls")
-                                .font(.system(size: 14, weight: .bold))
+                            Text("Load Blockchain")
+                                .font(.title)
+                            //                                .font(.system(size: 14, weight: .bold))
                                 .help("load state/contract")
-                            Text("Continue")
+                            Button {
+                                present_load_db_sheet.toggle()
+                            } label: {
+                                Text("load existing db")
+                            }
                         }
                         .background()
                         .padding()
@@ -234,6 +240,13 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                            d: d)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .sheet(isPresented: $present_load_db_sheet, onDismiss: {
+                //
+            }, content: {
+                LoadExistingDB(d:d) { db_kind, chaindata_dir in
+                    print("got the \(db_kind) - \(chaindata_dir)")
+                }
+            })
             .sheet(isPresented: $present_eips_sheet,
                    onDismiss: {
                 // just hold onto it
@@ -309,7 +322,7 @@ struct StateDBDetails: View {
     var body: some View {
         VStack {
             Text("State used by EVM")
-                .font(.system(size: 14, weight: .bold))
+                .font(.title)
             VStack {
                 HStack {
                     Text("Kind: ")
@@ -420,6 +433,60 @@ struct ABIEncode: View {
     }
 }
 
+struct LoadExistingDB : View {
+    let d : EVMDriver
+    @Environment(\.dismiss) var dismiss
+    @State private var options = ["pebble", "leveldb"]
+    @State private var selected_option = "pebble"
+    @State private var chaindata_dir = ""
+    @State private var present_fileimporter = false
+    let finished: ((db_kind: String, chaindata: String)) -> Void
+    
+    var body: some View {
+        VStack {
+            Picker("Database kind", selection: $selected_option) {
+                ForEach(options, id: \.self) { option in
+                    Text(option).tag(option)
+                }
+            }
+            .tint(.black)
+            .pickerStyle(.menu)
+            HStack {
+                Text("Chaindata")
+                TextField("directory", text: $chaindata_dir)
+            }
+            HStack {
+                Button {
+                    present_fileimporter.toggle()
+                } label: {
+                    Text("Select directory")
+                }.fileImporter(isPresented: $present_fileimporter,
+                               allowedContentTypes: [.directory]) { result in
+                    switch result {
+                    case .success(let directory):
+                        chaindata_dir = directory.path()
+                        // gain access to the directory
+                    case .failure(let error):
+                        // how would this even happen?
+                        print(error)
+                    }
+                }
+                Spacer()
+                Button {
+                    finished((db_kind: selected_option, chaindata: chaindata_dir))
+                    dismiss()
+                } label: {
+                    Text("Ok")
+                }
+            }
+        }
+        .padding()
+        .frame(width: 400, height: 300)
+    }
+}
+
+
+
 struct RunningEVM<Driver: EVMDriver>: View {
     @State private var calldata = ""
     @State private var msg_value = ""
@@ -443,6 +510,7 @@ struct RunningEVM<Driver: EVMDriver>: View {
     var body: some View {
         VStack {
             Text("Live Contract Interaction")
+                .font(.title)
             HStack {
                 VStack {
                     HStack {
@@ -538,6 +606,15 @@ struct RunningEVM<Driver: EVMDriver>: View {
             ExecutedOperations.shared.execed_operations.append(contentsOf: dummy_items)
         }
 }
+
+#Preview("load existing db") {
+    LoadExistingDB(d: StubEVMDriver(), finished: { _, _ in
+        //
+    })
+        .frame(width: 480, height: 380)
+}
+
+
 
 #Preview("state inspect") {
     StateInspector(d: StubEVMDriver())

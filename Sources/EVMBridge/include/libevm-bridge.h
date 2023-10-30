@@ -42,6 +42,11 @@ struct SetAccountBalanceResult {
    size_t error_reason_size;
 };
 
+struct LoadChainDataResult {
+  char *error_reason;
+  size_t error_reason_size;
+};
+
 
 #line 1 "cgo-generated-wrapper"
 
@@ -99,9 +104,11 @@ typedef struct { void *data; GoInt len; GoInt cap; } GoSlice;
 extern "C" {
 #endif
 
+extern struct LoadChainDataResult LoadChainData(GoString pathDir, GoString kind);
 extern void TestReceiveGoString(GoString input);
 extern int NewEVMSession();
 extern void NewGlobalEVM();
+extern void PauseOnOpcode(char code);
 extern void EnableCallback(GoUint8 status);
 extern void EnableStopOnCall(GoUint8 enable);
 extern struct SetAccountBalanceResult SetAccountBalance(GoString account, GoString balance);

@@ -42,6 +42,8 @@ struct LoadedContract : Hashable, Identifiable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
+    let abi_id : Int
+    let method_names: [String]
 }
 
 extension Collection {
@@ -78,7 +80,20 @@ struct RotatingDotAnimation: View {
     }
 }
 
-public struct EVMDevCenter<Driver: EVMDriver> : View {
+class EVMRunStateControls: ObservableObject {
+    @Published var record_executed_operations = false
+    @Published var breakpoint_on_call = false
+    @Published var breakpoint_on_jump = false
+}
+
+class LoadChainModel: ObservableObject {
+    @Published var chaindata_directory = ""
+    @Published var is_chain_loaded = false
+    @Published var show_loading_db = false
+    @Published var db_kind : DBKind = .InMemory
+}
+
+public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
     
     @State private var bytecode_add = false
     // TODO refactor these into a stateobject
@@ -92,27 +107,32 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     @State private var present_load_db_sheet = false
     @State private var msg_sender = ""
     @State private var msg_sender_eth_balance = ""
-    @State private var show_loading_db = false
-    @State private var db_loaded_from_chain = false
+    
+    
+    @StateObject private var chaindb = LoadChainModel()
+    @StateObject private var current_block_header = CurrentBlockHeader()
+    @StateObject private var evm_run_controls = EVMRunStateControls()
     
     let d : Driver
-    
-    public init(driver : Driver) {
+    let abi: ABIDriver
+
+    public init(driver : Driver, abi_driver: ABI) {
         d = driver
+        abi = abi_driver
     }
     
     
     @State private var loaded_contracts : [LoadedContract] = [
-        .init(name: "uniswapv3", bytecode: "123", address: "0x1256"),
-        .init(name: "compound", bytecode: "456", address: "0x1234"),
+        .init(name: "uniswapv3", bytecode: "123", address: "0x1256", abi_id: 0, method_names: []),
+        .init(name: "compound", bytecode: "456", address: "0x1234", abi_id: 1, method_names: []),
         sample_contract
     ]
     
     @State private var selected_contract : LoadedContract?
     @State private var deploy_contract_result = ""
     @State var eips_used : [EIP] = []
+    // Use observedobject on singletons
     @ObservedObject private var execed_ops = ExecutedOperations.shared
-    @StateObject private var current_block_header = CurrentBlockHeader()
     
     private func running_evm(calldata: String, msg_value: String) -> EVMCallResult {
         print("kicking off running evm \(calldata) \(msg_value) \(selected_contract!.address)")
@@ -149,7 +169,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                 present_load_contract_sheet.toggle()
                             } label: {
                                 Text("Load Contract from chain")
-                            }.disabled(!db_loaded_from_chain)
+                            }.disabled(!chaindb.is_chain_loaded)
                                 .help("must first load an existing blockchain database")
                         }
                     }
@@ -220,6 +240,9 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                     perform: { item in
                             // print("got a new value")
                         })
+                        if let contract = selected_contract {
+                            ABIEncode(d: abi, abi_id: contract.abi_id, method_names: contract.method_names)
+                        }
                     }
                     VStack {
                         BlockContext()
@@ -230,7 +253,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                 .help("load state/contract")
                             VStack {
                                 HStack {
-                                    if show_loading_db {
+                                    if chaindb.show_loading_db {
                                         RotatingDotAnimation()
                                     }
                                     Button {
@@ -260,7 +283,8 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                         }
                         StateDBDetails()
                             .environmentObject(current_block_header)
-                        .padding()
+                            .environmentObject(chaindb)
+                            .padding()
                     }.frame(maxHeight: .infinity, alignment: .topLeading)
                 }
                 RunningEVM(target_addr: Binding<String>(
@@ -280,31 +304,34 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                            msg_sender: $msg_sender,
                            msg_sender_eth_balance: $msg_sender_eth_balance,
                            d: d)
+                .environmentObject(evm_run_controls)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             
             .sheet(isPresented: $present_load_contract_sheet, onDismiss: {
                 // something
             }, content: {
-                LoadContractFromChain(do_load: { name, addr in
+                LoadContractFromChain(do_load: { name, addr, abi in
+                    if name.isEmpty || addr.isEmpty {
+                        return
+                    }
+                    //                    Task.detached {
+                    guard let code = try? d.load_contract(addr: addr) else {
+                        print("problem loading contract")
+                        return
+                    }
                     
-//                    Task.detached {
-                        guard let code = try? d.load_contract(addr: addr) else {
-                            print("problem loading contract")
-                            return
+                    print("here is the actual contract loaded from chain", code)
+                    
+                    DispatchQueue.main.async {
+                        loaded_contracts.append(
+                            .init(name: name, bytecode: code, address: addr, abi_id: 0, method_names: [])
+                        )
+                        withAnimation {
+                            selected_contract = loaded_contracts.last
                         }
-
-                        print("here is the actual contract loaded from chain", code)
-
-                        DispatchQueue.main.async {
-                            loaded_contracts.append(
-                                .init(name: name, bytecode: code, address: addr)
-                            )
-                            withAnimation {
-                                selected_contract = loaded_contracts.last
-                            }
-                        }
-//                    }
+                    }
+                    //                    }
                 })
             })
             
@@ -315,7 +342,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                 LoadExistingDB(d:d) { db_kind, chaindata_dir in
                     print("got the \(db_kind) - \(chaindata_dir)")
                     withAnimation {
-                        show_loading_db = true
+                        chaindb.show_loading_db = true
                     }
                     
                     Task.detached {
@@ -323,7 +350,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             Task {
                                 await MainActor.run {
                                     withAnimation {
-                                        show_loading_db = false
+                                        chaindb.show_loading_db = false
                                     }
                                 }
                             }
@@ -353,9 +380,9 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             
                             DispatchQueue.main.async {
                                 current_block_header.block_number = head_number
-                                current_block_header.db_backing = .GethDB
                                 current_block_header.state_root = blk_header.stateRoot
-                                db_loaded_from_chain = true
+                                chaindb.is_chain_loaded = true
+                                chaindb.db_kind = if db_kind == "pebble" { .GethDBPebble} else { .GethDBLevelDB }
                             }
                             
                             print("head is \(head) -> \(blk_header)")
@@ -385,11 +412,22 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                 } catch {
                     return
                 }
-                
+
+
+//                let abi_id = if !new_contract_abi.isEmpty { try! abi.add_abi(abi_json: new_contract_abi)} else { 0 }
+//                // TODO actually call out to the ABI go code
+//                let method_names = if abi_id > 0 { try! abi.methods_for_abi(abi_id: abi_id) } else { [] }
+
+                let abi_id = 0
+                let method_names : [String] = []
+
                 loaded_contracts.append(LoadedContract(
                     name: new_contract_name,
                     bytecode: new_contract_bytecode,
-                    address: new_addr)
+                    address: new_addr,
+                    abi_id: abi_id,
+                    method_names: method_names
+                )
                 )
             } content: {
                 NewContractByteCode(
@@ -415,33 +453,68 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     }
 }
 
+struct StateAccount : Hashable,  Identifiable {
+    let addr : String
+    let code_hash: String
+    let id = UUID()
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+}
+
 struct StateInspector: View {
     let d : EVMDriver
+    @State private var loaded_accounts : [StateAccount] = [.init(addr: "0x0123", code_hash: "0x213123")]
+    @State private var selected_account : StateAccount?
+    
     var body : some View {
-        Text("placeholder")
+        VStack{
+            HStack {
+                NavigationStack {
+                    VStack {
+                        Text("Accounts")
+                            .font(.title)
+                        List(loaded_accounts, id: \.id,
+                             selection: $selected_account) { item in
+                            Text(item.addr)
+                        }
+                        Button {
+                            loaded_accounts.append(.init(addr: "more", code_hash: "more"))
+                        } label: {
+                            Text("Load Account")
+                        }
+                    }.frame(maxWidth: 300)
+                }
+                VStack {
+                    Text("first")
+                }
+                Spacer()
+            }.frame(maxWidth: .infinity)
+        }
     }
 }
 
 struct StateDBDetails: View {
     @EnvironmentObject var current_head : CurrentBlockHeader
-//    @EnvironmentObject var
+    @EnvironmentObject var db_backing : LoadChainModel
+    
     var body: some View {
         VStack {
             Text("State used by EVM")
                 .font(.title)
             VStack {
                 HStack {
-                    Text("Kind: ")
+                    Text("Kind:")
                     Spacer()
-                    Text(current_head.db_backing.rawValue)
+                    Text(db_backing.db_kind.rawValue)
                 }
                 HStack {
-                    Text("BlockNumber: ")
+                    Text("BlockNumber:")
                     Spacer()
                     Text("\(current_head.block_number)")
                 }
                 HStack {
-                    Text("State Root")
+                    Text("State Root:")
                     Spacer()
                     Text(current_head.state_root)
                 }
@@ -468,12 +541,16 @@ struct NewContractByteCode: View {
                 TextField("optional contract ABI...", text: $contract_abi, axis: .vertical)
                     .lineLimit(20, reservesSpace: true)
             }
-            Button {
-                dismiss()
-            } label: {
-                Text("Add")
-                    .padding(5)
-                    .scaledToFill()
+            HStack {
+                Button { dismiss() } label: { Text("Cancel").padding(5).scaledToFit().frame(width: 120)}
+                Button {
+                    dismiss()
+                } label: {
+                    Text("Add")
+                        .padding(5)
+                        .scaledToFill()
+                        .frame(width: 120)
+                }
             }
         }.padding()
             .frame(width: 500, height: 450)
@@ -531,18 +608,34 @@ struct KnownEIPs: View {
 }
 
 struct ABIEncode: View {
+    let d : ABIDriver
+    let abi_id: Int
+    let method_names : [String]
+    @State private var selected: String = ""
     
     var body: some View {
-        VStack {
-            Text("some kind of encoder?")
-        }
+        HStack {
+            NavigationStack {
+                Text("Method names")
+                List(method_names, id: \.self,
+                     selection: $selected) { item in
+                    Text(item)
+                }
+            }
+        }.frame(maxWidth: 300, maxHeight: 200)
     }
 }
 
+#Preview("ABI encode table") {
+    ABIEncode(d: StubABIDriver(), abi_id: 0, method_names: ["method1", "method2"])
+}
+
 struct LoadContractFromChain : View {
-    let do_load: (String, String) -> Void
+    let do_load: (String, String, String) -> Void
     @State private var contract_name = ""
     @State private var contract_addr = ""
+    @State private var contract_abi = ""
+
     @Environment(\.dismiss) var dismiss
     
     
@@ -550,21 +643,35 @@ struct LoadContractFromChain : View {
         VStack {
             HStack {
                 Text("Contract Name")
+                    .frame(width: 120)
                 TextField("nickname", text: $contract_name)
             }
             HStack {
                 Text("Contract Address")
+                    .frame(width: 120)
                 TextField("0x...", text: $contract_addr)
             }
             HStack {
+                Text("Optional ABI")
+                    .frame(width: 120)
+                TextEditor(text: $contract_abi)
+            }
+            HStack {
                 Button {
-                    do_load(contract_name, contract_addr)
+                    do_load(contract_name, contract_addr, contract_abi)
                     dismiss()
                 } label: {
                     Text("Load Contract")
                         .help("could take a second please wait")
                 }
                 Button { dismiss() } label : { Text("Cancel") }
+                Button {
+                    contract_name = "uniswap router"
+                    contract_addr = "0xEf1c6E67703c7BD7107eed8303Fbe6EC2554BF6B"
+                    contract_abi = UNISWAP_ROUTER_ABI
+                } label: {
+                    Text("dev mode")
+                }
             }
         }
         .padding()
@@ -574,7 +681,7 @@ struct LoadContractFromChain : View {
 }
 
 #Preview("load from chain") {
-    LoadContractFromChain { _, _ in
+    LoadContractFromChain { _, _ , _ in
         //
     }
 }
@@ -647,6 +754,7 @@ struct RunningEVM<Driver: EVMDriver>: View {
     @Binding var msg_sender_eth_balance: String
     let d : Driver
     @State private var _hack_redraw_hook = false
+    @EnvironmentObject private var evm_run_controls : EVMRunStateControls
     
     func dev_mode() {
         // entry_point(address,uint256)
@@ -722,6 +830,12 @@ struct RunningEVM<Driver: EVMDriver>: View {
                     } label: {
                         Text("enable dev values")
                     }
+                    Toggle(isOn: $evm_run_controls.breakpoint_on_call, label: {
+                        Text("Break on CALL")
+                    })
+                    Toggle(isOn: $evm_run_controls.breakpoint_on_jump, label: {
+                        Text("Break on JUMP")
+                    })
                     Toggle(isOn: Binding<Bool>(
                         get: {
                             d.exec_callback_enabled()
@@ -743,7 +857,7 @@ struct RunningEVM<Driver: EVMDriver>: View {
 
 
 #Preview("dev center") {
-    EVMDevCenter(driver: StubEVMDriver())
+    EVMDevCenter(driver: StubEVMDriver(), abi_driver: StubABIDriver())
         .frame(width: 1224, height: 760)
         .onAppear {
             let dummy_items : [ExecutedEVMCode] = [
@@ -765,6 +879,9 @@ struct RunningEVM<Driver: EVMDriver>: View {
 
 #Preview("state inspect") {
     StateInspector(d: StubEVMDriver())
+        .onAppear {
+            
+        }
         .frame(width: 768, height: 480)
 }
 
@@ -774,7 +891,7 @@ struct RunningEVM<Driver: EVMDriver>: View {
         msg_sender: .constant(""),
         msg_sender_eth_balance: .constant(""),
         d: StubEVMDriver()
-    )
+    ).environmentObject(EVMRunStateControls())
 }
 
 #Preview("enabled EIPs") {

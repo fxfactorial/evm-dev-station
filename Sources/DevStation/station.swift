@@ -30,7 +30,8 @@ extension String {
     }
 
     func to_go_string2() -> GoString {
-        let copy = String(self)
+        //        let copy = String(self)
+        let copy = self
         let wrapped = copy.data(using: .ascii)?.withUnsafeBytes {
             $0.baseAddress?.assumingMemoryBound(to: CChar.self)
         }!
@@ -46,13 +47,40 @@ extension String {
         return as_g
     }
 
-
-//        GoString(
-
-
 }
 
+final class ABIEncoder: ABIDriver {
+    static let shared = ABIEncoder()
+    private var abi_id = 0
 
+    func add_abi(abi_json: String) throws -> Int {
+        abi_id += 1
+        let id = abi_id
+        EVMBridge.AddABI(GoInt(abi_id), abi_json.to_go_string2())
+        return id
+    }
+
+    func methods_for_abi(abi_id: Int) throws -> [String] {
+        let methods_result = EVMBridge.MethodsForABI(GoInt(abi_id))
+        var method_names = [String]()
+        let buffer = UnsafeBufferPointer(start: methods_result.r0, count: Int(methods_result.r1))
+        let wrapped = Array(buffer)
+
+        for i in wrapped {
+            let method = String(cString: i!)
+            free(i!)
+            method_names.append(method)
+        }
+
+        free(methods_result.r0)
+        return method_names
+    }
+
+    func encode_arguments(abi_id: Int, args: [String]) throws -> String {
+        ""
+    }
+
+}
 
 final class EVM: EVMDriver {
     static let shared = EVM()
@@ -196,8 +224,8 @@ func convert(length: Int, data: UnsafePointer<Int>) -> [Int] {
 struct Rootview : View {
     var body : some View {
         VStack {
-            EVMDevCenter(driver: EVM.shared)
-        }.frame(width: 1480, height: 760, alignment: .center)
+            EVMDevCenter(driver: EVM.shared, abi_driver: ABIEncoder.shared)
+        }.frame(width: 1480, height: 960, alignment: .center)
     }
 }
 

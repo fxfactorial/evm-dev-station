@@ -113,6 +113,14 @@ typedef struct { void *data; GoInt len; GoInt cap; } GoSlice;
 extern "C" {
 #endif
 
+extern void AddABI(GoInt name, GoString abiJSON_);
+
+/* Return type for MethodsForABI */
+struct MethodsForABI_return {
+	char** r0;
+	int r1;
+};
+extern struct MethodsForABI_return MethodsForABI(GoInt name);
 extern struct ChainHeadResult ChainHead();
 
 /* Return type for LoadCodeFromState */
@@ -129,8 +137,8 @@ extern void PauseOnOpcode(char code);
 extern void EnableCallback(GoUint8 status);
 extern void EnableStopOnCall(GoUint8 enable);
 extern struct SetAccountBalanceResult SetAccountBalance(GoString account, GoString balance);
-extern struct CallContractResult CallEVM(GoString calldataSwift, GoString targetAddrSwift, GoString msgValueSwift);
-extern struct NewContractResult DeployNewContract(GoString bytecode);
+extern struct CallContractResult CallEVM(GoString calldataSwift_, GoString targetAddrSwift_, GoString msgValueSwift_);
+extern struct NewContractResult DeployNewContract(GoString bytecode_);
 extern int CreateNewContract(int sessionID, char* contractByteCode, int contractByteCodeLength, char* senderC, char* value, GoString test);
 extern int RunCodeOnContract(int sessionID, char* calldata, int calldataLength, char* callerAddr);
 extern void CallGoFromSwift();

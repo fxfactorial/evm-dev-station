@@ -35,6 +35,10 @@ struct BlockContext : View {
 
 
 struct LoadedContract : Hashable, Identifiable {
+    static func == (lhs: LoadedContract, rhs: LoadedContract) -> Bool {
+        lhs.id == rhs.id
+    }
+    
     let name : String
     let bytecode: String
     var address : String
@@ -45,6 +49,7 @@ struct LoadedContract : Hashable, Identifiable {
     let abi_id : Int
     let method_names: [String]
     var abi : SolidityABI?
+    var contract: EthereumContract?
 }
 
 extension Collection {
@@ -243,6 +248,8 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                         })
                         if let contract = selected_contract {
                             ABIEncode(d: abi, loaded_contract: contract)
+                                .padding()
+                                .background()
                         }
                     }
                     VStack {
@@ -335,6 +342,7 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                     if let json_data = abi_json.data(using: .utf8),
                        let parsed_abi = try? JSONDecoder().decode(SolidityABI.self, from: json_data) {
                         contract.abi = parsed_abi
+                        contract.contract = try? EthereumContract(abi_json, at: EthereumAddress(addr))
                     }
                     
                     DispatchQueue.main.async {
@@ -444,6 +452,7 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                 if !abi_json.isEmpty {
                     let json_data = abi_json.data(using: .utf8)!
                     loaded.abi = try? JSONDecoder().decode(SolidityABI.self, from: json_data)
+                    loaded.contract = try? EthereumContract(abi_json, at: EthereumAddress(new_addr))
                 }
 
                 loaded_contracts.append(loaded)
@@ -643,6 +652,31 @@ struct ABIEncode: View {
                          selection: $selected) { item in
                         Text(item)
                     }
+                    Button {
+                        if selected == "quoteExactInputSingle" {
+//                            let usdc = EthereumAddress("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48")!
+//                            let weth = EthereumAddress("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2")!
+//                            let fee_tier = BigUInt(3000)
+//                            let amount_out = BigUInt.init("1", .ether)
+//                            let sqrt_param = BigUInt(0)
+
+                            fields[selected] = [
+                                // weth
+                                "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+                                // usdc
+                                "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+                                // fee tier
+                                "3000",
+                                // amount
+                                "1000000000000000000",
+                                // sqrt thing
+                                "0"
+                            ]
+                            
+                        }
+                    } label: {
+                        Text("dev quick fill in params")
+                    }.disabled(selected != "quoteExactInputSingle")
                 }
             }
             VStack {
@@ -682,11 +716,24 @@ struct ABIEncode: View {
                 Spacer()
                 HStack {
                     Button {
-                        ABIEncoder
-                        // do the encoding
+                        guard let l = loaded_contract,
+                              let contract = l.contract else {
+                            print("nothing loaded ")
+                            encoded = ""
+                            return
+                        }
+
+                        guard
+                            let encoded_call = contract.method(selected, parameters: fields[selected] ?? [], extraData: nil) else {
+                            encoded = ""
+                            return
+                        }
+
+                        encoded = encoded_call.toHexString()
+                        
                     } label: {
                         Text("encode")
-                    }
+                    }.disabled(selected.isEmpty || loaded_contract?.contract == nil)
                     TextField("Encoded...", text: $encoded)
                         .textSelection(.enabled)
                 }

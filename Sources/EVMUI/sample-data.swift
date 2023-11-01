@@ -20,7 +20,9 @@ let sample_contract = LoadedContract(
                    name: "quoteExactInputSingle",
                    outputs: [])
         
-])
+    ],
+    contract: try? EthereumContract(UNISWAP_ROUTER_ABI)
+)
 
 final class StubABIDriver: ABIDriver {
     private var id = 0

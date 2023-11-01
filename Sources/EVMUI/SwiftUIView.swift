@@ -682,6 +682,7 @@ struct ABIEncode: View {
                 Spacer()
                 HStack {
                     Button {
+                        ABIEncoder
                         // do the encoding
                     } label: {
                         Text("encode")

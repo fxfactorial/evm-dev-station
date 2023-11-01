@@ -25,6 +25,7 @@ public protocol EVMDriver {
     func load_chaindata(pathdir: String, db_kind: String) throws
     func load_chainhead() throws -> String
     func load_contract(addr: String) throws -> String
+    func use_loaded_state_on_evm()
 }
 
 public protocol ABIDriver {

@@ -50,6 +50,9 @@ final class StubABIDriver: ABIDriver {
 }
 
 final class StubEVMDriver: EVMDriver {
+    func use_loaded_state_on_evm() {
+    }
+
     func create_new_contract(code: String) throws -> String {
         return "0x522B3294E6d06aA25Ad0f1B8891242E335D3B459"
     }

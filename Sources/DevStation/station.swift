@@ -46,6 +46,16 @@ extension String {
         let as_g = GoString(p: wrapped, n: self.count)
         return as_g
     }
+    
+    func as_go_string() -> GoString {
+        let payload = self.withCString {pointee in
+            pointee.withMemoryRebound(to: CChar.self, capacity: self.count) {
+                GoString(p: $0, n: self.count)
+            }
+        }
+        return payload
+    }
+
 
 }
 
@@ -84,7 +94,11 @@ final class ABIEncoder: ABIDriver {
 
 final class EVM: EVMDriver {
     static let shared = EVM()
-    
+
+    func use_loaded_state_on_evm() {
+        EVMBridge.UseLoadedStateOnEVM()
+    }
+
     func create_new_contract(code: String) throws -> String {
         var code = code
         code.makeContiguousUTF8()
@@ -124,21 +138,41 @@ final class EVM: EVMDriver {
         var calldata = calldata
         var target_addr = target_addr
         var msg_value = msg_value
-        calldata.makeContiguousUTF8()
-        target_addr.makeContiguousUTF8()
-        msg_value.makeContiguousUTF8()
+//        calldata.makeContiguousUTF8()
+//        target_addr.makeContiguousUTF8()
+//        msg_value.makeContiguousUTF8()
 
-        let calldata_gstr = calldata.to_go_string2()
-        let target_addr_gstr = target_addr.to_go_string2()
-        let msg_value_gstr = msg_value.to_go_string2()
+//        let calldata_gstr = calldata.to_go_string2()
+//        let target_addr_gstr = target_addr.to_go_string2()
+//        let msg_value_gstr = msg_value.as_go_string()
 //        GoString
-        print("about to call \(calldata_gstr) \(target_addr_gstr) \(msg_value_gstr)")
+        print("SWIFT using OG values:", calldata, " ", target_addr, " ", msg_value)
+//        print("about to call \(calldata_gstr) \(target_addr_gstr) \(msg_value_gstr)")
+        let result_call = msg_value.withCString {msg_value_pointee in
+            let msg_value_gstr = msg_value_pointee.withMemoryRebound(to: CChar.self, capacity: msg_value.count) {
+                GoString(p: $0, n: msg_value.count)
+            }
 
-        let result_call = EVMBridge.CallEVM(
-          calldata_gstr,
-          target_addr_gstr,
-          msg_value_gstr
-        )
+            return calldata.withCString { calldata_pointee in
+                let calldata_gstr = calldata_pointee.withMemoryRebound(to: CChar.self, capacity: calldata.count) {
+                    GoString(p: $0, n: calldata.count)
+                }
+                
+                return target_addr.withCString { target_addr_pointee in
+                    let target_addr_gstr = target_addr_pointee.withMemoryRebound(to: CChar.self, capacity: target_addr.count) {
+                        GoString(p: $0, n: target_addr.count)
+                    }
+
+                    return EVMBridge.CallEVM(
+                        calldata_gstr,
+                        target_addr_gstr,
+                        msg_value_gstr
+                    )
+                }
+            }
+        }
+        
+
         if result_call.error_reason_size > 0 {
             let error_wrapped = Data(bytes: result_call.error_reason, count: result_call.error_reason_size)
             let error_str = String(bytes: error_wrapped, encoding: .utf8)!

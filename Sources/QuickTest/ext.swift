@@ -17,7 +17,7 @@ extension String {
 
     func to_go_string2() -> GoString {
         let copy = String(self)
-        let wrapped = copy.data(using: .ascii)?.withUnsafeBytes {
+        let wrapped = copy.data(using: .ascii, allowLossyConversion: false)?.withUnsafeBytes {
             $0.baseAddress?.assumingMemoryBound(to: CChar.self)
         }!
         let as_g = GoString(p: wrapped, n: copy.count)
@@ -32,4 +32,16 @@ extension String {
         return as_g
     }
 
+    // FINALLY i think its becauyse i used the pointeee from outside the closure! , not allowed to do that
+    // come back to it in the other functions
+    func test_4() -> GoString {
+        let payload = self.withCString {pointee in
+            pointee.withMemoryRebound(to: CChar.self, capacity: self.count) {
+                GoString(p: $0, n: self.count)
+            }
+        }
+        return payload
+    }
 }
+                                                                                                               
+

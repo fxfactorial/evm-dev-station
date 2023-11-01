@@ -398,6 +398,8 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                                 return
                             }
                             
+                            await d.use_loaded_state_on_evm()
+                            
                             DispatchQueue.main.async {
                                 current_block_header.block_number = head_number
                                 current_block_header.state_root = blk_header.stateRoot

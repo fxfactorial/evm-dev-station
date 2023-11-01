@@ -177,7 +177,7 @@ public struct Put: Codable, Equatable {
 
 public typealias SolidityABI = [ABIElement]
 
-public let UNISWAP_ROUTER_ABI = """
+public let UNISWAP_QUOTER_ABI = """
 [
   {
     "inputs": [

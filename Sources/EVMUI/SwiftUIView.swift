@@ -788,9 +788,9 @@ struct LoadContractFromChain : View {
                 }
                 Button { dismiss() } label : { Text("Cancel") }
                 Button {
-                    contract_name = "uniswap router"
-                    contract_addr = "0xEf1c6E67703c7BD7107eed8303Fbe6EC2554BF6B"
-                    contract_abi = UNISWAP_ROUTER_ABI
+                    contract_name = "uniswap quoter"
+                    contract_addr = "0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6"
+                    contract_abi = UNISWAP_QUOTER_ABI
                 } label: {
                     Text("dev mode")
                 }

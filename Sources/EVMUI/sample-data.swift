@@ -21,7 +21,7 @@ let sample_contract = LoadedContract(
                    outputs: [])
         
     ],
-    contract: try? EthereumContract(UNISWAP_ROUTER_ABI)
+    contract: try? EthereumContract(UNISWAP_QUOTER_ABI)
 )
 
 final class StubABIDriver: ABIDriver {

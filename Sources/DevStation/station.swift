@@ -20,6 +20,7 @@ extension String {
         return unicodeScalars.map { prefix + .init($0.value, radix: 16, uppercase: uppercase) } .joined(separator: separator)
     }
 
+    // These are all wrong because they holdonto the pointer!
     func to_go_string() -> GoString {
         let code = self
         let data = Data(code.utf8)
@@ -189,6 +190,24 @@ final class EVM: EVMDriver {
         return .success(return_value: "")
     }
 
+    fileprivate var _opcode_call_hook_enabled = false
+
+    func opcode_call_hook_enabled() -> Bool {
+        return _opcode_call_hook_enabled
+    }
+
+    func enable_opcode_call_callback(yes_no: Bool) {
+        if yes_no {
+            EVMBridge.EnableOPCodeCallHook(GoUint8(1))
+        } else {
+            EVMBridge.EnableOPCodeCallHook(GoUint8(0))
+        }
+        _opcode_call_hook_enabled = yes_no
+
+    }
+
+    
+    
     fileprivate var _cb_enabled : Bool = false
 
     func enable_exec_callback(yes_no: Bool) {
@@ -277,6 +296,22 @@ struct Rootview : View {
 //    let when_done = Date.now
 //    print("finished loading chain at \(when_done)")
 //}
+
+@_cdecl("evm_opcall_callback")
+public func evm_opcall_callback(
+    caller_: UnsafeMutablePointer<CChar>,
+    callee_: UnsafeMutablePointer<CChar>,
+    args_: UnsafeMutablePointer<CChar>
+) {
+    let caller = String(cString: caller_)
+    let callee = String(cString: callee_)
+    let args = String(cString: args_)
+    free(caller_)
+    free(callee_)
+    free(args_)
+    print("SWIFT unbelievable got a call back from running EVM \(caller)-\(callee)-\(args)")
+    EVMBridge.SendValueToPausedEVMInCall()
+}
 
 @_cdecl("evm_run_callback")
 public func evm_run_callback(

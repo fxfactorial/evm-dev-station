@@ -18,6 +18,9 @@ public protocol EVMDriver {
     func exec_callback_enabled() -> Bool
     func enable_exec_callback(yes_no: Bool)
     
+    func opcode_call_hook_enabled() -> Bool
+    func enable_opcode_call_callback(yes_no: Bool)
+    
     func create_new_contract(code: String) throws -> String
     func new_evm_singleton()
     func available_eips() -> [Int]

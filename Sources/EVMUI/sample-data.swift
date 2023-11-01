@@ -50,6 +50,17 @@ final class StubABIDriver: ABIDriver {
 }
 
 final class StubEVMDriver: EVMDriver {
+    
+    func opcode_call_hook_enabled() -> Bool {
+        false
+    }
+
+    func enable_opcode_call_callback(yes_no: Bool) {
+        
+    }
+
+
+    
     func use_loaded_state_on_evm() {
     }
 

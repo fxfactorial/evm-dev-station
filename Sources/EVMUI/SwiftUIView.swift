@@ -86,6 +86,8 @@ struct RotatingDotAnimation: View {
     }
 }
 
+// TODO maybe delete since basically not used right - using the custom binding trick
+// cause on the fly need to do side effect to golang code
 class EVMRunStateControls: ObservableObject {
     @Published var record_executed_operations = false
     @Published var breakpoint_on_call = false
@@ -932,18 +934,24 @@ struct RunningEVM<Driver: EVMDriver>: View {
                 VStack {
                     Button {
                         print("calling run evm handler \(calldata)-\(msg_value)")
-                        let result = d.call(
-                            calldata: calldata,
-                            target_addr: target_addr,
-                            msg_value: msg_value
-                        )
-                        switch result {
-                        case .failure(reason: let r):
-                            error_msg_evm = r
-                        case .success(return_value: let r):
-                            error_msg_evm = ""
-                            call_return_value = r
+                        Task.detached {
+                            let result = await d.call(
+                                calldata: calldata,
+                                target_addr: target_addr,
+                                msg_value: msg_value
+                            )
+                            
+                            DispatchQueue.main.async {
+                                switch result {
+                                case .failure(reason: let r):
+                                    error_msg_evm = r
+                                case .success(return_value: let r):
+                                    error_msg_evm = ""
+                                    call_return_value = r
+                                }
+                            }
                         }
+
                     } label: {
                         Text("Run contract")
                     }
@@ -952,7 +960,15 @@ struct RunningEVM<Driver: EVMDriver>: View {
                     } label: {
                         Text("enable dev values")
                     }
-                    Toggle(isOn: $evm_run_controls.breakpoint_on_call, label: {
+                    Toggle(isOn: Binding<Bool>(
+                        get: {
+                            d.opcode_call_hook_enabled()
+                        },
+                        set: {
+                            d.enable_opcode_call_callback(yes_no: $0)
+                            _hack_redraw_hook = $0
+                        }
+                    ), label: {
                         Text("Break on CALL")
                     })
                     Toggle(isOn: $evm_run_controls.breakpoint_on_jump, label: {

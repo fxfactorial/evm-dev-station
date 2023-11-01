@@ -44,6 +44,7 @@ struct LoadedContract : Hashable, Identifiable {
     }
     let abi_id : Int
     let method_names: [String]
+    var abi : SolidityABI?
 }
 
 extension Collection {
@@ -241,7 +242,7 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                             // print("got a new value")
                         })
                         if let contract = selected_contract {
-                            ABIEncode(d: abi, abi_id: contract.abi_id, method_names: contract.method_names)
+                            ABIEncode(d: abi, loaded_contract: contract)
                         }
                     }
                     VStack {
@@ -308,10 +309,15 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             
-            .sheet(isPresented: $present_load_contract_sheet, onDismiss: {
+            .sheet(isPresented: $present_load_contract_sheet,
+                   onDismiss: {
                 // something
-            }, content: {
-                LoadContractFromChain(do_load: { name, addr, abi in
+            },
+                   content: {
+                LoadContractFromChain(do_load: {
+                    name,
+                    addr,
+                    abi_json in
                     if name.isEmpty || addr.isEmpty {
                         return
                     }
@@ -323,10 +329,16 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                     
                     print("here is the actual contract loaded from chain", code)
                     
+                    let abi_id = !abi_json.isEmpty ? try! abi.add_abi(abi_json: abi_json) : 0
+                    let methods = abi_id > 0 ? try! abi.methods_for_abi(abi_id: abi_id) : []
+                    var contract = LoadedContract(name: name, bytecode: code, address: addr, abi_id: abi_id, method_names: methods)
+                    if let json_data = abi_json.data(using: .utf8),
+                       let parsed_abi = try? JSONDecoder().decode(SolidityABI.self, from: json_data) {
+                        contract.abi = parsed_abi
+                    }
+                    
                     DispatchQueue.main.async {
-                        loaded_contracts.append(
-                            .init(name: name, bytecode: code, address: addr, abi_id: 0, method_names: [])
-                        )
+                        loaded_contracts.append(contract)
                         withAnimation {
                             selected_contract = loaded_contracts.last
                         }
@@ -418,17 +430,23 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
 //                // TODO actually call out to the ABI go code
 //                let method_names = if abi_id > 0 { try! abi.methods_for_abi(abi_id: abi_id) } else { [] }
 
-                let abi_id = 0
-                let method_names : [String] = []
-
-                loaded_contracts.append(LoadedContract(
+                let abi_json = new_contract_abi
+                let abi_id = !abi_json.isEmpty ? try! abi.add_abi(abi_json: abi_json) : 0
+                let methods = abi_id > 0 ? try! abi.methods_for_abi(abi_id: abi_id) : []
+                var loaded = LoadedContract(
                     name: new_contract_name,
                     bytecode: new_contract_bytecode,
                     address: new_addr,
                     abi_id: abi_id,
-                    method_names: method_names
+                    method_names: methods
                 )
-                )
+
+                if !abi_json.isEmpty {
+                    let json_data = abi_json.data(using: .utf8)!
+                    loaded.abi = try? JSONDecoder().decode(SolidityABI.self, from: json_data)
+                }
+
+                loaded_contracts.append(loaded)
             } content: {
                 NewContractByteCode(
                     contract_name: $new_contract_name,
@@ -609,25 +627,79 @@ struct KnownEIPs: View {
 
 struct ABIEncode: View {
     let d : ABIDriver
-    let abi_id: Int
-    let method_names : [String]
+    let loaded_contract: LoadedContract?
+
     @State private var selected: String = ""
+    @State private var encoded: String = ""
+//    @State private var fields : [String] = [String](repeating: "", count: 100)
+    @State private var fields : [String: [String]] = [:]
     
     var body: some View {
         HStack {
             NavigationStack {
                 Text("Method names")
-                List(method_names, id: \.self,
-                     selection: $selected) { item in
-                    Text(item)
+                if let contract = loaded_contract {
+                    List(contract.method_names, id: \.self,
+                         selection: $selected) { item in
+                        Text(item)
+                    }
                 }
             }
-        }.frame(maxWidth: 300, maxHeight: 200)
+            VStack {
+                ScrollView {
+                    if !selected.isEmpty {
+                        if let contract = loaded_contract,
+                           let abi = contract.abi,
+                           let element = abi.first(where: { $0.name == selected }) {
+                            ForEach(Array(zip(element.inputs.indices, element.inputs)), id: \.1.name) {index, input in
+                                HStack {
+                                    Text(input.name)
+                                    TextField(input.name, text: Binding<String>(
+                                        get: {
+                                            guard let method_name = element.name else {
+                                                return ""
+                                            }
+                                            
+                                            if let had_it = fields[method_name] {
+                                                return had_it[index]
+                                            }
+                                            
+                                            fields[method_name] = [String](repeating: "", count: element.inputs.count)
+                                            return ""
+                                        },
+                                        set: {
+                                            if let n = element.name {
+                                                fields[n]![index] = $0
+                                            }
+                                        }
+                                    ))
+                                }
+                            }
+                        }
+                    }
+                }
+                .padding([.top], 15)
+                Spacer()
+                HStack {
+                    Button {
+                        // do the encoding
+                    } label: {
+                        Text("encode")
+                    }
+                    TextField("Encoded...", text: $encoded)
+                        .textSelection(.enabled)
+                }
+            }
+        }
+        .frame(maxWidth: 420, maxHeight: 200)
     }
 }
 
 #Preview("ABI encode table") {
-    ABIEncode(d: StubABIDriver(), abi_id: 0, method_names: ["method1", "method2"])
+    ABIEncode(
+        d: StubABIDriver(),
+        loaded_contract: sample_contract
+    )
 }
 
 struct LoadContractFromChain : View {
@@ -898,8 +970,8 @@ struct RunningEVM<Driver: EVMDriver>: View {
     KnownEIPs(known_eips: .constant([
         EIP(num: 1223, enabled: false),
         EIP(num: 1559, enabled: true),
-        EIP(num: 44, enabled: false)]
-                                   ))
+        EIP(num: 44, enabled: false)])
+    )
 }
 
 #Preview("New Contract bytecode") {

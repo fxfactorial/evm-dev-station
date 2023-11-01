@@ -86,6 +86,8 @@ final class EVM: EVMDriver {
     static let shared = EVM()
     
     func create_new_contract(code: String) throws -> String {
+        var code = code
+        code.makeContiguousUTF8()
         let data = Data(code.utf8)
         let value = data.withUnsafeBytes { $0.baseAddress }!
         let result = value.assumingMemoryBound(to: CChar.self)
@@ -119,6 +121,13 @@ final class EVM: EVMDriver {
     }
     
     func call(calldata: String, target_addr: String, msg_value: String) -> EVMCallResult {
+        var calldata = calldata
+        var target_addr = target_addr
+        var msg_value = msg_value
+        calldata.makeContiguousUTF8()
+        target_addr.makeContiguousUTF8()
+        msg_value.makeContiguousUTF8()
+
         let calldata_gstr = calldata.to_go_string2()
         let target_addr_gstr = target_addr.to_go_string2()
         let msg_value_gstr = msg_value.to_go_string2()

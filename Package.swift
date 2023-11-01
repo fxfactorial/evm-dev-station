@@ -16,8 +16,8 @@ let package = Package(
   ],
   dependencies: [
     // .package(url: "https://github.com/Boilertalk/Web3.swift.git", from: "0.8.4")
-    // .package(url: "https://github.com/attaswift/BigInt.git", from: "5.3.0"),
-    // .package(url: "https://github.com/krzyzanowskim/CryptoSwift.git", from: "1.5.1"),
+    .package(url: "https://github.com/attaswift/BigInt.git", from: "5.3.0"),
+    .package(url: "https://github.com/krzyzanowskim/CryptoSwift.git", from: "1.5.1"),
     // .package(url: "https://github.com/apple/swift-collections.git", .upToNextMajor(from: "1.0.3"))
   ],
   targets: [
@@ -25,8 +25,8 @@ let package = Package(
             dependencies: [
               // .product(name: "Web3ContractABI", package: "Web3.swift"),
               // "Web3ContractABI",
-              // "BigInt",
-              // "CryptoSwift",
+              "BigInt",
+              "CryptoSwift",
               // .product(name: "Collections", package: "swift-collections")
             ],
             path: "Sources/DevStationCommon"),

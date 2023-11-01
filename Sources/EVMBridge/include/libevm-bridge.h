@@ -121,6 +121,7 @@ struct MethodsForABI_return {
 	int r1;
 };
 extern struct MethodsForABI_return MethodsForABI(GoInt name);
+extern void* ABIEncode(GoInt name, GoSlice params);
 extern struct ChainHeadResult ChainHead();
 
 /* Return type for LoadCodeFromState */

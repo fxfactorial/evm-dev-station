@@ -104,7 +104,19 @@ let result = ABIDecoder.decode(types: [
                                ],
                                data: Data(hex: payload[8...]))
 
-print(result)
+// print(result)
 
 let result2 = try? ABITypeParser.parseTypeString(sig)
-print(result2)
+// print(result2)
+
+
+let time_stamp =  "0x653aa2ef"
+  // guard let timestampInt = UInt(stripedHexString, radix: 16) else { return nil }
+  //   149         self = Date(timeIntervalSince1970: TimeInterval(timestampInt))
+// let ts = Data(hex: time_stamp).withUnsafeBytes({ $0.load(as: UInt64.self)})
+// let date = Date(timeIntervalSince1970: TimeInterval(ts))
+// print(date)
+
+let result3 = UInt(time_stamp[2...], radix: 16)!
+let ts = Date(timeIntervalSince1970: TimeInterval(result3))
+print(result3, ts)

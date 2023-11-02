@@ -119,7 +119,7 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
     @State private var present_load_db_sheet = false
     @State private var msg_sender = ""
     @State private var msg_sender_eth_balance = ""
-    
+    @State private var current_contract_detail_tab = 0
     
     @StateObject private var chaindb = LoadChainModel()
     @StateObject private var current_block_header = CurrentBlockHeader()
@@ -186,24 +186,22 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                         }
                     }
                     VStack {
-                        HStack {
-                            if let contract = selected_contract {
-                                VStack {
-                                    Text("Contract bytecode")
-                                        .font(.title2)
-                                    ScrollView {
-                                        Text(contract.bytecode)
-                                            .lineLimit(nil)
-                                            .frame(maxWidth:.infinity, maxHeight:300)
-                                            .background()
-                                    }
-                                }
-                            } else {
-                                Text("select a contract from sidebar ")
-                            }
+                        TabView(selection: $current_contract_detail_tab) {
                             VStack {
-                                Text("Contract Details")
-                                    .font(.title2)
+                                if let contract = selected_contract {
+                                    VStack {
+                                        ScrollView {
+                                            Text(contract.bytecode)
+                                                .lineLimit(nil)
+                                                .frame(maxWidth:.infinity, maxHeight:300)
+                                                .background()
+                                        }
+                                    }
+                                } else {
+                                    Text("select a contract from sidebar ")
+                                }
+                            }.tabItem { Text("Bytecode") }.tag(0)
+                            VStack {
                                 VStack {
                                     Button {
                                         if var contract = selected_contract {
@@ -238,8 +236,7 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                                 }
                                 .padding()
                                 .background()
-                            }
-                            .frame(width: 200)
+                            }.tabItem{ Text("Details") }.tag(1)
                         }
                         Text("\(execed_ops.execed_operations.count) Executed Operations")
                             .font(.title2)
@@ -411,10 +408,12 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                             }
                             
                             await d.use_loaded_state_on_evm()
-                            
+                            let ts_int = UInt(blk_header.timestamp[2...], radix: 16)!
+                            let ts = Date(timeIntervalSince1970: TimeInterval(ts_int))
+
                             DispatchQueue.main.async {
                                 BlockContextModel.shared.coinbase = blk_header.miner
-                                // BlockContextMode.shared.time
+                                BlockContextModel.shared.time = ts.ISO8601Format()
                                 current_block_header.block_number = head_number
                                 current_block_header.state_root = blk_header.stateRoot
                                 chaindb.is_chain_loaded = true

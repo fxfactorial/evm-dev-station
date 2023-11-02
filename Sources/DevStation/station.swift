@@ -7,10 +7,11 @@ import DevStationCommon
 @main
 struct DevStation : App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var app_delegate
+    @AppStorage("prefer_dark_mode") private var prefer_dark = true
 
     var body : some Scene {
         WindowGroup {
-            Rootview()
+            Rootview().preferredColorScheme(prefer_dark ? .dark : .light)
         }
     }
 }

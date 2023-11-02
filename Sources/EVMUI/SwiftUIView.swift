@@ -59,21 +59,30 @@ extension Collection {
     }
 }
 
+struct RotationParam {
+    let inner_circle_width: CGFloat
+    let inner_circle_height : CGFloat
+    let inner_circle_offset: CGFloat
+
+    let outer_circle_width: CGFloat
+    let outer_circle_height: CGFloat
+}
 
 struct RotatingDotAnimation: View {
     
     @State private var startAnimation = false
     @State private var duration = 1.0 // Works as speed, since it repeats forever
-    
+    let param : RotationParam
+
     var body: some View {
         ZStack {
             Circle()
                 .stroke(lineWidth: 4)
                 .foregroundColor(.blue.opacity(0.5))
-                .frame(width: 35, height: 35, alignment: .center)
+                .frame(width: param.outer_circle_width, height: param.outer_circle_height, alignment: .center)
             Circle()
                 .fill(.blue)
-                .frame(width: 12, height: 12, alignment: .center)
+                .frame(width: param.inner_circle_width, height: param.inner_circle_height, alignment: .center)
                 .offset(x: -9)
                 .rotationEffect(.degrees(startAnimation ? 360 : 0))
                 .animation(.easeInOut(duration: duration).repeatForever(autoreverses: false),
@@ -265,7 +274,13 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                                 VStack {
                                     HStack {
                                         if chaindb.show_loading_db {
-                                            RotatingDotAnimation()
+                                            RotatingDotAnimation(param: .init(
+                                                inner_circle_width: 12,
+                                                inner_circle_height: 12,
+                                                inner_circle_offset: -9,
+                                                outer_circle_width: 35,
+                                                outer_circle_height: 35)
+                                            )
                                         }
                                         Button {
                                             present_load_db_sheet.toggle()
@@ -951,7 +966,8 @@ struct RunningEVM<Driver: EVMDriver>: View {
     let d : Driver
     @State private var _hack_redraw_hook = false
     @EnvironmentObject private var evm_run_controls : EVMRunStateControls
-    
+    @State private var contract_currently_running = false
+
     func dev_mode() {
         // entry_point(address,uint256)
         calldata = "f4bd333800000000000000000000000001010101010101010101010101010101010101010000000000000000000000000000000000000000000000004563918244f40000"
@@ -1004,29 +1020,42 @@ struct RunningEVM<Driver: EVMDriver>: View {
                     }
                 }.padding()
                 VStack {
-                    Button {
-                        print("calling run evm handler \(calldata)-\(msg_value)")
-                        Task.detached {
-                            let result = await d.call(
-                                calldata: calldata,
-                                target_addr: target_addr,
-                                msg_value: msg_value
-                            )
-
-                            DispatchQueue.main.async {
-                                OpcodeCallbackModel.shared.hit_breakpoint = false
-                                switch result {
-                                case .failure(reason: let r):
-                                    error_msg_evm = r
-                                case .success(return_value: let r):
-                                    error_msg_evm = ""
-                                    call_return_value = r
+                    HStack {
+                        Button {
+                            print("calling run evm handler \(calldata)-\(msg_value)")
+                            contract_currently_running = true
+                            Task.detached {
+                                let result = await d.call(
+                                    calldata: calldata,
+                                    target_addr: target_addr,
+                                    msg_value: msg_value
+                                )
+                                
+                                DispatchQueue.main.async {
+                                    OpcodeCallbackModel.shared.hit_breakpoint = false
+                                    contract_currently_running = false
+                                    switch result {
+                                    case .failure(reason: let r):
+                                        error_msg_evm = r
+                                    case .success(return_value: let r):
+                                        error_msg_evm = ""
+                                        call_return_value = r
+                                    }
                                 }
                             }
+                            
+                        } label: {
+                            Text("Run contract")
                         }
-
-                    } label: {
-                        Text("Run contract")
+                        if contract_currently_running {
+                            RotatingDotAnimation(param: .init(
+                                inner_circle_width: 12,
+                                inner_circle_height: 12,
+                                inner_circle_offset: -9,
+                                outer_circle_width: 35,
+                                outer_circle_height: 35
+                            ))
+                        }
                     }
                     Button {
                         dev_mode()

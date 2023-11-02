@@ -67,7 +67,15 @@ public class ExecutedOperations : ObservableObject {
     public static let shared = ExecutedOperations()
     
     @Published public var execed_operations: [ExecutedEVMCode] = []
-    
+}
+
+public class OpcodeCallbackModel: ObservableObject {
+    public static let shared = OpcodeCallbackModel()
+    public var continue_evm_exec : (() -> Void)?
+    @Published public var hit_breakpoint = false
+    @Published public var current_caller = ""
+    @Published public var current_callee = ""
+    @Published public var current_args = ""
 }
 
 public enum DBKind : String {

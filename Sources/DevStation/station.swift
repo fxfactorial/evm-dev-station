@@ -287,7 +287,7 @@ struct Rootview : View {
     var body : some View {
         VStack {
             EVMDevCenter(driver: EVM.shared, abi_driver: ABIEncoder.shared)
-        }.frame(width: 1480, height: 960, alignment: .center)
+        }.frame(minWidth: 780, idealWidth: 1480, minHeight: 560, idealHeight: 960, alignment: .center)
     }
 }
 
@@ -309,8 +309,16 @@ public func evm_opcall_callback(
     free(caller_)
     free(callee_)
     free(args_)
-    print("SWIFT unbelievable got a call back from running EVM \(caller)-\(callee)-\(args)")
-    EVMBridge.SendValueToPausedEVMInCall()
+
+    DispatchQueue.main.async {
+        OpcodeCallbackModel.shared.current_args = args
+        OpcodeCallbackModel.shared.current_callee = callee
+        OpcodeCallbackModel.shared.current_caller = caller
+        OpcodeCallbackModel.shared.hit_breakpoint = true
+    }
+
+    print("SWIFT call back from running EVM \(caller)-\(callee)-\(args)")
+    // EVMBridge.SendValueToPausedEVMInCall()
 }
 
 @_cdecl("evm_run_callback")
@@ -345,10 +353,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // critical otherwise won't be able to get input into gui, instead via CLI
+        evm_driver.new_evm_singleton()
+        OpcodeCallbackModel.shared.continue_evm_exec = {
+            EVMBridge.SendValueToPausedEVMInCall()
+        }
         NSApp.setActivationPolicy(.regular)
         NSApp.windows[0].makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-        evm_driver.new_evm_singleton()
     }
 
 }

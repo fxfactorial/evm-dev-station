@@ -15,7 +15,7 @@ struct BlockContext : View {
     var body : some View {
         VStack {
             Text("Block Context")
-                .font(.title)
+                .font(.title2)
             VStack {
                 HStack {
                     Text("Coinbase")
@@ -160,13 +160,13 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                     NavigationStack {
                         VStack {
                             Text("Loaded contracts")
-                                .font(.title)
+                                .font(.title2)
                                 .help("interact with contracts loaded")
                             List(loaded_contracts, id:\.self,
                                  selection: $selected_contract) { item in
                                 Text(item.name)
                             }
-                                 .frame(maxWidth: 200)
+                                 .frame(maxWidth: 150)
                                  .padding([.trailing, .leading])
                             Button {
                                 bytecode_add.toggle()
@@ -186,7 +186,7 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                             if let contract = selected_contract {
                                 VStack {
                                     Text("Contract bytecode")
-                                        .font(.title)
+                                        .font(.title2)
                                     ScrollView {
                                         Text(contract.bytecode)
                                             .lineLimit(nil)
@@ -199,7 +199,7 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                             }
                             VStack {
                                 Text("Contract Details")
-                                    .font(.title)
+                                    .font(.title2)
                                 VStack {
                                     Button {
                                         if var contract = selected_contract {
@@ -238,7 +238,7 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                             .frame(width: 200)
                         }
                         Text("\(execed_ops.execed_operations.count) Executed Operations")
-                            .font(.title)
+                            .font(.title2)
                         Table(execed_ops.execed_operations) {
                             TableColumn("PC", value: \.pc)
                             TableColumn("OPNAME", value: \.op_name)
@@ -260,7 +260,7 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                         HStack {
                             VStack {
                                 Text("Load Blockchain")
-                                    .font(.title)
+                                    .font(.title2)
                                     .help("load state/contract")
                                 VStack {
                                     HStack {
@@ -280,7 +280,7 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                             Spacer()
                             VStack {
                                 Text("EVM Configuration")
-                                    .font(.title)
+                                    .font(.title2)
                                 VStack {
                                     Button {
                                         present_eips_sheet.toggle()
@@ -296,6 +296,7 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                             .environmentObject(current_block_header)
                             .environmentObject(chaindb)
                             .padding()
+                        BreakpointView()
                     }.frame(maxHeight: .infinity, alignment: .topLeading)
                 }
                 RunningEVM(target_addr: Binding<String>(
@@ -505,7 +506,7 @@ struct StateInspector: View {
                 NavigationStack {
                     VStack {
                         Text("Accounts")
-                            .font(.title)
+                            .font(.title2)
                         List(loaded_accounts, id: \.id,
                              selection: $selected_account) { item in
                             Text(item.addr)
@@ -533,7 +534,7 @@ struct StateDBDetails: View {
     var body: some View {
         VStack {
             Text("State used by EVM")
-                .font(.title)
+                .font(.title2)
             VStack {
                 HStack {
                     Text("Kind:")
@@ -811,6 +812,46 @@ struct LoadContractFromChain : View {
     }
 }
 
+struct BreakpointView: View {
+    @ObservedObject private var callbackmodel: OpcodeCallbackModel = OpcodeCallbackModel.shared
+
+    var body: some View {
+        VStack {
+            Text("Breakpoint Hook")
+                .font(.title2)
+            VStack {
+                HStack {
+                    Text("caller").frame(width: 75)
+                    TextField("", text: $callbackmodel.current_caller)
+                }
+                HStack {
+                    Text("callee").frame(width: 75)
+                    TextField("", text: $callbackmodel.current_callee)
+                }
+                HStack {
+                    Text("args").frame(width: 75)
+                    TextField("", text: $callbackmodel.current_args)
+                }
+                HStack {
+                    Button {
+                        if let cb = callbackmodel.continue_evm_exec {
+                            cb()
+                        }
+                    } label: {
+                        Text("Continue")
+                    }.disabled(!callbackmodel.hit_breakpoint)
+                }
+            }
+            .padding()
+            .background()
+        }
+    }
+}
+
+#Preview("breakpoint view") {
+    BreakpointView()
+}
+
 struct LoadExistingDB : View {
     let d : EVMDriver
     @Environment(\.dismiss) var dismiss
@@ -890,7 +931,7 @@ struct RunningEVM<Driver: EVMDriver>: View {
     var body: some View {
         VStack {
             Text("Live Contract Interaction")
-                .font(.title)
+                .font(.title2)
             HStack {
                 VStack {
                     HStack {
@@ -941,8 +982,9 @@ struct RunningEVM<Driver: EVMDriver>: View {
                                 target_addr: target_addr,
                                 msg_value: msg_value
                             )
-                            
+
                             DispatchQueue.main.async {
+                                OpcodeCallbackModel.shared.hit_breakpoint = false
                                 switch result {
                                 case .failure(reason: let r):
                                     error_msg_evm = r

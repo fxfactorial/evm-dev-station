@@ -89,7 +89,23 @@ let num_2 = "2000000000123123"
 let num_3 = "999129213123123123123"
 let collect = [num_1, num_2, num_3]
 
-print("sending over", collect)
+// print("sending over", collect)
 for i in collect {
     EVMBridge.TestSendingInt(i.test_4())
 }
+
+
+let payload = "128acb08000000000000000000000000b27308f9f90d607463bb33ea1bebb41c27ce5ab600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000de0b6b3a7640000000000000000000000000000fffd8963efd1fc6a506488495d951d5263988d2500000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000002bc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2000bb8a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48000000000000000000000000000000000000000000"
+
+let sig = "swap(address,bool,int256,uint160,bytes)"
+
+// actually does work on payload if you remove the first four bytes of payload
+let result = ABIDecoder.decode(types: [
+                                 .address, .bool, .int(bits:256), .uint(bits:160), .dynamicBytes,
+                               ],
+                               data: Data(hex: payload[8...]))
+
+print(result)
+
+let result2 = try? ABITypeParser.parseTypeString(sig)
+print(result2)

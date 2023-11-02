@@ -823,6 +823,7 @@ struct BreakpointView: View {
     @State private var use_modified_values = false
     @Environment(\.openURL) var openURL
     @State private var possible_signature_names : [String] = []
+    @State private var selected : String?
     
     var body: some View {
         VStack {
@@ -875,7 +876,7 @@ struct BreakpointView: View {
                         Task {
                             let (data, _) = try await URLSession.shared.data(from: url)
                             let ptvResult = try JSONDecoder().decode(SignatureLookup.self, from: data)
-                            print("swift pulled \(ptvResult) against url \(url)")
+                            // print("swift pulled \(ptvResult) against url \(url)")
                             //                            guard let query_result = ptvResult.results.first else {
                             //                                return
                             //                            }
@@ -888,15 +889,13 @@ struct BreakpointView: View {
                             .help("powered by API request to 4byte")
                     }.disabled(callbackmodel.current_args.count < 8)
                     HStack {
-                        List {
-                            ForEach(possible_signature_names, id: \.self) { name in
-                                Text(name)
-                            }
+                        List(possible_signature_names, id:\.self, selection: $selected) { name in
+                            Text(name).textSelection(.enabled)
                         }
                         .frame(minHeight: 120, maxHeight: 240)
                         .border(.black)
                         //                        .background(.gray)
-                        .foregroundStyle(.gray)
+                        // .foregroundStyle(.selection)
                         .scrollContentBackground(.hidden)
                         VStack {
                             Button {

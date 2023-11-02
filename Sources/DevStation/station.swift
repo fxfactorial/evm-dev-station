@@ -352,11 +352,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var evm_driver: any EVMDriver = EVM.shared
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // critical otherwise won't be able to get input into gui, instead via CLI
         evm_driver.new_evm_singleton()
-        OpcodeCallbackModel.shared.continue_evm_exec = {
-            EVMBridge.SendValueToPausedEVMInCall()
+        OpcodeCallbackModel.shared.continue_evm_exec = { do_use, caller, callee, args in
+            caller.withCString({ caller_pointee in
+                let caller_gstr = caller_pointee.withMemoryRebound(to: CChar.self, capacity: caller.count) {
+                    GoString(p: $0, n: caller.count)
+                }
+                
+                callee.withCString { callee_pointee in
+                    let callee_gstr = callee_pointee.withMemoryRebound(to: CChar.self, capacity: callee.count) {
+                        GoString(p: $0, n: callee.count)
+                    }
+                    args.withCString { args_pointee in
+                        let args_gstr = args_pointee.withMemoryRebound(to: CChar.self, capacity: args.count) {
+                            GoString(p: $0, n: args.count)
+                        }
+                        EVMBridge.SendValueToPausedEVMInCall(
+                            do_use ? GoUint8(1) : GoUint8(0),
+                            caller_gstr,
+                            callee_gstr,
+                            args_gstr
+                        )
+                    }
+                }
+            })
         }
+
+        // critical otherwise won't be able to get input into gui, instead via CLI
         NSApp.setActivationPolicy(.regular)
         NSApp.windows[0].makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)

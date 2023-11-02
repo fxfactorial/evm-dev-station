@@ -116,7 +116,7 @@ extern "C" {
 #endif
 
 extern void EnableOPCodeCallHook(GoUint8 status);
-extern void SendValueToPausedEVMInCall();
+extern void SendValueToPausedEVMInCall(GoUint8 useOverrides, GoString caller_, GoString callee_, GoString payload_);
 extern void AddABI(GoInt name, GoString abiJSON_);
 
 /* Return type for MethodsForABI */

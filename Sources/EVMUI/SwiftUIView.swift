@@ -814,7 +814,9 @@ struct LoadContractFromChain : View {
 
 struct BreakpointView: View {
     @ObservedObject private var callbackmodel: OpcodeCallbackModel = OpcodeCallbackModel.shared
-
+    @State private var use_modified_values = false
+    @Environment(\.openURL) var openURL
+    
     var body: some View {
         VStack {
             Text("Breakpoint Hook")
@@ -823,19 +825,47 @@ struct BreakpointView: View {
                 HStack {
                     Text("caller").frame(width: 75)
                     TextField("", text: $callbackmodel.current_caller)
+                    Button {
+                        if !callbackmodel.current_caller.isEmpty {
+                            guard let link = URL(string: "https://etherscan.com/address/\(callbackmodel.current_caller)") else {
+                                return
+                            }
+                            openURL(link)
+                        }
+                    } label: {
+                        Text("etherscan")
+                    }
                 }
                 HStack {
                     Text("callee").frame(width: 75)
                     TextField("", text: $callbackmodel.current_callee)
+                    Button {
+                        if !callbackmodel.current_callee.isEmpty {
+                            guard let link = URL(string: "https://etherscan.com/address/\(callbackmodel.current_callee)") else {
+                                return
+                            }
+                            openURL(link)
+                        }
+
+                    } label: {
+                        Text("etherscan")
+                    }
                 }
                 HStack {
                     Text("args").frame(width: 75)
                     TextField("", text: $callbackmodel.current_args)
                 }
                 HStack {
+                    Toggle(isOn: $use_modified_values) {
+                        Text("Use modified values")
+                    }
                     Button {
                         if let cb = callbackmodel.continue_evm_exec {
-                            cb()
+                            cb(use_modified_values,
+                               callbackmodel.current_caller,
+                               callbackmodel.current_callee,
+                               callbackmodel.current_args
+                            )
                         }
                     } label: {
                         Text("Continue")

@@ -63,7 +63,7 @@ struct RotationParam {
     let inner_circle_width: CGFloat
     let inner_circle_height : CGFloat
     let inner_circle_offset: CGFloat
-
+    
     let outer_circle_width: CGFloat
     let outer_circle_height: CGFloat
 }
@@ -73,7 +73,7 @@ struct RotatingDotAnimation: View {
     @State private var startAnimation = false
     @State private var duration = 1.0 // Works as speed, since it repeats forever
     let param : RotationParam
-
+    
     var body: some View {
         ZStack {
             Circle()
@@ -124,7 +124,7 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
     
     let d : Driver
     let abi: ABIDriver
-
+    
     public init(driver : Driver, abi_driver: ABI) {
         d = driver
         abi = abi_driver
@@ -191,7 +191,7 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                                     ScrollView {
                                         Text(contract.bytecode)
                                             .lineLimit(nil)
-                                            .frame(maxWidth:.infinity, maxHeight:.infinity)
+                                            .frame(maxWidth:.infinity, maxHeight:300)
                                             .background()
                                     }
                                 }
@@ -245,8 +245,10 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                             TableColumn("OPNAME", value: \.op_name)
                             TableColumn("OPCODE", value: \.opcode)
                             TableColumn("GAS", value: \.gas_cost)
-                        }.onReceive(ExecutedOperations.shared.$execed_operations,
-                                    perform: { item in
+                        }
+                        .frame(maxHeight: 400)
+                        .onReceive(ExecutedOperations.shared.$execed_operations,
+                                   perform: { item in
                             // print("got a new value")
                         })
                         if let contract = selected_contract {
@@ -264,27 +266,28 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                                     .font(.title2)
                                     .help("load state/contract")
                                 VStack {
-                                    HStack {
-                                        if chaindb.show_loading_db {
-                                            RotatingDotAnimation(param: .init(
-                                                inner_circle_width: 12,
-                                                inner_circle_height: 12,
-                                                inner_circle_offset: -9,
-                                                outer_circle_width: 35,
-                                                outer_circle_height: 35)
-                                            )
-                                        }
-                                        Button {
-                                            present_load_db_sheet.toggle()
-                                        } label: {
-                                            Text("load existing db")
-                                        }
+                                    Button {
+                                        present_load_db_sheet.toggle()
+                                    } label: {
+                                        Text("Load existing db")
                                     }
-                                }
+                                    if chaindb.show_loading_db {
+                                        RotatingDotAnimation(param: .init(
+                                            inner_circle_width: 12,
+                                            inner_circle_height: 12,
+                                            inner_circle_offset: -9,
+                                            outer_circle_width: 35,
+                                            outer_circle_height: 35)
+                                        )
+                                    }
+                                }.frame(minHeight: 80)
                                 .padding()
                                 .background()
                             }
-                            Spacer()
+                            StateDBDetails()
+                                .environmentObject(current_block_header)
+                                .environmentObject(chaindb)
+                                .padding(1)
                             VStack {
                                 Text("EVM Configuration")
                                     .font(.title2)
@@ -294,15 +297,10 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                                     } label: {
                                         Text("EIPS enabled")
                                     }
-                                }
-                                .padding()
-                                .background()
+                                }.padding()
+                                    .background()
                             }
                         }
-                        StateDBDetails()
-                            .environmentObject(current_block_header)
-                            .environmentObject(chaindb)
-                            .padding()
                         BreakpointView()
                     }.frame(maxHeight: .infinity, alignment: .topLeading)
                 }
@@ -445,12 +443,12 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                 } catch {
                     return
                 }
-
-
-//                let abi_id = if !new_contract_abi.isEmpty { try! abi.add_abi(abi_json: new_contract_abi)} else { 0 }
-//                // TODO actually call out to the ABI go code
-//                let method_names = if abi_id > 0 { try! abi.methods_for_abi(abi_id: abi_id) } else { [] }
-
+                
+                
+                //                let abi_id = if !new_contract_abi.isEmpty { try! abi.add_abi(abi_json: new_contract_abi)} else { 0 }
+                //                // TODO actually call out to the ABI go code
+                //                let method_names = if abi_id > 0 { try! abi.methods_for_abi(abi_id: abi_id) } else { [] }
+                
                 let abi_json = new_contract_abi
                 let abi_id = !abi_json.isEmpty ? try! abi.add_abi(abi_json: abi_json) : 0
                 let methods = abi_id > 0 ? try! abi.methods_for_abi(abi_id: abi_id) : []
@@ -461,13 +459,13 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                     abi_id: abi_id,
                     method_names: methods
                 )
-
+                
                 if !abi_json.isEmpty {
                     let json_data = abi_json.data(using: .utf8)!
                     loaded.abi = try? JSONDecoder().decode(SolidityABI.self, from: json_data)
                     loaded.contract = try? EthereumContract(abi_json, at: EthereumAddress(new_addr))
                 }
-
+                
                 loaded_contracts.append(loaded)
             } content: {
                 NewContractByteCode(
@@ -549,12 +547,13 @@ struct StateDBDetails: View {
                     Text(db_backing.db_kind.rawValue)
                 }
                 HStack {
-                    Text("BlockNumber:")
+                    let num = "\(current_head.block_number)"
+                    Text("BlockNumber:").help(num)
                     Spacer()
-                    Text("\(current_head.block_number)")
+                    Text(num)
                 }
                 HStack {
-                    Text("State Root:")
+                    Text("State Root:").help(current_head.state_root)
                     Spacer()
                     Text(current_head.state_root)
                 }
@@ -650,10 +649,10 @@ struct KnownEIPs: View {
 struct ABIEncode: View {
     let d : ABIDriver
     let loaded_contract: LoadedContract?
-
+    
     @State private var selected: String = ""
     @State private var encoded: String = ""
-//    @State private var fields : [String] = [String](repeating: "", count: 100)
+    //    @State private var fields : [String] = [String](repeating: "", count: 100)
     @State private var fields : [String: [String]] = [:]
     
     var body: some View {
@@ -667,12 +666,12 @@ struct ABIEncode: View {
                     }
                     Button {
                         if selected == "quoteExactInputSingle" {
-//                            let usdc = EthereumAddress("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48")!
-//                            let weth = EthereumAddress("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2")!
-//                            let fee_tier = BigUInt(3000)
-//                            let amount_out = BigUInt.init("1", .ether)
-//                            let sqrt_param = BigUInt(0)
-
+                            //                            let usdc = EthereumAddress("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48")!
+                            //                            let weth = EthereumAddress("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2")!
+                            //                            let fee_tier = BigUInt(3000)
+                            //                            let amount_out = BigUInt.init("1", .ether)
+                            //                            let sqrt_param = BigUInt(0)
+                            
                             fields[selected] = [
                                 // weth
                                 "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
@@ -735,13 +734,13 @@ struct ABIEncode: View {
                             encoded = ""
                             return
                         }
-
+                        
                         guard
                             let encoded_call = contract.method(selected, parameters: fields[selected] ?? [], extraData: nil) else {
                             encoded = ""
                             return
                         }
-
+                        
                         encoded = encoded_call.toHexString()
                         
                     } label: {
@@ -768,7 +767,7 @@ struct LoadContractFromChain : View {
     @State private var contract_name = ""
     @State private var contract_addr = ""
     @State private var contract_abi = ""
-
+    
     @Environment(\.dismiss) var dismiss
     
     
@@ -854,7 +853,7 @@ struct BreakpointView: View {
                             }
                             openURL(link)
                         }
-
+                        
                     } label: {
                         Text("etherscan")
                     }
@@ -872,24 +871,39 @@ struct BreakpointView: View {
                         guard let url = URL(string:"\(SIG_DIR_URL)/api/v1/signatures/?format=json&hex_signature=0x\(sig)") else {
                             return
                         }
-
+                        
                         Task {
                             let (data, _) = try await URLSession.shared.data(from: url)
                             let ptvResult = try JSONDecoder().decode(SignatureLookup.self, from: data)
                             print("swift pulled \(ptvResult) against url \(url)")
-//                            guard let query_result = ptvResult.results.first else {
-//                                return
-//                            }
+                            //                            guard let query_result = ptvResult.results.first else {
+                            //                                return
+                            //                            }
                             DispatchQueue.main.async {
                                 possible_signature_names = ptvResult.results.map({ $0.textSignature })
                             }
                         }
                     } label: {
                         Text("Lookup possible signature names")
+                            .help("powered by API request to 4byte")
                     }.disabled(callbackmodel.current_args.count < 8)
-                    List {
-                        ForEach(possible_signature_names, id: \.self) { name in
-                            Text(name)
+                    HStack {
+                        List {
+                            ForEach(possible_signature_names, id: \.self) { name in
+                                Text(name)
+                            }
+                        }
+                        .frame(minHeight: 120, maxHeight: 240)
+                        .border(.black)
+                        //                        .background(.gray)
+                        .foregroundStyle(.gray)
+                        .scrollContentBackground(.hidden)
+                        VStack {
+                            Button {
+                                // print
+                            } label : {
+                                Text("attempt decode")
+                            }
                         }
                     }
                 }.frame(minWidth: 80)
@@ -911,13 +925,14 @@ struct BreakpointView: View {
                         Text("Continue")
                     }.disabled(!callbackmodel.hit_breakpoint)
                 }
-
-
-
             }
             .padding()
             .background()
-        }
+        }.onReceive(EVMRunStateControls.shared.$contract_currently_running, perform: { current_running in
+            if !current_running {
+                possible_signature_names = []
+            }
+        })
     }
 }
 
@@ -993,7 +1008,7 @@ struct RunningEVM<Driver: EVMDriver>: View {
     @Binding var msg_sender_eth_balance: String
     let d : Driver
     @ObservedObject private var evm_run_controls = EVMRunStateControls.shared
-
+    
     func dev_mode() {
         // entry_point(address,uint256)
         calldata = "f4bd333800000000000000000000000001010101010101010101010101010101010101010000000000000000000000000000000000000000000000004563918244f40000"
@@ -1071,7 +1086,7 @@ struct RunningEVM<Driver: EVMDriver>: View {
                             }
                             
                         } label: {
-                            Text("Run contract")
+                            Text("Run contract").frame(width: 120)
                         }
                         if evm_run_controls.contract_currently_running {
                             RotatingDotAnimation(param: .init(
@@ -1083,6 +1098,13 @@ struct RunningEVM<Driver: EVMDriver>: View {
                             ))
                         }
                     }
+                    Button {
+                        ExecutedOperations.shared.execed_operations = []
+                        EVMRunStateControls.shared.contract_currently_running = false
+                        OpcodeCallbackModel.shared.reset()
+                    } label : {
+                        Text("Reset").frame(width: 120)
+                    }.frame(width: 140)
                     Button {
                         dev_mode()
                     } label: {

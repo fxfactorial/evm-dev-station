@@ -87,6 +87,13 @@ public class OpcodeCallbackModel: ObservableObject {
     @Published public var current_caller = ""
     @Published public var current_callee = ""
     @Published public var current_args = ""
+    
+    public func reset() {
+        hit_breakpoint = false
+        current_caller = ""
+        current_callee = ""
+        current_args = ""
+    }
 }
 
 public enum DBKind : String {

@@ -69,6 +69,17 @@ public class ExecutedOperations : ObservableObject {
     @Published public var execed_operations: [ExecutedEVMCode] = []
 }
 
+// cause on the fly need to do side effect to golang code
+public class EVMRunStateControls: ObservableObject {
+    public static let shared = EVMRunStateControls()
+
+    @Published public var record_executed_operations = false
+    @Published public var breakpoint_on_call = false
+    @Published public var breakpoint_on_jump = false
+    @Published public var contract_currently_running = false
+
+}
+
 public typealias continue_evm_exec_completion = (Bool, String, String, String) -> Void
 
 public class OpcodeCallbackModel: ObservableObject {

@@ -95,14 +95,6 @@ struct RotatingDotAnimation: View {
     }
 }
 
-// TODO maybe delete since basically not used right - using the custom binding trick
-// cause on the fly need to do side effect to golang code
-class EVMRunStateControls: ObservableObject {
-    @Published var record_executed_operations = false
-    @Published var breakpoint_on_call = false
-    @Published var breakpoint_on_jump = false
-}
-
 class LoadChainModel: ObservableObject {
     @Published var chaindata_directory = ""
     @Published var is_chain_loaded = false
@@ -128,7 +120,7 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
     
     @StateObject private var chaindb = LoadChainModel()
     @StateObject private var current_block_header = CurrentBlockHeader()
-    @StateObject private var evm_run_controls = EVMRunStateControls()
+    @StateObject private var evm_run_controls = EVMRunStateControls.shared
     
     let d : Driver
     let abi: ABIDriver
@@ -964,9 +956,7 @@ struct RunningEVM<Driver: EVMDriver>: View {
     @Binding var msg_sender: String
     @Binding var msg_sender_eth_balance: String
     let d : Driver
-    @State private var _hack_redraw_hook = false
-    @EnvironmentObject private var evm_run_controls : EVMRunStateControls
-    @State private var contract_currently_running = false
+    @ObservedObject private var evm_run_controls = EVMRunStateControls.shared
 
     func dev_mode() {
         // entry_point(address,uint256)
@@ -1023,7 +1013,7 @@ struct RunningEVM<Driver: EVMDriver>: View {
                     HStack {
                         Button {
                             print("calling run evm handler \(calldata)-\(msg_value)")
-                            contract_currently_running = true
+                            evm_run_controls.contract_currently_running = true
                             Task.detached {
                                 let result = await d.call(
                                     calldata: calldata,
@@ -1033,7 +1023,7 @@ struct RunningEVM<Driver: EVMDriver>: View {
                                 
                                 DispatchQueue.main.async {
                                     OpcodeCallbackModel.shared.hit_breakpoint = false
-                                    contract_currently_running = false
+                                    evm_run_controls.contract_currently_running = false
                                     switch result {
                                     case .failure(reason: let r):
                                         error_msg_evm = r
@@ -1047,7 +1037,7 @@ struct RunningEVM<Driver: EVMDriver>: View {
                         } label: {
                             Text("Run contract")
                         }
-                        if contract_currently_running {
+                        if evm_run_controls.contract_currently_running {
                             RotatingDotAnimation(param: .init(
                                 inner_circle_width: 12,
                                 inner_circle_height: 12,
@@ -1064,11 +1054,11 @@ struct RunningEVM<Driver: EVMDriver>: View {
                     }
                     Toggle(isOn: Binding<Bool>(
                         get: {
-                            d.opcode_call_hook_enabled()
+                            evm_run_controls.breakpoint_on_call
                         },
                         set: {
                             d.enable_opcode_call_callback(yes_no: $0)
-                            _hack_redraw_hook = $0
+                            evm_run_controls.breakpoint_on_call = $0
                         }
                     ), label: {
                         Text("Break on CALL")
@@ -1078,11 +1068,11 @@ struct RunningEVM<Driver: EVMDriver>: View {
                     })
                     Toggle(isOn: Binding<Bool>(
                         get: {
-                            d.exec_callback_enabled()
+                            evm_run_controls.record_executed_operations
                         },
                         set: {
                             d.enable_exec_callback(yes_no: $0)
-                            _hack_redraw_hook = $0
+                            evm_run_controls.record_executed_operations = $0
                         }
                     ), label: {
                         Text("Record Executed Operations")
@@ -1131,7 +1121,7 @@ struct RunningEVM<Driver: EVMDriver>: View {
         msg_sender: .constant(""),
         msg_sender_eth_balance: .constant(""),
         d: StubEVMDriver()
-    ).environmentObject(EVMRunStateControls())
+    )
 }
 
 #Preview("enabled EIPs") {

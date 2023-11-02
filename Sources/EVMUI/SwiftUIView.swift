@@ -823,6 +823,7 @@ struct BreakpointView: View {
     @ObservedObject private var callbackmodel: OpcodeCallbackModel = OpcodeCallbackModel.shared
     @State private var use_modified_values = false
     @Environment(\.openURL) var openURL
+    @State private var possible_signature_names : [String] = []
     
     var body: some View {
         VStack {
@@ -862,12 +863,44 @@ struct BreakpointView: View {
                     Text("args").frame(width: 75)
                     TextField("", text: $callbackmodel.current_args)
                 }
+                VStack {
+                    Button {
+                        if callbackmodel.current_args.count < 8 {
+                            return
+                        }
+                        let sig = callbackmodel.current_args.prefix(8)
+                        guard let url = URL(string:"\(SIG_DIR_URL)/api/v1/signatures/?format=json&hex_signature=0x\(sig)") else {
+                            return
+                        }
+
+                        Task {
+                            let (data, _) = try await URLSession.shared.data(from: url)
+                            let ptvResult = try JSONDecoder().decode(SignatureLookup.self, from: data)
+                            print("swift pulled \(ptvResult) against url \(url)")
+//                            guard let query_result = ptvResult.results.first else {
+//                                return
+//                            }
+                            DispatchQueue.main.async {
+                                possible_signature_names = ptvResult.results.map({ $0.textSignature })
+                            }
+                        }
+                    } label: {
+                        Text("Lookup possible signature names")
+                    }.disabled(callbackmodel.current_args.count < 8)
+                    List {
+                        ForEach(possible_signature_names, id: \.self) { name in
+                            Text(name)
+                        }
+                    }
+                }.frame(minWidth: 80)
+                
                 HStack {
                     Toggle(isOn: $use_modified_values) {
                         Text("Use modified values")
                     }
                     Button {
                         if let cb = callbackmodel.continue_evm_exec {
+                            possible_signature_names = []
                             cb(use_modified_values,
                                callbackmodel.current_caller,
                                callbackmodel.current_callee,
@@ -878,6 +911,9 @@ struct BreakpointView: View {
                         Text("Continue")
                     }.disabled(!callbackmodel.hit_breakpoint)
                 }
+
+
+
             }
             .padding()
             .background()

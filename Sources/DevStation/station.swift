@@ -136,9 +136,9 @@ final class EVM: EVMDriver {
     }
     
     func call(calldata: String, target_addr: String, msg_value: String) -> EVMCallResult {
-        var calldata = calldata
-        var target_addr = target_addr
-        var msg_value = msg_value
+        let calldata = calldata
+        let target_addr = target_addr
+        let msg_value = msg_value
 //        calldata.makeContiguousUTF8()
 //        target_addr.makeContiguousUTF8()
 //        msg_value.makeContiguousUTF8()
@@ -286,8 +286,10 @@ func convert(length: Int, data: UnsafePointer<Int>) -> [Int] {
 struct Rootview : View {
     var body : some View {
         VStack {
-            EVMDevCenter(driver: EVM.shared, abi_driver: ABIEncoder.shared)
-        }.frame(minWidth: 780, idealWidth: 1480, minHeight: 560, idealHeight: 960, alignment: .center)
+            ScrollView {
+                EVMDevCenter(driver: EVM.shared, abi_driver: ABIEncoder.shared)
+            }
+        }.frame(minWidth: 780, idealWidth: 1480, minHeight: 560, idealHeight: 900, alignment: .center)
     }
 }
 

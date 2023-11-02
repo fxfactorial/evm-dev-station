@@ -69,7 +69,6 @@ public class ExecutedOperations : ObservableObject {
     @Published public var execed_operations: [ExecutedEVMCode] = []
 }
 
-// cause on the fly need to do side effect to golang code
 public class EVMRunStateControls: ObservableObject {
     public static let shared = EVMRunStateControls()
 
@@ -77,7 +76,6 @@ public class EVMRunStateControls: ObservableObject {
     @Published public var breakpoint_on_call = false
     @Published public var breakpoint_on_jump = false
     @Published public var contract_currently_running = false
-
 }
 
 public typealias continue_evm_exec_completion = (Bool, String, String, String) -> Void
@@ -201,6 +199,29 @@ public struct Put: Codable, Equatable {
 
 public typealias SolidityABI = [ABIElement]
 
+
+// MARK: - SignatureLookup
+public struct SignatureLookup: Codable {
+    let count: Int
+    let next, previous: JSONNull?
+    public let results: [Result]
+}
+
+// MARK: - Result
+public struct Result: Codable {
+    let id: Int
+    public let createdAt, textSignature, hexSignature, bytesSignature: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case createdAt = "created_at"
+        case textSignature = "text_signature"
+        case hexSignature = "hex_signature"
+        case bytesSignature = "bytes_signature"
+    }
+}
+
+public let SIG_DIR_URL = "https://www.4byte.directory"
 public let UNISWAP_QUOTER_ABI = """
 [
   {

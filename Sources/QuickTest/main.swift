@@ -14,6 +14,14 @@ public func evm_run_callback(
 
 }
 
+@_cdecl("evm_opcall_callback")
+public func evm_opcall_callback(
+    caller_: UnsafeMutablePointer<CChar>,
+    callee_: UnsafeMutablePointer<CChar>,
+    args_: UnsafeMutablePointer<CChar>
+) {
+
+}
 
 let name = "router"
 
@@ -43,7 +51,7 @@ for i in method_names {
 
 let jsonData = UNISWAP_QUOTER_ABI.data(using: .utf8)
 // let abi = try JSONDecoder().decode([ABI.Record].self, from: jsonData!)
-let contract = try EthereumContract(UNISWAP_QUOTER_ABI)
+let contract = try! EthereumContract(UNISWAP_QUOTER_ABI)
 let weth = EthereumAddress("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2")!
 let usdc = EthereumAddress("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48")!
 let fee_tier = BigUInt(3000)

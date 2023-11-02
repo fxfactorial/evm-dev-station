@@ -34,8 +34,8 @@ let package = Package(
       name: "EVMBridge",
       resources: [
         // technically not even needed!
-        .copy("../../libevm-bridge.a"),
-        .process("../../libevm-bridge.a")
+        // .copy("../../libevm-bridge.a"),
+        // .process("../../libevm-bridge.a")
       ],
       linkerSettings: [.unsafeFlags(["-L."]), .linkedLibrary("evm-bridge")]
     ),
@@ -52,6 +52,7 @@ let package = Package(
       dependencies: ["EVMBridge", "EVMUI", "DevStationCommon"],
       path: "Sources/DevStation"
     ),
+    // remember to define the @_cdecls necessary for linking to work
     .executableTarget(
       name: "quick-test",
       dependencies: ["EVMBridge", "DevStationCommon"],

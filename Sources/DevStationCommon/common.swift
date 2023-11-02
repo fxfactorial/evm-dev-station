@@ -80,6 +80,23 @@ public class EVMRunStateControls: ObservableObject {
 
 public typealias continue_evm_exec_completion = (Bool, String, String, String) -> Void
 
+public class BlockContextModel : ObservableObject {
+    public static let shared = BlockContextModel()
+
+    @Published public var coinbase = ""
+    @Published public var base_gas = ""
+    @Published public var base_gas_tip = ""
+    @Published public var time = ""
+
+    public func reset() {
+        coinbase = ""
+        base_gas = ""
+        base_gas_tip = ""
+        time = ""
+    }
+}
+
+
 public class OpcodeCallbackModel: ObservableObject {
     public static let shared = OpcodeCallbackModel()
     public var continue_evm_exec : continue_evm_exec_completion?

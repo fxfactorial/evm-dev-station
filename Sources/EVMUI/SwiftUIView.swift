@@ -9,8 +9,7 @@ import SwiftUI
 import DevStationCommon
 
 struct BlockContext : View {
-    @State fileprivate var coinbase: String = ""
-    @State fileprivate var base_gas: String = ""
+    @ObservedObject private var model = BlockContextModel.shared
     
     var body : some View {
         VStack {
@@ -19,11 +18,15 @@ struct BlockContext : View {
             VStack {
                 HStack {
                     Text("Coinbase")
-                    TextField("0x..", text: $coinbase)
+                    TextField("0x..", text: $model.coinbase)
                 }
                 HStack {
                     Text("Base Gas Price")
-                    TextField("base gas", text: $base_gas)
+                    TextField("base gas", text: $model.base_gas)
+                }
+                HStack {
+                    Text("Time")
+                    TextField("time", text: $model.time)
                 }
             }
             .padding()
@@ -410,6 +413,8 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                             await d.use_loaded_state_on_evm()
                             
                             DispatchQueue.main.async {
+                                BlockContextModel.shared.coinbase = blk_header.miner
+                                // BlockContextMode.shared.time
                                 current_block_header.block_number = head_number
                                 current_block_header.state_root = blk_header.stateRoot
                                 chaindb.is_chain_loaded = true
@@ -606,7 +611,10 @@ struct KnownEIPs: View {
     @Binding var known_eips : [EIP]
     @State var enable_all = false
     @Environment(\.dismiss) var dismiss
-    
+    @Environment(\.openURL) var openURL
+
+    let base_url = "https://eips.ethereum.org/EIPS"
+
     var body : some View {
         VStack {
             HStack {
@@ -621,7 +629,14 @@ struct KnownEIPs: View {
             }
             Table(known_eips) {
                 TableColumn("EIP") { d in
-                    Text(String(d.num))
+                    Button {
+                        guard let url = URL(string: "\(base_url)/eip-\(d.num)") else {
+                            return
+                        }
+                        openURL(url)
+                    } label: {
+                        Text(String(d.num))
+                    }
                 }
                 TableColumn("Enabled") { d in
                     // SO ELEGANT! custom binding on the fly!
@@ -824,116 +839,131 @@ struct BreakpointView: View {
     @Environment(\.openURL) var openURL
     @State private var possible_signature_names : [String] = []
     @State private var selected : String?
+    @State private var current_tab = 0
     
     var body: some View {
         VStack {
             Text("Breakpoint Hook")
                 .font(.title2)
-            VStack {
-                HStack {
-                    Text("caller").frame(width: 75)
-                    TextField("", text: $callbackmodel.current_caller)
-                    Button {
-                        if !callbackmodel.current_caller.isEmpty {
-                            guard let link = URL(string: "https://etherscan.com/address/\(callbackmodel.current_caller)") else {
-                                return
-                            }
-                            openURL(link)
-                        }
-                    } label: {
-                        Text("etherscan")
-                    }
-                }
-                HStack {
-                    Text("callee").frame(width: 75)
-                    TextField("", text: $callbackmodel.current_callee)
-                    Button {
-                        if !callbackmodel.current_callee.isEmpty {
-                            guard let link = URL(string: "https://etherscan.com/address/\(callbackmodel.current_callee)") else {
-                                return
-                            }
-                            openURL(link)
-                        }
-                        
-                    } label: {
-                        Text("etherscan")
-                    }
-                }
-                HStack {
-                    Text("args").frame(width: 75)
-                    TextField("", text: $callbackmodel.current_args)
-                }
+            TabView(selection: $current_tab,
+                    content: {
                 VStack {
-                    Button {
-                        if callbackmodel.current_args.count < 8 {
-                            return
-                        }
-                        let sig = callbackmodel.current_args.prefix(8)
-                        guard let url = URL(string:"\(SIG_DIR_URL)/api/v1/signatures/?format=json&hex_signature=0x\(sig)") else {
-                            return
-                        }
-                        
-                        Task {
-                            let (data, _) = try await URLSession.shared.data(from: url)
-                            let ptvResult = try JSONDecoder().decode(SignatureLookup.self, from: data)
-                            // print("swift pulled \(ptvResult) against url \(url)")
-                            //                            guard let query_result = ptvResult.results.first else {
-                            //                                return
-                            //                            }
-                            DispatchQueue.main.async {
-                                possible_signature_names = ptvResult.results.map({ $0.textSignature })
+                    VStack {
+                        HStack {
+                            Text("caller").frame(width: 75)
+                            TextField("", text: $callbackmodel.current_caller)
+                            Button {
+                                if !callbackmodel.current_caller.isEmpty {
+                                    guard let link = URL(string: "https://etherscan.com/address/\(callbackmodel.current_caller)") else {
+                                        return
+                                    }
+                                    openURL(link)
+                                }
+                            } label: {
+                                Text("etherscan")
                             }
                         }
-                    } label: {
-                        Text("Lookup possible signature names")
-                            .help("powered by API request to 4byte")
-                    }.disabled(callbackmodel.current_args.count < 8)
-                    HStack {
-                        List(possible_signature_names, id:\.self, selection: $selected) { name in
-                            Text(name).textSelection(.enabled)
+                        HStack {
+                            Text("callee").frame(width: 75)
+                            TextField("", text: $callbackmodel.current_callee)
+                            Button {
+                                if !callbackmodel.current_callee.isEmpty {
+                                    guard let link = URL(string: "https://etherscan.com/address/\(callbackmodel.current_callee)") else {
+                                        return
+                                    }
+                                    openURL(link)
+                                }
+                                
+                            } label: {
+                                Text("etherscan")
+                            }
                         }
-                        .frame(minHeight: 120, maxHeight: 240)
-                        .border(.black)
-                        //                        .background(.gray)
-                        // .foregroundStyle(.selection)
-                        .scrollContentBackground(.hidden)
+                        HStack {
+                            Text("args").frame(width: 75)
+                            TextField("", text: $callbackmodel.current_args)
+                        }
                         VStack {
                             Button {
-                                // print
-                            } label : {
-                                Text("attempt decode")
+                                if callbackmodel.current_args.count < 8 {
+                                    return
+                                }
+                                let sig = callbackmodel.current_args.prefix(8)
+                                guard let url = URL(string:"\(SIG_DIR_URL)/api/v1/signatures/?format=json&hex_signature=0x\(sig)") else {
+                                    return
+                                }
+                                
+                                Task {
+                                    let (data, _) = try await URLSession.shared.data(from: url)
+                                    let ptvResult = try JSONDecoder().decode(SignatureLookup.self, from: data)
+                                    // print("swift pulled \(ptvResult) against url \(url)")
+                                    //                            guard let query_result = ptvResult.results.first else {
+                                    //                                return
+                                    //                            }
+                                    DispatchQueue.main.async {
+                                        possible_signature_names = ptvResult.results.map({ $0.textSignature })
+                                    }
+                                }
+                            } label: {
+                                Text("Lookup possible signature names")
+                                    .help("powered by API request to 4byte")
+                            }.disabled(callbackmodel.current_args.count < 8)
+                            HStack {
+                                List(possible_signature_names, id:\.self, selection: $selected) { name in
+                                    Text(name).textSelection(.enabled)
+                                }
+                                .frame(minHeight: 120, maxHeight: 240)
+                                .border(.black)
+                                //                        .background(.gray)
+                                // .foregroundStyle(.selection)
+                                .scrollContentBackground(.hidden)
+                                VStack {
+                                    Button {
+                                        // print
+                                    } label : {
+                                        Text("attempt decode")
+                                    }
+                                }
                             }
+                        }.frame(minWidth: 80)
+                        
+                        HStack {
+                            Toggle(isOn: $use_modified_values) {
+                                Text("Use modified values")
+                            }
+                            Button {
+                                if let cb = callbackmodel.continue_evm_exec {
+                                    possible_signature_names = []
+                                    cb(use_modified_values,
+                                       callbackmodel.current_caller,
+                                       callbackmodel.current_callee,
+                                       callbackmodel.current_args
+                                    )
+                                }
+                            } label: {
+                                Text("Continue")
+                            }.disabled(!callbackmodel.hit_breakpoint)
                         }
                     }
-                }.frame(minWidth: 80)
-                
-                HStack {
-                    Toggle(isOn: $use_modified_values) {
-                        Text("Use modified values")
+                    .padding()
+                }.onReceive(EVMRunStateControls.shared.$contract_currently_running, perform: { current_running in
+                    if !current_running {
+                        possible_signature_names = []
                     }
-                    Button {
-                        if let cb = callbackmodel.continue_evm_exec {
-                            possible_signature_names = []
-                            cb(use_modified_values,
-                               callbackmodel.current_caller,
-                               callbackmodel.current_callee,
-                               callbackmodel.current_args
-                            )
-                        }
-                    } label: {
-                        Text("Continue")
-                    }.disabled(!callbackmodel.hit_breakpoint)
+                })
+                .tabItem { Text("CALL").help("contract calls") }.tag(0)
+                .frame(height: 280)
+                VStack {
+                    Text("jump stuff")
                 }
-            }
-            .padding()
-            .background()
-        }.onReceive(EVMRunStateControls.shared.$contract_currently_running, perform: { current_running in
-            if !current_running {
-                possible_signature_names = []
-            }
-        })
+                .tabItem{ Text("JUMP").help("internal transactions") }.tag(1)
+                .frame(height: 280)
+                
+            })
+        }
     }
 }
+
+
 
 #Preview("breakpoint view") {
     BreakpointView()
@@ -1089,11 +1119,11 @@ struct RunningEVM<Driver: EVMDriver>: View {
                         }
                         if evm_run_controls.contract_currently_running {
                             RotatingDotAnimation(param: .init(
-                                inner_circle_width: 12,
-                                inner_circle_height: 12,
-                                inner_circle_offset: -9,
-                                outer_circle_width: 35,
-                                outer_circle_height: 35
+                                inner_circle_width: 6,
+                                inner_circle_height: 6,
+                                inner_circle_offset: -12,
+                                outer_circle_width: 20,
+                                outer_circle_height: 20
                             ))
                         }
                     }

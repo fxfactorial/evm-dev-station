@@ -256,40 +256,41 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                     }
                     VStack {
                         BlockContext()
-                            .frame(maxWidth: 240)
-                        VStack {
-                            Text("Load Blockchain")
-                                .font(.title)
-                                .help("load state/contract")
+                            .frame(maxWidth: .infinity)
+                        HStack {
                             VStack {
-                                HStack {
-                                    if chaindb.show_loading_db {
-                                        RotatingDotAnimation()
+                                Text("Load Blockchain")
+                                    .font(.title)
+                                    .help("load state/contract")
+                                VStack {
+                                    HStack {
+                                        if chaindb.show_loading_db {
+                                            RotatingDotAnimation()
+                                        }
+                                        Button {
+                                            present_load_db_sheet.toggle()
+                                        } label: {
+                                            Text("load existing db")
+                                        }
                                     }
+                                }
+                                .padding()
+                                .background()
+                            }
+                            Spacer()
+                            VStack {
+                                Text("EVM Configuration")
+                                    .font(.title)
+                                VStack {
                                     Button {
-                                        present_load_db_sheet.toggle()
+                                        present_eips_sheet.toggle()
                                     } label: {
-                                        Text("load existing db")
+                                        Text("EIPS enabled")
                                     }
                                 }
+                                .padding()
+                                .background()
                             }
-                            .padding()
-                            .background()
-                            
-                        }
-                        VStack {
-                            Text("EVM Configuration")
-                                .font(.system(size: 14, weight: .bold))
-                            VStack {
-                                Button {
-                                    present_eips_sheet.toggle()
-                                } label: {
-                                    Text("EIPS enabled")
-                                }
-                                Text("Something")
-                            }
-                            .padding()
-                            .background()
                         }
                         StateDBDetails()
                             .environmentObject(current_block_header)
@@ -743,7 +744,7 @@ struct ABIEncode: View {
                 }
             }
         }
-        .frame(maxWidth: 420, maxHeight: 200)
+        .frame(maxWidth: .infinity, maxHeight: 200)
     }
 }
 

@@ -10,32 +10,23 @@ public enum EVMError : Error {
     case load_chaindata_problem(String)
 }
 
-// TODO rename to backend golang code interface, something cause
-// we also load up the database and such
-public protocol EVMDriver {
-    
-    // not sure how to do this as the get,set way without turning into existential type/observable later
-    func exec_callback_enabled() -> Bool
-    func enable_exec_callback(yes_no: Bool)
-    
-    func opcode_call_hook_enabled() -> Bool
-    func enable_opcode_call_callback(yes_no: Bool)
-    
-    func create_new_contract(code: String) throws -> String
-    func new_evm_singleton()
-    func available_eips() -> [Int]
-    func call(calldata: String, target_addr: String, msg_value: String) -> EVMCallResult
-    func load_chaindata(pathdir: String, db_kind: String) throws
-    func load_chainhead() throws -> String
-    func load_contract(addr: String) throws -> String
-    func use_loaded_state_on_evm()
+public class LoadChainModel: ObservableObject {
+    public static let shared = LoadChainModel()
+    @Published public var chaindata_directory = ""
+    @Published public var is_chain_loaded = false
+    @Published public var show_loading_db = false
+    @Published public var db_kind : DBKind = .InMemory
+//    public init(chaindata_directory: String = "",
+//                is_chain_loaded: Bool = false,
+//                show_loading_db: Bool = false,
+//                db_kind: DBKind = .InMemory) {
+//        self.chaindata_directory = chaindata_directory
+//        self.is_chain_loaded = is_chain_loaded
+//        self.show_loading_db = show_loading_db
+//        self.db_kind = db_kind
+//    }
 }
 
-public protocol ABIDriver {
-    func add_abi(abi_json: String) throws -> Int
-    func methods_for_abi(abi_id: Int) throws -> [String]
-    func encode_arguments(abi_id: Int, args: [String]) throws -> String
-}
 
 public struct ExecutedEVMCode: Identifiable{
     public let id = UUID()
@@ -76,6 +67,7 @@ public class EVMRunStateControls: ObservableObject {
     @Published public var breakpoint_on_call = false
     @Published public var breakpoint_on_jump = false
     @Published public var contract_currently_running = false
+    public var current_call_task : Task<Void, Error>?
 }
 
 public typealias continue_evm_exec_completion = (Bool, String, String, String) -> Void

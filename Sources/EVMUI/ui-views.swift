@@ -98,13 +98,6 @@ struct RotatingDotAnimation: View {
     }
 }
 
-class LoadChainModel: ObservableObject {
-    @Published var chaindata_directory = ""
-    @Published var is_chain_loaded = false
-    @Published var show_loading_db = false
-    @Published var db_kind : DBKind = .InMemory
-}
-
 public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
     
     @State private var bytecode_add = false
@@ -121,7 +114,7 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
     @State private var msg_sender_eth_balance = ""
     @State private var current_contract_detail_tab = 0
     
-    @StateObject private var chaindb = LoadChainModel()
+    @StateObject private var chaindb = LoadChainModel.shared
     @StateObject private var current_block_header = CurrentBlockHeader()
     @StateObject private var evm_run_controls = EVMRunStateControls.shared
     
@@ -207,7 +200,8 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                                         if var contract = selected_contract {
                                             do {
                                                 contract.address = try d.create_new_contract(
-                                                    code: contract.bytecode
+                                                    code: contract.bytecode,
+                                                    creator_addr: "0x00000000000000000000"
                                                 )
                                                 // needed to cause ui update
                                                 selected_contract = contract
@@ -269,8 +263,8 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                                     Button {
                                         present_load_db_sheet.toggle()
                                     } label: {
-                                        Text("Load existing db")
-                                    }
+                                        Text("Load Chaindata")
+                                    }.disabled(chaindb.is_chain_loaded)
                                     if chaindb.show_loading_db {
                                         RotatingDotAnimation(param: .init(
                                             inner_circle_width: 12,
@@ -443,7 +437,10 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                 var new_addr: String
                 
                 do {
-                    new_addr = try d.create_new_contract(code: new_contract_bytecode)
+                    new_addr = try d.create_new_contract(
+                        code: new_contract_bytecode,
+                        creator_addr: "0x00000000000000000000"
+                    )
                 } catch {
                     return
                 }
@@ -1036,6 +1033,7 @@ struct RunningEVM<Driver: EVMDriver>: View {
     @Binding var msg_sender_eth_balance: String
     let d : Driver
     @ObservedObject private var evm_run_controls = EVMRunStateControls.shared
+    @ObservedObject private var load_chain_model = LoadChainModel.shared
     
     func dev_mode() {
         // entry_point(address,uint256)
@@ -1093,7 +1091,7 @@ struct RunningEVM<Driver: EVMDriver>: View {
                         Button {
                             print("calling run evm handler \(calldata)-\(msg_value)")
                             evm_run_controls.contract_currently_running = true
-                            Task.detached {
+                            evm_run_controls.current_call_task = Task.detached {
                                 let result = await d.call(
                                     calldata: calldata,
                                     target_addr: target_addr,
@@ -1115,7 +1113,7 @@ struct RunningEVM<Driver: EVMDriver>: View {
                             
                         } label: {
                             Text("Run contract").frame(width: 120)
-                        }
+                        }.disabled(evm_run_controls.contract_currently_running)
                         if evm_run_controls.contract_currently_running {
                             RotatingDotAnimation(param: .init(
                                 inner_circle_width: 6,
@@ -1130,6 +1128,15 @@ struct RunningEVM<Driver: EVMDriver>: View {
                         ExecutedOperations.shared.execed_operations = []
                         EVMRunStateControls.shared.contract_currently_running = false
                         OpcodeCallbackModel.shared.reset()
+                        if let t = EVMRunStateControls.shared.current_call_task {
+                            d.reset_evm(
+                                enableOpCodeCallback: EVMRunStateControls.shared.breakpoint_on_call,
+                                enableCallback: EVMRunStateControls.shared.record_executed_operations,
+                                useStateInMemory: load_chain_model.db_kind == DBKind.InMemory
+                            )
+                            t.cancel()
+                            EVMRunStateControls.shared.current_call_task = nil
+                        }
                     } label : {
                         Text("Reset").frame(width: 120)
                     }.frame(width: 140)

@@ -115,6 +115,8 @@ typedef struct { void *data; GoInt len; GoInt cap; } GoSlice;
 extern "C" {
 #endif
 
+extern void UseInMemoryStateOnEVM();
+extern void ResetEVM(GoUint8 enableOpCodeCallback, GoUint8 enableCallback, GoUint8 useStateInMemory);
 extern void EnableOPCodeCallHook(GoUint8 status);
 extern void SendValueToPausedEVMInCall(GoUint8 useOverrides, GoString caller_, GoString callee_, GoString payload_);
 extern void AddABI(GoInt name, GoString abiJSON_);
@@ -135,7 +137,6 @@ struct LoadCodeFromState_return {
 extern struct LoadCodeFromState_return LoadCodeFromState(GoString addrSwift);
 extern struct LoadChainDataResult LoadChainData(GoString pathDir, GoInt dbKind);
 extern int TestReceiveGoString(GoString input_);
-extern int NewEVMSession();
 extern void NewGlobalEVM();
 extern void PauseOnOpcode(char code);
 extern void UseLoadedStateOnEVM();
@@ -144,8 +145,7 @@ extern void EnableStopOnCall(GoUint8 enable);
 extern struct SetAccountBalanceResult SetAccountBalance(GoString account, GoString balance);
 extern void TestSendingInt(GoString msgValue_);
 extern struct CallContractResult CallEVM(GoString calldataSwift_, GoString targetAddrSwift_, GoString msgValueSwift_);
-extern struct NewContractResult DeployNewContract(GoString bytecode_);
-extern int CreateNewContract(int sessionID, char* contractByteCode, int contractByteCodeLength, char* senderC, char* value, GoString test);
+extern struct NewContractResult DeployNewContract(GoString bytecode_, GoString caller_);
 extern int RunCodeOnContract(int sessionID, char* calldata, int calldataLength, char* callerAddr);
 extern void CallGoFromSwift();
 

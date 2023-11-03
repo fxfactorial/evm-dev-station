@@ -94,21 +94,44 @@ final class ABIEncoder: ABIDriver {
 
 }
 
+extension Bool {
+    func to_go_bool() -> GoUint8 {
+        self ? GoUint8(1) : GoUint8(0)
+    }
+}
+
 final class EVM: EVMDriver {
     static let shared = EVM()
+    func reset_evm(enableOpCodeCallback: Bool, 
+                   enableCallback: Bool,
+                   useStateInMemory: Bool) {
+        EVMBridge.ResetEVM(
+            enableOpCodeCallback.to_go_bool(),
+            enableCallback.to_go_bool(),
+            useStateInMemory.to_go_bool()
+        )
+    }
 
     func use_loaded_state_on_evm() {
         EVMBridge.UseLoadedStateOnEVM()
     }
 
-    func create_new_contract(code: String) throws -> String {
+    // NOTE THIS IS WRONG NEED TO DO WITH THE SCOPED POINTER THING
+    func create_new_contract(code: String, creator_addr: String) throws -> String {
         var code = code
         code.makeContiguousUTF8()
         let data = Data(code.utf8)
         let value = data.withUnsafeBytes { $0.baseAddress }!
         let result = value.assumingMemoryBound(to: CChar.self)
         let wrapped = GoString(p: result, n: code.count)
-        let result_deploy = EVMBridge.DeployNewContract(wrapped)
+
+        let data_ = Data(creator_addr.utf8)
+        let value_ = data_.withUnsafeBytes { $0.baseAddress }!
+        let result_ = value_.assumingMemoryBound(to: CChar.self)
+        let wrapped_ = GoString(p: result_, n: creator_addr.count)
+
+        
+        let result_deploy = EVMBridge.DeployNewContract(wrapped, wrapped_)
         if result_deploy.is_error {
             let error_wrapped = Data(bytes: result_deploy.error_reason, count: result_deploy.error_reason_size)
             free(result_deploy.error_reason)
@@ -199,9 +222,9 @@ final class EVM: EVMDriver {
 
     func enable_opcode_call_callback(yes_no: Bool) {
         if yes_no {
-            EVMBridge.EnableOPCodeCallHook(GoUint8(1))
+            EVMBridge.EnableOPCodeCallHook(yes_no.to_go_bool())
         } else {
-            EVMBridge.EnableOPCodeCallHook(GoUint8(0))
+            EVMBridge.EnableOPCodeCallHook(yes_no.to_go_bool())
         }
         _opcode_call_hook_enabled = yes_no
 

@@ -1018,7 +1018,51 @@ struct LoadExistingDB : View {
     }
 }
 
+struct OPCodeEnable: Identifiable {
+    let id = UUID()
+    let name : String
+    var enabled: Bool = false
+}
 
+struct BreakOnOpcodes: View {
+    @Binding var known_ops: [OPCodeEnable]
+    @State var break_on_all = false
+    @Environment(\.dismiss) var dismiss
+
+    var body: some View {
+        VStack {
+            HStack {
+                Text("\(known_ops.count) known opcodes")
+                Toggle("all", isOn: $break_on_all)
+                Button {
+                    dismiss()
+                } label: {
+                    Text("Ok")
+                }
+            }
+            Table(known_ops) {
+                TableColumn("name", value: \.name)
+                TableColumn("enabled") { d in
+                    Toggle("", isOn: Binding<Bool>(
+                        get: {
+                            if break_on_all {
+                                return true
+                            }
+                            return d.enabled
+                        },
+                        set: {
+                            if let index = known_ops.firstIndex(where: { $0.id == d.id }) {
+                                known_ops[index].enabled = $0
+                            }
+                        }
+                    ))
+                }
+            }
+        }
+        .frame(minWidth: 450, minHeight: 450)
+        .padding()
+    }
+}
 
 struct RunningEVM<Driver: EVMDriver>: View {
     @State private var calldata = ""
@@ -1034,7 +1078,11 @@ struct RunningEVM<Driver: EVMDriver>: View {
     let d : Driver
     @ObservedObject private var evm_run_controls = EVMRunStateControls.shared
     @ObservedObject private var load_chain_model = LoadChainModel.shared
-    
+    // opcode things
+    @State private var present_opcode_select_sheet = false
+    @Environment(\.dismiss) var dismiss
+    @State private var opcodes_used : [OPCodeEnable] = []
+
     func dev_mode() {
         // entry_point(address,uint256)
         calldata = "f4bd333800000000000000000000000001010101010101010101010101010101010101010000000000000000000000000000000000000000000000004563918244f40000"
@@ -1141,10 +1189,11 @@ struct RunningEVM<Driver: EVMDriver>: View {
                         Text("Reset").frame(width: 120)
                     }.frame(width: 140)
                     Button {
-                        dev_mode()
+                        present_opcode_select_sheet.toggle()
+                        print("ALL KNOWN OPCODES?", d.all_known_opcodes(), d.all_known_opcodes().count)
                     } label: {
-                        Text("enable dev values")
-                    }
+                        Text("Break on OPCODE").frame(width: 120)
+                    }.frame(width: 140)
                     Toggle(isOn: Binding<Bool>(
                         get: {
                             evm_run_controls.breakpoint_on_call
@@ -1174,7 +1223,19 @@ struct RunningEVM<Driver: EVMDriver>: View {
             }
             .padding()
             .background()
-        }
+        }.onAppear {
+            var codes = d.all_known_opcodes()
+            codes.sort()
+            for c in codes {
+                opcodes_used.append(.init(name: c))
+            }
+        }.sheet(isPresented: $present_opcode_select_sheet,
+                onDismiss: {
+            
+        }, content: {
+            BreakOnOpcodes(known_ops: $opcodes_used)
+        })
+
     }
 }
 

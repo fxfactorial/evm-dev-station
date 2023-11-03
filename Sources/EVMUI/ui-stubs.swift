@@ -58,6 +58,10 @@ final class StubEVMDriver: EVMDriver {
     func use_loaded_state_on_evm() {
     }
 
+    func all_known_opcodes() -> [String] {
+        return ["PUSH1", "PUSH2"]
+    }
+
     func create_new_contract(code: String, 
                              creator_addr new_addr: String) throws -> String {
         return "0x522B3294E6d06aA25Ad0f1B8891242E335D3B459"

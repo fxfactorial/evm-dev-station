@@ -3,6 +3,12 @@ import EVMBridge
 import DevStationCommon
 import BigInt
 
+@_cdecl("evm_opcode_callback")
+public func evm_opcode_callback() {
+    //
+}
+
+
 // just to make it link 
 @_cdecl("evm_run_callback")
 public func evm_run_callback(

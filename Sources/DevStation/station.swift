@@ -300,6 +300,23 @@ final class EVM: EVMDriver {
         free(result.r0)
         return contract
     }
+
+    func all_known_opcodes() -> [String] {
+        let codes = EVMBridge.AllKnownOpcodes()
+        let elem_count = Int(codes.r1)
+        var known = [String]()
+        let buf = codes.r0.withMemoryRebound(to: UnsafePointer<CChar>.self, capacity: elem_count) {
+            Array(UnsafeBufferPointer(start: $0, count: elem_count))
+        }
+        for i in buf {
+            let s = String(cString: i)
+            free(UnsafeMutableRawPointer(mutating: i))
+            known.append(s)
+        }
+        
+        free(codes.r0)
+        return known
+    }
 }
 
 func convert(length: Int, data: UnsafePointer<Int>) -> [Int] {
@@ -322,7 +339,10 @@ struct Rootview : View {
 //    let when_done = Date.now
 //    print("finished loading chain at \(when_done)")
 //}
-
+@_cdecl("evm_opcode_callback")
+public func evm_opcode_callback() {
+    //
+}
 @_cdecl("evm_opcall_callback")
 public func evm_opcall_callback(
     caller_: UnsafeMutablePointer<CChar>,

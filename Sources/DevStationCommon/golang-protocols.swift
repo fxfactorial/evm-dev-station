@@ -19,6 +19,7 @@ public protocol EVMDriver {
     func create_new_contract(code: String, creator_addr: String) throws -> String
     func new_evm_singleton()
     func available_eips() -> [Int]
+    func all_known_opcodes() -> [String]
     func call(calldata: String, target_addr: String, msg_value: String) -> EVMCallResult
     func load_chaindata(pathdir: String, db_kind: String) throws
     func load_chainhead() throws -> String

@@ -178,6 +178,30 @@ public class CurrentBlockHeader: ObservableObject {
     
 }
 
+public class LoadedContract : ObservableObject, Hashable, Equatable {
+    static public func == (lhs: LoadedContract, rhs: LoadedContract) -> Bool {
+        lhs.id == rhs.id
+    }
+    
+    @Published public var name : String = ""
+    @Published public var bytecode: String = ""
+    @Published public var address : String = ""
+    public let id = UUID() // maybe just the address next time
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+    @Published public var contract: EthereumContract?
+    public init(name: String, 
+                bytecode: String,
+                address: String,
+                contract: EthereumContract? = nil) {
+        self.name = name
+        self.bytecode = bytecode
+        self.address = address
+        self.contract = contract
+    }
+}
+
 /*
  {
  "parentHash": "0xb222f1a60364148ab5b44ee63a70bd31167d12f209f57c7bedc238dcc54c279c",

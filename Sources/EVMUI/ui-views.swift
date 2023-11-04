@@ -35,26 +35,6 @@ struct BlockContext : View {
     }
 }
 
-
-
-struct LoadedContract : Hashable, Identifiable {
-    static func == (lhs: LoadedContract, rhs: LoadedContract) -> Bool {
-        lhs.id == rhs.id
-    }
-    
-    let name : String
-    let bytecode: String
-    var address : String
-    let id = UUID() // maybe just the address next time
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
-    }
-    let abi_id : Int
-    let method_names: [String]
-    var abi : SolidityABI?
-    var contract: EthereumContract?
-}
-
 extension Collection {
     /// Returns the element at the specified index if it exists, otherwise nil.
     subscript (safe index: Index) -> Element? {
@@ -128,9 +108,7 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
     
     
     @State private var loaded_contracts : [LoadedContract] = [
-        .init(name: "uniswapv3", bytecode: "123", address: "0x1256", abi_id: 0, method_names: []),
-        .init(name: "compound", bytecode: "456", address: "0x1234", abi_id: 1, method_names: []),
-        sample_contract
+        // sample_contract
     ]
     
     @State private var selected_contract : LoadedContract?
@@ -342,16 +320,13 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                     }
                     
                     print("here is the actual contract loaded from chain", code)
-                    
-                    let abi_id = !abi_json.isEmpty ? try! abi.add_abi(abi_json: abi_json) : 0
-                    let methods = abi_id > 0 ? try! abi.methods_for_abi(abi_id: abi_id) : []
-                    var contract = LoadedContract(name: name, bytecode: code, address: addr, abi_id: abi_id, method_names: methods)
-                    if let json_data = abi_json.data(using: .utf8),
-                       let parsed_abi = try? JSONDecoder().decode(SolidityABI.self, from: json_data) {
-                        contract.abi = parsed_abi
-                        contract.contract = try? EthereumContract(abi_json, at: EthereumAddress(addr))
-                    }
-                    
+                    let contract = LoadedContract(
+                        name: name,
+                        bytecode: code,
+                        address: addr,
+                        contract: try? EthereumContract(abi_json)
+                    )
+
                     DispatchQueue.main.async {
                         loaded_contracts.append(contract)
                         withAnimation {
@@ -448,29 +423,12 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                 } catch {
                     return
                 }
-                
-                
-                //                let abi_id = if !new_contract_abi.isEmpty { try! abi.add_abi(abi_json: new_contract_abi)} else { 0 }
-                //                // TODO actually call out to the ABI go code
-                //                let method_names = if abi_id > 0 { try! abi.methods_for_abi(abi_id: abi_id) } else { [] }
-                
-                let abi_json = new_contract_abi
-                let abi_id = !abi_json.isEmpty ? try! abi.add_abi(abi_json: abi_json) : 0
-                let methods = abi_id > 0 ? try! abi.methods_for_abi(abi_id: abi_id) : []
-                var loaded = LoadedContract(
+                let loaded = LoadedContract(
                     name: new_contract_name,
                     bytecode: new_contract_bytecode,
                     address: new_addr,
-                    abi_id: abi_id,
-                    method_names: methods
+                    contract: try? EthereumContract(new_contract_abi)
                 )
-                
-                if !abi_json.isEmpty {
-                    let json_data = abi_json.data(using: .utf8)!
-                    loaded.abi = try? JSONDecoder().decode(SolidityABI.self, from: json_data)
-                    loaded.contract = try? EthereumContract(abi_json, at: EthereumAddress(new_addr))
-                }
-                
                 loaded_contracts.append(loaded)
             } content: {
                 NewContractByteCode(
@@ -484,8 +442,6 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
             StateInspector(d: d)
                 .tabItem { Text("Account/State Modification") }.tag(1)
         }).onAppear {
-            // TODO only during dev at the moment
-            selected_contract = loaded_contracts[2]
             // only needs to happen once
             let all = d.available_eips()
             for item in all {
@@ -680,15 +636,19 @@ struct ABIEncode: View {
     
     @State private var selected: String = ""
     @State private var encoded: String = ""
-    //    @State private var fields : [String] = [String](repeating: "", count: 100)
+    @State private var decoded_input : String = ""
+    @State private var decoded_output : [String: Any]? = [:]
     @State private var fields : [String: [String]] = [:]
     
     var body: some View {
         HStack {
             NavigationStack {
                 Text("Method names")
-                if let contract = loaded_contract {
-                    List(contract.method_names, id: \.self,
+                if let contract = loaded_contract,
+                   let c = contract.contract {
+                    let names = Array(c.methods.keys).filter { !$0.hasPrefix("0x") }.sorted()
+
+                    List(names, id: \.self,
                          selection: $selected) { item in
                         Text(item)
                     }
@@ -723,8 +683,8 @@ struct ABIEncode: View {
                 ScrollView {
                     if !selected.isEmpty {
                         if let contract = loaded_contract,
-                           let abi = contract.abi,
-                           let element = abi.first(where: { $0.name == selected }) {
+                           let c = contract.contract,
+                           let element = c.allMethods.first(where: { $0.name == selected }) {
                             ForEach(Array(zip(element.inputs.indices, element.inputs)), id: \.1.name) {index, input in
                                 HStack {
                                     Text(input.name)
@@ -750,32 +710,63 @@ struct ABIEncode: View {
                                 }
                             }
                         }
+                    } else {
+                        Text("select a method from list")
                     }
                 }
                 .padding([.top], 15)
                 Spacer()
-                HStack {
-                    Button {
-                        guard let l = loaded_contract,
-                              let contract = l.contract else {
-                            print("nothing loaded ")
-                            encoded = ""
-                            return
-                        }
-                        
-                        guard
-                            let encoded_call = contract.method(selected, parameters: fields[selected] ?? [], extraData: nil) else {
-                            encoded = ""
-                            return
-                        }
-                        
-                        encoded = encoded_call.toHexString()
-                        
-                    } label: {
-                        Text("encode")
-                    }.disabled(selected.isEmpty || loaded_contract?.contract == nil)
-                    TextField("Encoded...", text: $encoded)
-                        .textSelection(.enabled)
+                VStack {
+                    TabView {
+                        HStack {
+                            Button {
+                                guard let l = loaded_contract,
+                                      let contract = l.contract else {
+                                    encoded = ""
+                                    print("exit first")
+                                    return
+                                }
+                                
+                                guard
+                                    let encoded_call = contract.method(selected, parameters: fields[selected] ?? [], extraData: nil) else {
+                                    encoded = ""
+                                    print("exit second", selected, fields)
+                                    return
+                                }
+                                
+                                encoded = encoded_call.toHexString()
+                                
+                            } label: {
+                                Text("encode")
+                            }.disabled(selected.isEmpty || loaded_contract?.contract == nil)
+                            TextField("Encoded...", text: $encoded)
+                                .textSelection(.enabled)
+                        }.tabItem {
+                            Text("Encode")
+                        }.tag(1).padding()
+                        VStack {
+                            HStack {
+                                Button {
+                                    guard let l = loaded_contract,
+                                          let contract = l.contract else {
+                                        return
+                                    }
+                                    
+                                    decoded_output = contract.decodeReturnData(selected, data: decoded_input.data(using: .utf8)!)
+                                    print("WHAT IS DECODED", decoded_output)
+                                } label: {
+                                    Text("decode")
+                                }.disabled(decoded_input.isEmpty || loaded_contract?.contract == nil)
+                                TextField("return...", text: $decoded_input)
+                            }
+                            HStack {
+                                Text("result")
+                                //TextField("", text: )
+                            }
+                        }.tabItem {
+                            Text("Decode")
+                        }.tag(0).padding()
+                    }
                 }
             }
         }
@@ -787,7 +778,7 @@ struct ABIEncode: View {
     ABIEncode(
         d: StubABIDriver(),
         loaded_contract: sample_contract
-    )
+    ).frame(width: 700, height: 300)
 }
 
 struct LoadContractFromChain : View {
@@ -1203,8 +1194,8 @@ struct RunningEVM<Driver: EVMDriver>: View {
                     HStack {
                         Text("Return value")
                             .frame(width: 120, alignment: .leading)
-                        TextField("last call return value", text: $call_return_value)
-                            .disabled(true)
+                        Text(call_return_value)
+                            .textSelection(.enabled)
                     }
                 }
                 VStack{

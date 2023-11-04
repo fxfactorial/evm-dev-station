@@ -5,22 +5,31 @@ let sample_contract = LoadedContract(
     name: "local-compiled",
     bytecode: "6080604052600a5f55348015610013575f80fd5b50610252806100215f395ff3fe608060405234801561000f575f80fd5b5060043610610029575f3560e01c8063f4bd33381461002d575b5f80fd5b61004760048036038101906100429190610156565b61005d565b60405161005491906101a3565b60405180910390f35b5f808390505f607b8461007091906101e9565b90505f8054905061008b818361008691906101e9565b61009f565b9150815f8190555081935050505092915050565b5f80600a836100ae91906101e9565b9050600a816100bd91906101e9565b915050919050565b5f80fd5b5f73ffffffffffffffffffffffffffffffffffffffff82169050919050565b5f6100f2826100c9565b9050919050565b610102816100e8565b811461010c575f80fd5b50565b5f8135905061011d816100f9565b92915050565b5f819050919050565b61013581610123565b811461013f575f80fd5b50565b5f813590506101508161012c565b92915050565b5f806040838503121561016c5761016b6100c5565b5b5f6101798582860161010f565b925050602061018a85828601610142565b9150509250929050565b61019d81610123565b82525050565b5f6020820190506101b65f830184610194565b92915050565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52601160045260245ffd5b5f6101f382610123565b91506101fe83610123565b9250828201905080821115610216576102156101bc565b5b9291505056fea2646970667358221220de039dae0a3608fad968668e180dc3afd6bb7fe7177a42a724f955eeac0e3a8c64736f6c63430008160033",
     address: "",
-    abi_id: 3,
-    method_names: ["entry_point"]
-//    abi: [
-//        ABIElement(inputs: [
-//            Put(internalType: "address", name: "tokenIn", type: "address"),
-//            Put(internalType: "address", name: "tokenOut", type: "address"),
-//            Put(internalType: "uint24", name: "fee", type: "uint24"),
-//            Put(internalType: "uint256", name: "amountIn", type: "uint256"),
-//            Put(internalType: "uint160", name: "sqrtPriceLimitX96", type: "uint160"),
-//        ],
-//                   stateMutability: "view",
-//                   type: "function",
-//                   name: "quoteExactInputSingle",
-//                   outputs: [])
-//        
-//    ],
-//    contract: try? EthereumContract(UNISWAP_QUOTER_ABI)
+    contract: try? EthereumContract(sample_contract_abi)
 )
 
+
+let sample_contract_abi = """
+[
+  {
+    "inputs": [
+      { "internalType": "address", "name": "sender", "type": "address" },
+      { "internalType": "uint256", "name": "amount", "type": "uint256" }
+    ],
+    "name": "entry_point",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "input_amount", "type": "uint256" },
+      { "internalType": "bool", "name": "use_first", "type": "bool" }
+    ],
+    "name": "storage_checking",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]
+"""

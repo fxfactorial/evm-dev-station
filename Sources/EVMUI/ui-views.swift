@@ -555,7 +555,6 @@ struct NewContractByteCode: View {
                     contract_bytecode = sample_contract.bytecode
                     contract_name = "example local contract"
                     contract_abi = sample_contract_abi
-                    dismiss()
                 } label: {
                     Text("quick dev add contract")
                 }
@@ -688,72 +687,71 @@ struct ABIEncode: View {
                 }
             }
             VStack {
-                ScrollView {
-                    if !selected.isEmpty {
-                        if let contract = loaded_contract,
-                           let c = contract.contract,
-                           let element = c.allMethods.first(where: { $0.name == selected }) {
-                            ForEach(Array(zip(element.inputs.indices, element.inputs)), id: \.1.name) {index, input in
-                                HStack {
-                                    Text(input.name)
-                                    TextField(input.name, text: Binding<String>(
-                                        get: {
-                                            guard let method_name = element.name else {
-                                                return ""
-                                            }
-                                            
-                                            if let had_it = fields[method_name] {
-                                                return had_it[index]
-                                            }
-                                            
-                                            fields[method_name] = [String](repeating: "", count: element.inputs.count)
-                                            return ""
-                                        },
-                                        set: {
-                                            if let n = element.name {
-                                                fields[n]![index] = $0
-                                            }
-                                        }
-                                    ))
-                                }
-                            }
-                        }
-                    } else {
-                        Text("select a method from list")
-                    }
-                }
-                .padding([.top], 15)
-                Spacer()
                 VStack {
                     TabView {
-                        HStack {
-                            Button {
-                                guard let l = loaded_contract,
-                                      let contract = l.contract else {
-                                    encoded = ""
-                                    print("exit first")
-                                    return
+                        VStack {
+                            ScrollView {
+                                if !selected.isEmpty {
+                                    if let contract = loaded_contract,
+                                       let c = contract.contract,
+                                       let element = c.allMethods.first(where: { $0.name == selected }) {
+                                        ForEach(Array(zip(element.inputs.indices, element.inputs)), id: \.1.name) {index, input in
+                                            HStack {
+                                                Text(input.name)
+                                                TextField(input.name, text: Binding<String>(
+                                                    get: {
+                                                        guard let method_name = element.name else {
+                                                            return ""
+                                                        }
+                                                        
+                                                        if let had_it = fields[method_name] {
+                                                            return had_it[index]
+                                                        }
+                                                        
+                                                        fields[method_name] = [String](repeating: "", count: element.inputs.count)
+                                                        return ""
+                                                    },
+                                                    set: {
+                                                        if let n = element.name {
+                                                            fields[n]![index] = $0
+                                                        }
+                                                    }
+                                                ))
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Text("select a method from list")
                                 }
-
-                                // TODO handle encoding errors better,
-                                // recall that if you have a bool, it will fail encoding because "true" != true ha.
-                                guard
-                                    let encoded_call = contract.method(selected, parameters: fields[selected]!, extraData: nil) else {
-                                    encoded = ""
-                                    return
-                                }
-
-                                print("actually did get ", encoded_call)
-                                encoded = encoded_call.toHexString()
-                                
-                            } label: {
-                                Text("encode")
-                            }.disabled(selected.isEmpty || loaded_contract?.contract == nil)
-                            TextField("Encoded...", text: $encoded)
-                                .textSelection(.enabled)
-                        }.tabItem {
-                            Text("Encode")
-                        }.tag(1).padding()
+                            }
+                            
+                            HStack {
+                                Button {
+                                    guard let l = loaded_contract,
+                                          let contract = l.contract else {
+                                        encoded = ""
+                                        print("exit first")
+                                        return
+                                    }
+                                    
+                                    // TODO handle encoding errors better,
+                                    // recall that if you have a bool, it will fail encoding because "true" != true ha.
+                                    guard
+                                        let encoded_call = contract.method(selected, parameters: fields[selected]!, extraData: nil) else {
+                                        encoded = ""
+                                        return
+                                    }
+                                    
+                                    print("actually did get ", encoded_call)
+                                    encoded = encoded_call.toHexString()
+                                    
+                                } label: {
+                                    Text("encode")
+                                }.disabled(selected.isEmpty || loaded_contract?.contract == nil)
+                                TextField("Encoded...", text: $encoded)
+                                    .textSelection(.enabled)
+                            }
+                        }.tabItem { Text("Encode") }.tag(1).padding()
                         VStack {
                             HStack {
                                 Button {
@@ -762,21 +760,33 @@ struct ABIEncode: View {
                                         return
                                     }
                                     
-                                    decoded_output = contract.decodeReturnData(selected, data: decoded_input.data(using: .utf8)!)
+                                    decoded_output = contract.decodeReturnData(selected, data: Data(hex:decoded_input))
                                     print("WHAT IS DECODED", decoded_output)
+
                                 } label: {
                                     Text("decode")
                                 }.disabled(decoded_input.isEmpty || loaded_contract?.contract == nil)
                                 TextField("return...", text: $decoded_input)
                             }
                             HStack {
-                                Text("result")
-                                //TextField("", text: )
+                                Text("result(s)")
+                                if var have = decoded_output {
+                                    // TODO more elegant answer here
+//                                    have.removeValue(forKey: "_success")
+                                    let _ = have.removeValue(forKey: "_success")
+                                    let zipped = Array(zip(have.keys, have.values))
+                                    List(zipped, id: \.0.self) {item in
+                                        HStack {
+                                            Text(item.0)
+                                            Spacer()
+                                            Text("\((item.1 as AnyObject).description)")
+                                        }
+                                    }
+                                }
+                                // TextField("", text: )
                             }
-                        }.tabItem {
-                            Text("Decode")
-                        }.tag(0).padding()
-                    }
+                        }.tabItem { Text("Decode") }.tag(0).padding()
+                    }.frame(minHeight: 150)
                 }
             }
         }
@@ -945,10 +955,10 @@ struct BreakpointView: View {
                                 Text("Use modified values")
                             }
                             Button {
-                                callbackmodel.current_opcode_continue_task = Task.detached {
-                                    if let cb = await callbackmodel.continue_evm_exec {
-                                        
-                                        await cb(use_modified_values,
+//                                callbackmodel.current_opcode_continue_task = Task.detached {
+                                    if let cb = callbackmodel.continue_evm_exec {
+                                        print("calling continue on paused opcode", use_modified_values)
+                                         cb(use_modified_values,
                                            callbackmodel.current_caller,
                                            callbackmodel.current_callee,
                                            callbackmodel.current_args
@@ -959,7 +969,8 @@ struct BreakpointView: View {
                                             callbackmodel.selected_stack_item = nil
                                         }
                                     }
-                                }
+                                
+//                                }
                             } label: {
                                 Text("Continue")
                             }.disabled(!callbackmodel.hit_breakpoint)
@@ -975,7 +986,8 @@ struct BreakpointView: View {
                 .frame(height: 280)
                 HStack {
                     VStack {
-                        Text("Current Stack")
+                        Text("Current Stack ")
+                        Text("(bottom of list is latest value pushed to stack)")
                         List(Array(zip(callbackmodel.current_stack.indices, callbackmodel.current_stack)),
                              id: \.1.self,
                              selection: $callbackmodel.selected_stack_item) { index, item in
@@ -1170,7 +1182,9 @@ struct RunningEVM<Driver: EVMDriver>: View {
     @State private var present_opcode_select_sheet = false
     @Environment(\.dismiss) var dismiss
     @State private var opcodes_used : [OPCodeEnable] = []
-
+    @State private var keccak_input = ""
+    @State private var keccak_output = ""
+    
     func dev_mode() {
         // entry_point(address,uint256)
         calldata = "f4bd333800000000000000000000000001010101010101010101010101010101010101010000000000000000000000000000000000000000000000004563918244f40000"
@@ -1204,11 +1218,19 @@ struct RunningEVM<Driver: EVMDriver>: View {
                     HStack {
                         Text("Return value")
                             .frame(width: 120, alignment: .leading)
-                        Text(call_return_value)
+                        TextField(call_return_value, text: $call_return_value)
+                            .disabled(false)
                             .textSelection(.enabled)
                     }
                 }
                 VStack{
+                    HStack {
+                        Button {
+                            keccak_output = d.keccak256(input: $keccak_input.wrappedValue)
+                        } label: { Text("Keccak256") }
+                        TextField("input...", text: $keccak_input)
+                        TextField("output..", text: $keccak_output)
+                    }
                     HStack {
                         Text("Sender Addr")
                             .frame(width: 120, alignment: .leading)

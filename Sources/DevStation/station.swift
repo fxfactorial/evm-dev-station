@@ -163,6 +163,16 @@ final class EVM: EVMDriver {
         EVMBridge.NewGlobalEVM()
     }
 
+    func keccak256(input: String) -> String {
+        return input.withCString {
+            let g_str = GoString(p: $0, n: input.count)
+            let result = EVMBridge.Keccak256(g_str)
+            let copy = String(cString: result!)
+            free(result)
+            return copy
+        }
+    }
+
     func available_eips() -> [Int] {
         let eips = EVMBridge.AvailableEIPS()
         let elem_count = Int(eips.r1)
@@ -435,7 +445,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let stack_gstr = GoString(p: $0, n: s.count)
                 memory.withCString {
                     let memory_gstr =  GoString(p: $0, n: memory.count)
-                    EVMBridge.SendValueToPausedEVMInOpCode(true.to_go_bool(), stack_gstr, memory_gstr)
+                    // but actually this showed a bug anyway
+                    EVMBridge.SendValueToPausedEVMInOpCode(do_use.to_go_bool(), stack_gstr, memory_gstr)
                 }
             }
         }

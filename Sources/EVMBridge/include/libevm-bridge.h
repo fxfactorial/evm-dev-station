@@ -116,6 +116,7 @@ typedef struct { void *data; GoInt len; GoInt cap; } GoSlice;
 extern "C" {
 #endif
 
+extern char* Keccak256(GoString payload);
 extern void DoHookOnOpcode(GoUint8 doHook, GoString opcodeName);
 extern void EnableHookEveryOpcode(GoUint8 status);
 extern void UseInMemoryStateOnEVM();

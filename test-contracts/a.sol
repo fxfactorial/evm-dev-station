@@ -17,8 +17,7 @@ contract EntryPoint {
 
     function storage_checking(uint256 input_amount) external returns (uint256) {
 	uint256 copied_from_storage1 = simple_storage_one;
-	uint256 copied_from_storage2 = simple_storage_two;
-	return input_amount + copied_from_storage1;
+	return copied_from_storage1 + input_amount;
     }
     
     function internal_work(uint256 more_work) internal pure returns (uint256) {

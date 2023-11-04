@@ -8,7 +8,7 @@
 import Foundation
 
 public protocol EVMDriver {
-    
+    func keccak256(input: String) -> String
     // not sure how to do this as the get,set way without turning into existential type/observable later
     func exec_callback_enabled() -> Bool
     func enable_exec_callback(yes_no: Bool)

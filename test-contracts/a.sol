@@ -15,7 +15,7 @@ contract EntryPoint {
 	return amt_bigger;
     }
 
-    function storage_checking(uint256 input_amount, bool use_first) external returns (uint256) {
+    function storage_checking(uint256 input_amount) external returns (uint256) {
 	uint256 copied_from_storage1 = simple_storage_one;
 	uint256 copied_from_storage2 = simple_storage_two;
 	return input_amount + copied_from_storage1;

@@ -542,7 +542,7 @@ struct NewContractByteCode: View {
                     .lineLimit(20, reservesSpace: true)
             }
             HStack {
-                Button { dismiss() } label: { Text("Cancel").padding(5).scaledToFit().frame(width: 120)}
+                Button { dismiss() } label: { Text("Cancel").padding(5).scaledToFit().frame(width: 120) }
                 Button {
                     dismiss()
                 } label: {
@@ -550,6 +550,14 @@ struct NewContractByteCode: View {
                         .padding(5)
                         .scaledToFill()
                         .frame(width: 120)
+                }
+                Button {
+                    contract_bytecode = sample_contract.bytecode
+                    contract_name = "example local contract"
+                    contract_abi = sample_contract_abi
+                    dismiss()
+                } label: {
+                    Text("quick dev add contract")
                 }
             }
         }.padding()
@@ -726,14 +734,16 @@ struct ABIEncode: View {
                                     print("exit first")
                                     return
                                 }
-                                
+
+                                // TODO handle encoding errors better,
+                                // recall that if you have a bool, it will fail encoding because "true" != true ha.
                                 guard
-                                    let encoded_call = contract.method(selected, parameters: fields[selected] ?? [], extraData: nil) else {
+                                    let encoded_call = contract.method(selected, parameters: fields[selected]!, extraData: nil) else {
                                     encoded = ""
-                                    print("exit second", selected, fields)
                                     return
                                 }
-                                
+
+                                print("actually did get ", encoded_call)
                                 encoded = encoded_call.toHexString()
                                 
                             } label: {

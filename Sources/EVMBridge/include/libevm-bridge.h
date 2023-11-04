@@ -26,7 +26,7 @@ extern void evm_run_callback(int, char*, char*, int);
 extern void chain_load_finished();
 // callee, caller, args
 extern void evm_opcall_callback(char*, char*, char*);
-extern void evm_opcode_callback();
+extern void evm_opcode_callback(char*, char**, int, char*);
 
 struct NewContractResult {
    bool is_error;
@@ -116,10 +116,12 @@ typedef struct { void *data; GoInt len; GoInt cap; } GoSlice;
 extern "C" {
 #endif
 
+extern void DoHookOnOpcode(GoUint8 doHook, GoString opcodeName);
 extern void EnableHookEveryOpcode(GoUint8 status);
 extern void UseInMemoryStateOnEVM();
 extern void ResetEVM(GoUint8 enableOpCodeCallback, GoUint8 enableCallback, GoUint8 useStateInMemory);
 extern void EnableOPCodeCallHook(GoUint8 status);
+extern void SendValueToPausedEVMInOpCode(GoUint8 useOverrides, GoString serializedStack, GoString memory);
 extern void SendValueToPausedEVMInCall(GoUint8 useOverrides, GoString caller_, GoString callee_, GoString payload_);
 extern void AddABI(GoInt name, GoString abiJSON_);
 

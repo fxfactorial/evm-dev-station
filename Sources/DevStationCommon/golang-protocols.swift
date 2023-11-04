@@ -16,6 +16,9 @@ public protocol EVMDriver {
     func opcode_call_hook_enabled() -> Bool
     func enable_opcode_call_callback(yes_no: Bool)
     
+    func enable_breakpoint_on_opcode(yes_no: Bool, opcode_name: String)
+    func enable_breakpoint_on_opcode(yes_no: Bool)
+    
     func create_new_contract(code: String, creator_addr: String) throws -> String
     func new_evm_singleton()
     func available_eips() -> [Int]

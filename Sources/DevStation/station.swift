@@ -101,8 +101,22 @@ extension Bool {
 }
 
 final class EVM: EVMDriver {
+    func enable_breakpoint_on_opcode(yes_no: Bool) {
+        EVMBridge.EnableHookEveryOpcode(yes_no.to_go_bool())
+    }
+    
     static let shared = EVM()
-    func reset_evm(enableOpCodeCallback: Bool, 
+    
+    func enable_breakpoint_on_opcode(yes_no: Bool, opcode_name: String) {
+        opcode_name.withCString {pointee in
+            let opcode_name_gstr = pointee.withMemoryRebound(to: CChar.self, capacity: opcode_name.count) {
+                GoString(p: $0, n: opcode_name.count)
+            }
+            EVMBridge.DoHookOnOpcode(yes_no.to_go_bool(), opcode_name_gstr)
+        }
+    }
+
+    func reset_evm(enableOpCodeCallback: Bool,
                    enableCallback: Bool,
                    useStateInMemory: Bool) {
         EVMBridge.ResetEVM(
@@ -163,14 +177,6 @@ final class EVM: EVMDriver {
         let calldata = calldata
         let target_addr = target_addr
         let msg_value = msg_value
-//        calldata.makeContiguousUTF8()
-//        target_addr.makeContiguousUTF8()
-//        msg_value.makeContiguousUTF8()
-
-//        let calldata_gstr = calldata.to_go_string2()
-//        let target_addr_gstr = target_addr.to_go_string2()
-//        let msg_value_gstr = msg_value.as_go_string()
-//        GoString
         print("SWIFT using OG values:", calldata, " ", target_addr, " ", msg_value)
 //        print("about to call \(calldata_gstr) \(target_addr_gstr) \(msg_value_gstr)")
         let result_call = msg_value.withCString {msg_value_pointee in
@@ -252,20 +258,7 @@ final class EVM: EVMDriver {
         print("swift starting loading chain \(started) - \(pathdir) - \(db_kind)")
         let db_kind = db_kind.trimmingCharacters(in: .whitespacesAndNewlines)
         let pathdir = pathdir.trimmingCharacters(in: .whitespacesAndNewlines)
-//        print(db_kind.debugDescription)
-//        print(pathdir.debugDescription)
-//        let wrapped_kind = db_kind.data(using: .ascii)?.withUnsafeBytes {
-//            $0.baseAddress?.assumingMemoryBound(to: CChar.self)
-//        }!
-//        UnsafeBufferPointer(start: <#T##UnsafePointer<Element>?#>, count: <#T##Int#>)
-//        let r = UnsafePointer<CChar>(db_kind.utf8CString)
-        // later ask on swift forums whats going on with small strings
-//        let db_g = GoString(p: wrapped_kind, n: db_kind.count)
-//        let db = db_kind.to_go_string()
-        
         let path = pathdir.to_go_string2()
-//        EVMBridge.TestReceiveGoString(db_g)
-//        EVMBridge.TestReceiveGoString(path)
         let kind = switch db_kind {
         case "pebble":GoInt(0)
         case "leveldb":GoInt(1)
@@ -286,10 +279,8 @@ final class EVM: EVMDriver {
     
     func load_chainhead() throws -> String {
         let result = EVMBridge.ChainHead()
-        print("print result \(result)")
         let wrapped = String(cString: result.chain_head_json)
         free(result.chain_head_json)
-        print("wrapped loaded \(wrapped)")
         return wrapped
     }
 
@@ -327,10 +318,8 @@ func convert(length: Int, data: UnsafePointer<Int>) -> [Int] {
 struct Rootview : View {
     var body : some View {
         VStack {
-            ScrollView {
-                EVMDevCenter(driver: EVM.shared, abi_driver: ABIEncoder.shared)
-            }
-        }.frame(minWidth: 780, idealWidth: 1480, minHeight: 560, idealHeight: 900, alignment: .center)
+            EVMDevCenter(driver: EVM.shared, abi_driver: ABIEncoder.shared)
+        }.frame(minWidth: 780, idealWidth: 1480, minHeight: 660, idealHeight: 950, alignment: .center)
     }
 }
 
@@ -340,9 +329,42 @@ struct Rootview : View {
 //    print("finished loading chain at \(when_done)")
 //}
 @_cdecl("evm_opcode_callback")
-public func evm_opcode_callback() {
-    //
+public func evm_opcode_callback(
+    opcode_name: UnsafeMutablePointer<CChar>,
+    stack: UnsafeMutablePointer<UnsafeMutablePointer<CChar>>,
+    stack_size: Int,
+    memory: UnsafeMutablePointer<CChar>
+) {
+    let opcode = String(cString: opcode_name)
+    free(opcode_name)
+
+    var stack_rep = [Item]()
+    let buf = stack.withMemoryRebound(to: UnsafePointer<CChar>.self, capacity: stack_size) {
+        Array(UnsafeBufferPointer(start: $0, count: stack_size))
+    }
+
+
+    for (name, index) in zip(buf, buf.indices) {
+        let s = String(cString: name)
+        free(UnsafeMutableRawPointer(mutating: name))
+        stack_rep.append(Item(name: s, index: index))
+    }
+                         
+    free(stack)
+    let memory_hex = String(cString: memory)
+    free(memory)
+    print("SWIFT-> current opcode ", opcode, stack_rep, memory_hex)
+    
+    DispatchQueue.main.async {
+        OpcodeCallbackModel.shared.current_stack = stack_rep
+        OpcodeCallbackModel.shared.current_memory = memory_hex
+        OpcodeCallbackModel.shared.current_opcode_hit = opcode
+        OpcodeCallbackModel.shared.hit_breakpoint = true
+    }
 }
+
+
+
 @_cdecl("evm_opcall_callback")
 public func evm_opcall_callback(
     caller_: UnsafeMutablePointer<CChar>,
@@ -399,6 +421,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         evm_driver.new_evm_singleton()
+        EVMBridge.UseInMemoryStateOnEVM()
+        OpcodeCallbackModel.shared.continue_evm_exec_break_on_opcode = {do_use, stack, memory in
+            let just_hex_ints = stack.map({$0.name})
+            print("should be calling evm bridge now", do_use, just_hex_ints)
+            let encoded = try? JSONEncoder().encode(just_hex_ints)
+            guard let s = encoded else {
+                EVMBridge.SendValueToPausedEVMInOpCode(false.to_go_bool(), GoString(p: nil, n: 0), GoString(p: nil, n: 0))
+                return
+            }
+            
+            s.withUnsafeBytes {
+                let stack_gstr = GoString(p: $0, n: s.count)
+                memory.withCString {
+                    let memory_gstr =  GoString(p: $0, n: memory.count)
+                    EVMBridge.SendValueToPausedEVMInOpCode(true.to_go_bool(), stack_gstr, memory_gstr)
+                }
+            }
+        }
+
         OpcodeCallbackModel.shared.continue_evm_exec = { do_use, caller, callee, args in
             caller.withCString({ caller_pointee in
                 let caller_gstr = caller_pointee.withMemoryRebound(to: CChar.self, capacity: caller.count) {
@@ -414,7 +455,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                             GoString(p: $0, n: args.count)
                         }
                         EVMBridge.SendValueToPausedEVMInCall(
-                            do_use ? GoUint8(1) : GoUint8(0),
+                            do_use.to_go_bool(),
                             caller_gstr,
                             callee_gstr,
                             args_gstr

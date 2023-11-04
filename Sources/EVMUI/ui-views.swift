@@ -230,21 +230,25 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                                 }
                                 .padding()
                                 .background()
-                            }.tabItem{ Text("Details") }.tag(1)
+                            }.tabItem{ Text("Contract State") }.tag(1)
                         }
                         Text("\(execed_ops.execed_operations.count) Executed Operations")
                             .font(.title2)
-                        Table(execed_ops.execed_operations) {
-                            TableColumn("PC", value: \.pc)
-                            TableColumn("OPNAME", value: \.op_name)
-                            TableColumn("OPCODE", value: \.opcode)
-                            TableColumn("GAS", value: \.gas_cost)
+                        ScrollViewReader { (proxy: ScrollViewProxy) in
+                            Table(execed_ops.execed_operations) {
+                                TableColumn("PC", value: \.pc)
+                                TableColumn("OPNAME", value: \.op_name)
+                                TableColumn("OPCODE", value: \.opcode)
+                                TableColumn("GAS", value: \.gas_cost)
+                            }
+                            .frame(maxHeight: 400)
+                            .onReceive(execed_ops.$execed_operations,
+                                       perform: { item in
+                                if let last = execed_ops.execed_operations.last {
+                                    proxy.scrollTo(last.id)
+                                }
+                            })
                         }
-                        .frame(maxHeight: 400)
-                        .onReceive(ExecutedOperations.shared.$execed_operations,
-                                   perform: { item in
-                            // print("got a new value")
-                        })
                         if let contract = selected_contract {
                             ABIEncode(d: abi, loaded_contract: contract)
                                 .padding()
@@ -478,7 +482,7 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
             
             .tabItem { Text("Live Dev") }.tag(0)
             StateInspector(d: d)
-                .tabItem { Text("State Inspector") }.tag(1)
+                .tabItem { Text("Account/State Modification") }.tag(1)
         }).onAppear {
             // TODO only during dev at the moment
             selected_contract = loaded_contracts[2]
@@ -654,6 +658,19 @@ struct KnownEIPs: View {
         }
         .padding()
         .frame(width: 500, height: 450)
+    }
+}
+
+
+struct ListRowView: View {
+    @ObservedObject var item: Item
+
+    var body: some View {
+        HStack {
+            Text("\(item.index)")
+            Spacer()
+            Text(item.name)
+        }
     }
 }
 
@@ -835,11 +852,12 @@ struct BreakpointView: View {
     @Environment(\.openURL) var openURL
     @State private var possible_signature_names : [String] = []
     @State private var selected : String?
-    @State private var current_tab = 0
-    
+    @State private var current_tab = 1
+
+
     var body: some View {
         VStack {
-            Text("Breakpoint Hook")
+            Text("Suspended EVM")
                 .font(.title2)
             TabView(selection: $current_tab,
                     content: {
@@ -921,19 +939,25 @@ struct BreakpointView: View {
                                 }
                             }
                         }.frame(minWidth: 80)
-                        
                         HStack {
                             Toggle(isOn: $use_modified_values) {
                                 Text("Use modified values")
                             }
                             Button {
-                                if let cb = callbackmodel.continue_evm_exec {
-                                    possible_signature_names = []
-                                    cb(use_modified_values,
-                                       callbackmodel.current_caller,
-                                       callbackmodel.current_callee,
-                                       callbackmodel.current_args
-                                    )
+                                callbackmodel.current_opcode_continue_task = Task.detached {
+                                    if let cb = await callbackmodel.continue_evm_exec {
+                                        
+                                        await cb(use_modified_values,
+                                           callbackmodel.current_caller,
+                                           callbackmodel.current_callee,
+                                           callbackmodel.current_args
+                                        )
+
+                                        DispatchQueue.main.async {
+                                            possible_signature_names = []
+                                            callbackmodel.selected_stack_item = nil
+                                        }
+                                    }
                                 }
                             } label: {
                                 Text("Continue")
@@ -948,12 +972,61 @@ struct BreakpointView: View {
                 })
                 .tabItem { Text("CALL").help("contract calls") }.tag(0)
                 .frame(height: 280)
-                VStack {
-                    Text("jump stuff")
+                HStack {
+                    VStack {
+                        Text("Current Stack")
+                        List(Array(zip(callbackmodel.current_stack.indices, callbackmodel.current_stack)),
+                             id: \.1.self,
+                             selection: $callbackmodel.selected_stack_item) { index, item in
+                            ListRowView(item: item)
+                        }
+                    }
+                    VStack {
+                        HStack {
+                            Text("Opcode suspended on ")
+                            Spacer()
+                            Text("`\(callbackmodel.current_opcode_hit)`")
+                                .foregroundStyle(.gray)
+                        }.padding([.trailing, .leading], 10)
+                        Text("current memory")
+                        TextEditor(text: $callbackmodel.current_memory)
+                            .scrollTargetLayout(isEnabled: true)
+                            .font(.system(size: 16))
+                            .disabled(false)
+                        TextField("selected stack item", text: Binding<String>(
+                            get: {
+                                callbackmodel.selected_stack_item?.name ?? ""
+                            },
+                            set: {
+                                // TODO more double checking work
+                                callbackmodel.selected_stack_item?.name = $0
+                            }
+                        ))
+                        Spacer()
+                        HStack {
+                            Toggle("use modified values", isOn: $callbackmodel.use_modified_values)
+                            Button {
+                                Task {
+                                    if let cb = callbackmodel.continue_evm_exec_break_on_opcode {
+                                        cb(
+                                            callbackmodel.use_modified_values,
+                                            callbackmodel.current_stack,
+                                            callbackmodel.current_memory
+                                        )
+                                        callbackmodel.selected_stack_item = nil
+                                    }
+                                }
+                            } label: {
+                                Text("Continue")
+                            }.disabled(!callbackmodel.hit_breakpoint)
+                        }.padding([.bottom], 5)
+                    }
                 }
-                .tabItem{ Text("JUMP").help("internal transactions") }.tag(1)
+                .tabItem{ Text("OPCODE").help("internal transactions") }.tag(1)
                 .frame(height: 280)
-                
+                VStack {
+                    Text("slot keys used")
+                }.tabItem{ Text("Storage")}.tag(2)
             })
         }
     }
@@ -1028,17 +1101,24 @@ struct BreakOnOpcodes: View {
     @Binding var known_ops: [OPCodeEnable]
     @State var break_on_all = false
     @Environment(\.dismiss) var dismiss
+    let d : EVMDriver
+
+    @ObservedObject private var controls = EVMRunStateControls.shared
 
     var body: some View {
         VStack {
             HStack {
                 Text("\(known_ops.count) known opcodes")
                 Toggle("all", isOn: $break_on_all)
-                Button {
-                    dismiss()
-                } label: {
-                    Text("Ok")
-                }
+                Toggle("hook", isOn: Binding<Bool>(
+                    get: {
+                        controls.opcode_breakpoints_enabled
+                    },
+                    set: {
+                        d.enable_breakpoint_on_opcode(yes_no: $0)
+                        controls.opcode_breakpoints_enabled = $0
+                    }
+                ))
             }
             Table(known_ops) {
                 TableColumn("name", value: \.name)
@@ -1053,11 +1133,18 @@ struct BreakOnOpcodes: View {
                         set: {
                             if let index = known_ops.firstIndex(where: { $0.id == d.id }) {
                                 known_ops[index].enabled = $0
+                                self.d.enable_breakpoint_on_opcode(yes_no:$0, opcode_name:known_ops[index].name)
                             }
                         }
                     ))
                 }
             }
+            Button {
+                dismiss()
+            } label: {
+                Text("Ok")
+            }
+
         }
         .frame(minWidth: 450, minHeight: 450)
         .padding()
@@ -1093,6 +1180,9 @@ struct RunningEVM<Driver: EVMDriver>: View {
         VStack {
             Text("Live Contract Interaction")
                 .font(.title2)
+            Button {
+                dev_mode()
+            }label: { Text("quick fill")}
             HStack {
                 VStack {
                     HStack {
@@ -1103,7 +1193,7 @@ struct RunningEVM<Driver: EVMDriver>: View {
                     HStack {
                         Text("Value")
                             .frame(width: 120, alignment: .leading)
-                        TextField("msg value", text: $msg_value)
+                        TextField("0", text: $msg_value)
                     }
                     HStack {
                         Text("Target Addr")
@@ -1160,8 +1250,9 @@ struct RunningEVM<Driver: EVMDriver>: View {
                             }
                             
                         } label: {
-                            Text("Run contract").frame(width: 120)
+                            Text("Run contract").frame(width: 140)
                         }.disabled(evm_run_controls.contract_currently_running)
+                            .frame(width: 160)
                         if evm_run_controls.contract_currently_running {
                             RotatingDotAnimation(param: .init(
                                 inner_circle_width: 6,
@@ -1173,9 +1264,16 @@ struct RunningEVM<Driver: EVMDriver>: View {
                         }
                     }
                     Button {
+                        present_opcode_select_sheet.toggle()
+                        print("ALL KNOWN OPCODES?", d.all_known_opcodes(), d.all_known_opcodes().count)
+                    } label: {
+                        Text("Break on OPCODE(s)").frame(width: 140)
+                    }.frame(width: 160)
+                    Button {
                         ExecutedOperations.shared.execed_operations = []
                         EVMRunStateControls.shared.contract_currently_running = false
                         OpcodeCallbackModel.shared.reset()
+
                         if let t = EVMRunStateControls.shared.current_call_task {
                             d.reset_evm(
                                 enableOpCodeCallback: EVMRunStateControls.shared.breakpoint_on_call,
@@ -1185,15 +1283,14 @@ struct RunningEVM<Driver: EVMDriver>: View {
                             t.cancel()
                             EVMRunStateControls.shared.current_call_task = nil
                         }
+                        
+                        if let t = OpcodeCallbackModel.shared.current_opcode_continue_task {
+                            t.cancel()
+                            OpcodeCallbackModel.shared.current_opcode_continue_task = nil
+                        }
                     } label : {
-                        Text("Reset").frame(width: 120)
-                    }.frame(width: 140)
-                    Button {
-                        present_opcode_select_sheet.toggle()
-                        print("ALL KNOWN OPCODES?", d.all_known_opcodes(), d.all_known_opcodes().count)
-                    } label: {
-                        Text("Break on OPCODE").frame(width: 120)
-                    }.frame(width: 140)
+                        Text("Reset").frame(width: 140)
+                    }.frame(width: 160)
                     Toggle(isOn: Binding<Bool>(
                         get: {
                             evm_run_controls.breakpoint_on_call
@@ -1205,9 +1302,6 @@ struct RunningEVM<Driver: EVMDriver>: View {
                     ), label: {
                         Text("Break on CALL")
                     })
-                    Toggle(isOn: $evm_run_controls.breakpoint_on_jump, label: {
-                        Text("Break on JUMP")
-                    })
                     Toggle(isOn: Binding<Bool>(
                         get: {
                             evm_run_controls.record_executed_operations
@@ -1217,7 +1311,7 @@ struct RunningEVM<Driver: EVMDriver>: View {
                             evm_run_controls.record_executed_operations = $0
                         }
                     ), label: {
-                        Text("Record Executed Operations")
+                        Text("Record all Operations")
                     })
                 }
             }
@@ -1231,9 +1325,14 @@ struct RunningEVM<Driver: EVMDriver>: View {
             }
         }.sheet(isPresented: $present_opcode_select_sheet,
                 onDismiss: {
-            
+            for c in opcodes_used {
+                if c.enabled {
+                    d.enable_breakpoint_on_opcode(yes_no:true)
+                    return
+                }
+            }
         }, content: {
-            BreakOnOpcodes(known_ops: $opcodes_used)
+            BreakOnOpcodes(known_ops: $opcodes_used, d: d)
         })
 
     }
@@ -1252,12 +1351,12 @@ struct RunningEVM<Driver: EVMDriver>: View {
         }
 }
 
-#Preview("load existing db") {
-    LoadExistingDB(d: StubEVMDriver(), finished: { _, _ in
-        //
-    })
-    .frame(width: 480, height: 380)
-}
+//#Preview("load existing db") {
+//    LoadExistingDB(d: StubEVMDriver(), finished: { _, _ in
+//        //
+//    })
+//    .frame(width: 480, height: 380)
+//}
 
 
 
@@ -1278,22 +1377,22 @@ struct RunningEVM<Driver: EVMDriver>: View {
     )
 }
 
-#Preview("enabled EIPs") {
-    KnownEIPs(known_eips: .constant([
-        EIP(num: 1223, enabled: false),
-        EIP(num: 1559, enabled: true),
-        EIP(num: 44, enabled: false)])
-    )
-}
+//#Preview("enabled EIPs") {
+//    KnownEIPs(known_eips: .constant([
+//        EIP(num: 1223, enabled: false),
+//        EIP(num: 1559, enabled: true),
+//        EIP(num: 44, enabled: false)])
+//    )
+//}
 
-#Preview("New Contract bytecode") {
-    NewContractByteCode(
-        contract_name: .constant(""),
-        contract_bytecode: .constant(""),
-        contract_abi: .constant("")
-    )
-}
+//#Preview("New Contract bytecode") {
+//    NewContractByteCode(
+//        contract_name: .constant(""),
+//        contract_bytecode: .constant(""),
+//        contract_abi: .constant("")
+//    )
+//}
 
-#Preview("BlockContext") {
-    BlockContext()
-}
+//#Preview("BlockContext") {
+//    BlockContext()
+//}

@@ -10,6 +10,18 @@ public enum EVMError : Error {
     case load_chaindata_problem(String)
 }
 
+
+//extension NSTextView {
+//  open override var frame: CGRect {
+//    didSet {
+//        // Top inset
+//        textContainerInset = NSSize(width: 0, height: 10)
+//        // Left fragment padding <<< This is what I was looking for
+//        textContainer?.lineFragmentPadding = 10
+//        }
+//    }
+//}
+
 public class LoadChainModel: ObservableObject {
     public static let shared = LoadChainModel()
     @Published public var chaindata_directory = ""
@@ -65,12 +77,11 @@ public class EVMRunStateControls: ObservableObject {
 
     @Published public var record_executed_operations = false
     @Published public var breakpoint_on_call = false
-    @Published public var breakpoint_on_jump = false
+    @Published public var opcode_breakpoints_enabled = false
     @Published public var contract_currently_running = false
+    @Published public var record_storage_keys = false
     public var current_call_task : Task<Void, Error>?
 }
-
-public typealias continue_evm_exec_completion = (Bool, String, String, String) -> Void
 
 public class BlockContextModel : ObservableObject {
     public static let shared = BlockContextModel()
@@ -89,19 +100,61 @@ public class BlockContextModel : ObservableObject {
 }
 
 
+public class Item: ObservableObject {
+    public let id = UUID()
+    public let index : Int
+    @Published public var name: String = ""
+    public init(name: String, index: Int) {
+        self.name = name
+        self.index = index
+    }
+}
+
+extension Item: Hashable {
+    public static func == (lhs: Item, rhs: Item) -> Bool {
+        lhs.id == rhs.id
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+}
+
+
+public typealias continue_evm_exec_completion = (Bool, String, String, String) -> Void
+public typealias continue_opcode_exec_completion = (Bool, [Item], String) -> Void
+
 public class OpcodeCallbackModel: ObservableObject {
     public static let shared = OpcodeCallbackModel()
     public var continue_evm_exec : continue_evm_exec_completion?
+    public var continue_evm_exec_break_on_opcode : continue_opcode_exec_completion?
+    
     @Published public var hit_breakpoint = false
     @Published public var current_caller = ""
     @Published public var current_callee = ""
     @Published public var current_args = ""
-    
+    // how to update these effectively
+    @Published public var current_stack : [Item] = [
+//        Item(name: "0x01", index: 0),
+//        Item(name: "0x02", index: 1),
+//        Item(name: "0x03", index: 2)
+    ]
+    @Published public var selected_stack_item: Item?
+    @Published public var current_memory = ""
+    @Published public var current_opcode_hit = ""
+    @Published public var use_modified_values = false
+    public var current_opcode_continue_task : Task<Void, Error>?
+
     public func reset() {
         hit_breakpoint = false
         current_caller = ""
         current_callee = ""
         current_args = ""
+        current_stack = []
+        current_memory = ""
+        current_opcode_hit = ""
+        use_modified_values = false
+        selected_stack_item = nil
     }
 }
 

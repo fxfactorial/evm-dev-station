@@ -34,6 +34,14 @@ final class StubABIDriver: ABIDriver {
 }
 
 final class StubEVMDriver: EVMDriver {
+    func enable_breakpoint_on_opcode(yes_no: Bool) {
+        //
+    }
+    
+    func enable_breakpoint_on_opcode(yes_no: Bool, opcode_name: String) {
+        //
+    }
+    
 
     func reset_evm(enableOpCodeCallback: Bool, 
                    enableCallback: Bool,

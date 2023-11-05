@@ -40,7 +40,7 @@ public class LoadChainModel: ObservableObject {
 }
 
 
-public struct ExecutedEVMCode: Identifiable{
+public struct ExecutedEVMCode: Identifiable, Hashable{
     public let id = UUID()
     // easiest when they are all strings
     public let pc: String
@@ -60,6 +60,11 @@ public struct ExecutedEVMCode: Identifiable{
         self.depth = "\(depth)"
         self.refund = "\(refund)"
     }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
 }
 
 // REMEMBER When you want to have this be observed as a source of data

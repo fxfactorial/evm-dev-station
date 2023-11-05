@@ -132,99 +132,101 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                 content:  {
             VStack {
                 HStack {
-                    NavigationStack {
-                        VStack {
-                            Text("Loaded contracts")
-                                .font(.title2)
-                                .help("interact with contracts loaded")
-                            List(loaded_contracts, id:\.self,
-                                 selection: $selected_contract) { item in
-                                Text(item.name)
-                            }
-                                 .frame(maxWidth: 150)
-                                 .padding([.trailing, .leading])
-                            Button {
-                                bytecode_add.toggle()
-                            } label: {
-                                Text("Add New Contract")
-                            }
-                            Button {
-                                present_load_contract_sheet.toggle()
-                            } label: {
-                                Text("Load Contract from chain")
-                            }.disabled(!chaindb.is_chain_loaded)
-                                .help("must first load an existing blockchain database")
-                        }
-                    }
                     VStack {
-                        TabView(selection: $current_contract_detail_tab) {
-                            VStack {
-                                if let contract = selected_contract {
-                                    VStack {
-                                        ScrollView {
-                                            Text(contract.bytecode)
-                                                .lineLimit(nil)
-                                                .frame(maxWidth:.infinity, maxHeight:300)
-                                                .background()
-                                        }
-                                    }
-                                } else {
-                                    Text("select a contract from sidebar ")
-                                }
-                            }.tabItem { Text("Bytecode") }.tag(0)
-                            VStack {
+                        HStack {
+                            NavigationStack {
                                 VStack {
+                                    Text("Loaded contracts")
+                                        .font(.title2)
+                                        .help("interact with contracts loaded")
+                                    List(loaded_contracts, id:\.self,
+                                         selection: $selected_contract) { item in
+                                        Text(item.name)
+                                    }
+                                         .frame(maxWidth: 150)
+                                         .padding([.trailing, .leading])
                                     Button {
-                                        if var contract = selected_contract {
-                                            do {
-                                                contract.address = try d.create_new_contract(
-                                                    code: contract.bytecode,
-                                                    creator_addr: "0x00000000000000000000"
-                                                )
-                                                // needed to cause ui update
-                                                selected_contract = contract
-                                            } catch EVMError.deploy_issue(let reason){
-                                                deploy_contract_result = reason
-                                            }  catch {
-                                                return
+                                        bytecode_add.toggle()
+                                    } label: {
+                                        Text("Add New Contract")
+                                    }
+                                    Button {
+                                        present_load_contract_sheet.toggle()
+                                    } label: {
+                                        Text("Load Contract from chain")
+                                    }.disabled(!chaindb.is_chain_loaded)
+                                        .help("must first load an existing blockchain database")
+                                }
+                            }
+
+                            TabView(selection: $current_contract_detail_tab) {
+                                VStack {
+                                    VStack {
+                                        Button {
+                                            if var contract = selected_contract {
+                                                do {
+                                                    contract.address = try d.create_new_contract(
+                                                        code: contract.bytecode,
+                                                        creator_addr: "0x00000000000000000000"
+                                                    )
+                                                    // needed to cause ui update
+                                                    selected_contract = contract
+                                                } catch EVMError.deploy_issue(let reason){
+                                                    deploy_contract_result = reason
+                                                }  catch {
+                                                    return
+                                                }
+                                            }
+                                        } label: {
+                                            Text("Try deploy contract")
+                                        }
+                                        HStack {
+                                            Text("deploy result")
+                                            Text(deploy_contract_result)
+                                        }
+                                        HStack {
+                                            Text("Deployed Addr")
+                                            Spacer()
+                                            if let contract = selected_contract {
+                                                Text(contract.address)
+                                            } else {
+                                                Text("N/A")
                                             }
                                         }
-                                    } label: {
-                                        Text("Try deploy contract")
                                     }
-                                    HStack {
-                                        Text("deploy result")
-                                        Text(deploy_contract_result)
-                                    }
-                                    HStack {
-                                        Text("Deployed Addr")
-                                        Spacer()
-                                        if let contract = selected_contract {
-                                            Text(contract.address)
-                                        } else {
-                                            Text("N/A")
+                                    .padding()
+                                    .background()
+                                }.tabItem{ Text("Contract State") }.tag(0)
+                                VStack {
+                                    if let contract = selected_contract {
+                                        VStack {
+                                            ScrollView {
+                                                Text(contract.bytecode)
+                                                    .lineLimit(nil)
+                                                    .frame(maxWidth:.infinity, maxHeight:300)
+                                                    .background()
+                                            }
                                         }
+                                    } else {
+                                        Text("select a contract from sidebar ")
                                     }
-                                }
-                                .padding()
-                                .background()
-                            }.tabItem{ Text("Contract State") }.tag(1)
+                                }.tabItem { Text("Bytecode") }.tag(1)
+                            }
                         }
-                        Text("\(execed_ops.execed_operations.count) Executed Operations")
-                            .font(.title2)
                         ScrollViewReader { (proxy: ScrollViewProxy) in
+                            Text("\(execed_ops.execed_operations.count) Executed Operations")
+                                .font(.title2)
                             Table(execed_ops.execed_operations) {
                                 TableColumn("PC", value: \.pc)
                                 TableColumn("OPNAME", value: \.op_name)
                                 TableColumn("OPCODE", value: \.opcode)
-                                TableColumn("GAS", value: \.gas_cost)
+                                TableColumn("GAS", value: \.gas_cost)                                
                             }
                             .frame(maxHeight: 400)
                             .onReceive(execed_ops.$execed_operations,
                                        perform: { item in
-                                if let last = execed_ops.execed_operations.last {
-                                    proxy.scrollTo(last.id)
-                                }
+                                let id = item.last
+                                proxy.scrollTo(id)
                             })
                         }
                         if let contract = selected_contract {
@@ -1160,7 +1162,7 @@ struct BreakOnOpcodes: View {
 
 struct RunningEVM<Driver: EVMDriver>: View {
     @State private var calldata = ""
-    @State private var msg_value = ""
+    @State private var msg_value = "0"
     @State private var call_return_value = ""
     @State private var error_msg_evm = ""
     @State private var error_msg_contract_eval = ""

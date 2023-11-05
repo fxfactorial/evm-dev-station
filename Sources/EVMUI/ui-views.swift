@@ -236,47 +236,45 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                     VStack {
                         BlockContext()
                             .frame(maxWidth: .infinity)
-                        HStack {
+                        TabView {
                             VStack {
-                                Text("Load Blockchain")
-                                    .font(.title2)
-                                    .help("load state/contract")
-                                VStack {
-                                    Button {
-                                        present_load_db_sheet.toggle()
-                                    } label: {
-                                        Text("Load Chaindata")
-                                    }.disabled(chaindb.is_chain_loaded)
-                                    if chaindb.show_loading_db {
-                                        RotatingDotAnimation(param: .init(
-                                            inner_circle_width: 12,
-                                            inner_circle_height: 12,
-                                            inner_circle_offset: -9,
-                                            outer_circle_width: 35,
-                                            outer_circle_height: 35)
-                                        )
-                                    }
-                                }.frame(minHeight: 80)
-                                .padding()
-                                .background()
+                                Button {
+                                    present_load_db_sheet.toggle()
+                                } label: {
+                                    Text("Load Chaindata")
+                                }.disabled(chaindb.is_chain_loaded)
+                                if chaindb.show_loading_db {
+                                    RotatingDotAnimation(param: .init(
+                                        inner_circle_width: 12,
+                                        inner_circle_height: 12,
+                                        inner_circle_offset: -9,
+                                        outer_circle_width: 35,
+                                        outer_circle_height: 35)
+                                    )
+                                }
                             }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .background()
+                            .tabItem {
+                                Text("Load Blockchain")
+                            }.tag(0)
                             StateDBDetails()
                                 .environmentObject(current_block_header)
                                 .environmentObject(chaindb)
-                                .padding(1)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .background()
+                                .tabItem { Text("StateDB Details") }.tag(1)
                             VStack {
-                                Text("EVM Configuration")
-                                    .font(.title2)
-                                VStack {
-                                    Button {
-                                        present_eips_sheet.toggle()
-                                    } label: {
-                                        Text("EIPS enabled")
-                                    }
-                                }.padding()
-                                    .background()
+                                Button {
+                                    present_eips_sheet.toggle()
+                                } label: {
+                                    Text("EIPS enabled")
+                                }
                             }
-                        }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .background()
+                            .tabItem { Text("EVM Config")}.tag(2)
+                        }.frame(minHeight: 200)
                         BreakpointView()
                     }.frame(maxHeight: .infinity, alignment: .topLeading)
                 }
@@ -499,8 +497,6 @@ struct StateDBDetails: View {
     
     var body: some View {
         VStack {
-            Text("State used by EVM")
-                .font(.title2)
             VStack {
                 HStack {
                     Text("Kind:")
@@ -519,9 +515,7 @@ struct StateDBDetails: View {
                     Text(current_head.state_root)
                 }
             }
-            .padding()
-            .background()
-        }.frame(alignment: .center)
+        }
     }
 }
 
@@ -1364,7 +1358,7 @@ struct RunningEVM<Driver: EVMDriver>: View {
 
 #Preview("dev center") {
     EVMDevCenter(driver: StubEVMDriver(), abi_driver: StubABIDriver())
-        .frame(width: 1224, height: 760)
+        .frame(width: 1224, height: 860)
         .onAppear {
             let dummy_items : [ExecutedEVMCode] = [
                 .init(pc: "0x07c9", op_name: "DUP2", opcode: "0x81", gas: 20684, gas_cost: 3, depth: 3, refund: 0),

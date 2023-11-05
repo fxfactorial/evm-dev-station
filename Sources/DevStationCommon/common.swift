@@ -39,6 +39,13 @@ public class LoadChainModel: ObservableObject {
 //    }
 }
 
+public class ErrorFeedbackModel: ObservableObject {
+    public static let hsared = ErrorFeedbackModel()
+    // issues from when running the EVM
+    @Published public var EVMError = ""
+    // issues from 
+    @Published public var UIInputError = ""
+}
 
 public struct ExecutedEVMCode: Identifiable, Hashable{
     public let id = UUID()
@@ -51,7 +58,9 @@ public struct ExecutedEVMCode: Identifiable, Hashable{
     public let depth : String
     public let refund: String
     
-    public init(pc: String, op_name: String, opcode: String, gas: Int, gas_cost: Int, depth: Int, refund: Int) {
+    public init(
+        pc: String, op_name: String, opcode: String,
+        gas: Int, gas_cost: Int, depth: Int, refund: Int) {
         self.pc = pc
         self.op_name = op_name
         self.opcode = opcode

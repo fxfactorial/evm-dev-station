@@ -164,13 +164,15 @@ final class EVM: EVMDriver {
     }
 
     func keccak256(input: String) -> String {
-        return input.withCString {
-            let g_str = GoString(p: $0, n: input.count)
-            let result = EVMBridge.Keccak256(g_str)
-            let copy = String(cString: result!)
-            free(result)
-            return copy
-        }
+        return input.sha3(.sha256)
+
+//        return input.withCString {
+//            let g_str = GoString(p: $0, n: input.count)
+//            let result = EVMBridge.Keccak256(g_str)
+//            let copy = String(cString: result!)
+//            free(result)
+//            return copy
+//        }
     }
 
     func available_eips() -> [Int] {

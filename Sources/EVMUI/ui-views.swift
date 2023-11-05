@@ -13,8 +13,6 @@ struct BlockContext : View {
     
     var body : some View {
         VStack {
-            Text("Block Context")
-                .font(.title2)
             VStack {
                 HStack {
                     Text("Coinbase")
@@ -79,6 +77,9 @@ struct RotatingDotAnimation: View {
 }
 
 public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
+    let d : Driver
+    // TODO remove this one
+    let abi: ABIDriver
     
     @State private var bytecode_add = false
     // TODO refactor these into a stateobject
@@ -93,14 +94,16 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
     @State private var msg_sender = ""
     @State private var msg_sender_eth_balance = ""
     @State private var current_contract_detail_tab = 0
-    
-    @StateObject private var chaindb = LoadChainModel.shared
+
+    // NOTE Use observedobject on singletons
+    @ObservedObject private var chaindb = LoadChainModel.shared
+    @ObservedObject private var evm_run_controls = EVMRunStateControls.shared
+    @ObservedObject private var execed_ops = ExecutedOperations.shared
+
     @StateObject private var current_block_header = CurrentBlockHeader()
-    @StateObject private var evm_run_controls = EVMRunStateControls.shared
     
-    let d : Driver
-    let abi: ABIDriver
-    
+    @State private var present_load_contract_sheet = false
+
     public init(driver : Driver, abi_driver: ABI) {
         d = driver
         abi = abi_driver
@@ -114,17 +117,14 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
     @State private var selected_contract : LoadedContract?
     @State private var deploy_contract_result = ""
     @State var eips_used : [EIP] = []
-    // Use observedobject on singletons
-    @ObservedObject private var execed_ops = ExecutedOperations.shared
     
     private func running_evm(calldata: String, msg_value: String) -> EVMCallResult {
-        print("kicking off running evm \(calldata) \(msg_value) \(selected_contract!.address)")
+//        print("kicking off running evm \(calldata) \(msg_value) \(selected_contract!.address)")
         let call_result = d.call(calldata: calldata, target_addr: selected_contract!.address, msg_value: msg_value)
-        print(call_result)
+//        print(call_result)
         return call_result
     }
     
-    @State private var present_load_contract_sheet = false
     
     public var body: some View {
         
@@ -148,55 +148,54 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                                     Button {
                                         bytecode_add.toggle()
                                     } label: {
-                                        Text("Add New Contract")
+                                        Text("Add New Contract").frame(maxWidth: 150)
                                     }
                                     Button {
                                         present_load_contract_sheet.toggle()
                                     } label: {
-                                        Text("Load Contract from chain")
-                                    }.disabled(!chaindb.is_chain_loaded)
-                                        .help("must first load an existing blockchain database")
+                                        Text("Load from chain").frame(maxWidth: 150)
+                                    }
+                                    .disabled(!chaindb.is_chain_loaded)
+                                    .help("must first load an existing blockchain database")
                                 }
                             }
-
                             TabView(selection: $current_contract_detail_tab) {
                                 VStack {
-                                    VStack {
-                                        Button {
-                                            if var contract = selected_contract {
-                                                do {
-                                                    contract.address = try d.create_new_contract(
-                                                        code: contract.bytecode,
-                                                        creator_addr: "0x00000000000000000000"
-                                                    )
-                                                    // needed to cause ui update
-                                                    selected_contract = contract
-                                                } catch EVMError.deploy_issue(let reason){
-                                                    deploy_contract_result = reason
-                                                }  catch {
-                                                    return
-                                                }
+                                    Button {
+                                        if var contract = selected_contract {
+                                            do {
+                                                contract.address = try d.create_new_contract(
+                                                    code: contract.bytecode,
+                                                    creator_addr: "0x00000000000000000000"
+                                                )
+                                                // needed to cause ui update
+                                                selected_contract = contract
+                                            } catch EVMError.deploy_issue(let reason){
+                                                deploy_contract_result = reason
+                                            }  catch {
+                                                return
                                             }
-                                        } label: {
-                                            Text("Try deploy contract")
                                         }
-                                        HStack {
-                                            Text("deploy result")
-                                            Text(deploy_contract_result)
-                                        }
-                                        HStack {
-                                            Text("Deployed Addr")
-                                            Spacer()
-                                            if let contract = selected_contract {
-                                                Text(contract.address)
-                                            } else {
-                                                Text("N/A")
-                                            }
+                                    } label: {
+                                        Text("Try deploy contract")
+                                    }
+                                    HStack {
+                                        Text("deploy result")
+                                        Text(deploy_contract_result)
+                                    }
+                                    HStack {
+                                        Text("Deployed Addr")
+                                        Spacer()
+                                        if let contract = selected_contract {
+                                            Text(contract.address)
+                                        } else {
+                                            Text("N/A")
                                         }
                                     }
-                                    .padding()
-                                    .background()
-                                }.tabItem{ Text("Contract State") }.tag(0)
+                                }
+                                .padding()
+                                .background()
+                                .tabItem{ Text("Contract State") }.tag(0)
                                 VStack {
                                     if let contract = selected_contract {
                                         VStack {
@@ -236,10 +235,10 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                         }
                     }
                     VStack {
-                        BlockContext()
-                            .frame(maxWidth: .infinity)
                         TabView {
                             VStack {
+                                BlockContext()
+                                    .frame(maxWidth: .infinity)
                                 Button {
                                     present_load_db_sheet.toggle()
                                 } label: {
@@ -733,7 +732,8 @@ struct ABIEncode: View {
                                     // TODO handle encoding errors better,
                                     // recall that if you have a bool, it will fail encoding because "true" != true ha.
                                     guard
-                                        let encoded_call = contract.method(selected, parameters: fields[selected]!, extraData: nil) else {
+                                        let selected_params = fields[selected],
+                                        let encoded_call = contract.method(selected, parameters: selected_params, extraData: nil) else {
                                         encoded = ""
                                         return
                                     }
@@ -755,10 +755,7 @@ struct ABIEncode: View {
                                           let contract = l.contract else {
                                         return
                                     }
-                                    
                                     decoded_output = contract.decodeReturnData(selected, data: Data(hex:decoded_input))
-                                    print("WHAT IS DECODED", decoded_output)
-
                                 } label: {
                                     Text("decode")
                                 }.disabled(decoded_input.isEmpty || loaded_contract?.contract == nil)

@@ -36,7 +36,7 @@ final class StubABIDriver: ABIDriver {
 final class StubEVMDriver: EVMDriver {
     
     func keccak256(input: String) -> String {
-        return ""
+        return input.sha3(.sha256)
     }
 
     func enable_breakpoint_on_opcode(yes_no: Bool) {

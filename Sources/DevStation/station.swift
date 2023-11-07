@@ -299,7 +299,7 @@ struct Rootview : View {
     var body : some View {
         VStack {
             EVMDevCenter(driver: EVM.shared)
-        }.frame(minWidth: 780, idealWidth: 1480, minHeight: 660, idealHeight: 950, alignment: .center)
+        }.frame(minWidth: 580, idealWidth: 1480, minHeight: 460, idealHeight: 950, alignment: .center)
     }
 }
 

@@ -6,6 +6,7 @@ git clone this repo and run `./evm-dev-station` either in the arm directory (for
 the x86 directory for older intel based macs.
 
 ![](./ss.png)
+![](./ss-2.png)
 
 # work flow
 
@@ -31,7 +32,12 @@ pebble based db)
 
 Huge amounts of bugs. Yes its currently closed source, but still open tickets, issues with
 screenshots please showing what happened wrong. I'll add a git commit to the UI so we can double
-check what version you had issues with.
+check what version you had issues with. Right now its probably more useful to tell, share ideas
+about what you'd like to be able to do, see, how it ought to interact, font changes, animations etc.
 
 see https://twitter.com/EdgarArout/status/1720939792098107443 for an example of how to change the
 value of `SLOAD`
+
+# architecture
+
+golang compiled into a C static library, statically linked into native swift binary.

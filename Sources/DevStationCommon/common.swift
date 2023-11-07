@@ -180,6 +180,8 @@ public enum DBKind : String {
 
 
 public class CurrentBlockHeader: ObservableObject {
+    public static let shared = CurrentBlockHeader()
+
     // although they are strings - its up to consuming
     // caller to format them as properly as needed
     @Published public var block_time : String = ""

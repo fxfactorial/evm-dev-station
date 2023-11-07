@@ -124,7 +124,6 @@ extern void UISendCmd(GoString msg);
 extern char* Keccak256(GoString payload);
 extern void DoHookOnOpcode(GoUint8 doHook, GoString opcodeName);
 extern void EnableHookEveryOpcode(GoUint8 status);
-extern void UseInMemoryStateOnEVM();
 extern void ResetEVM(GoUint8 enableOpCodeCallback, GoUint8 enableCallback, GoUint8 useStateInMemory);
 extern void EnableOPCodeCallHook(GoUint8 status);
 extern void SendValueToPausedEVMInOpCode(GoUint8 useOverrides, GoString serializedStack, GoString memory);
@@ -136,7 +135,6 @@ struct AllKnownOpcodes_return {
 	int r1;
 };
 extern struct AllKnownOpcodes_return AllKnownOpcodes();
-extern struct ChainHeadResult ChainHead();
 
 /* Return type for LoadCodeFromState */
 struct LoadCodeFromState_return {

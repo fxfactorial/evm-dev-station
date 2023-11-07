@@ -3,6 +3,7 @@ import AppKit
 import EVMBridge
 import EVMUI
 import DevStationCommon
+import AsyncAlgorithms
 
 @main
 struct DevStation : App {
@@ -74,6 +75,23 @@ final class EVM: EVMDriver {
     }
     
     static let shared = EVM()
+    let comm_channel = AsyncChannel<Data>()
+
+    func start_handling_bridge() {
+        Task.detached {
+            EVMBridge.MakeChannelAndListenThread(true.to_go_bool())
+            EVMBridge.MakeChannelAndReplyThread(true.to_go_bool())
+
+            for await msg in self.comm_channel {
+                String(data: msg, encoding: .utf8)!.withCString {
+                    $0.withMemoryRebound(to: CChar.self, capacity: msg.count) {
+                        EVMBridge.UISendCmd(GoString(p: $0, n: msg.count))
+                    }
+                }
+            }
+        }
+
+    }
     
     func enable_breakpoint_on_opcode(yes_no: Bool, opcode_name: String) {
         opcode_name.withCString {pointee in
@@ -128,7 +146,12 @@ final class EVM: EVMDriver {
     }
 
     func new_evm_singleton() {
-        EVMBridge.NewGlobalEVM()
+        Task {
+            let msg = try! JSONEncoder().encode(
+              EVMBridgeMessage<BridgeCmdNewGlobalEVM>(c: CMD_NEW_EVM, p: BridgeCmdNewGlobalEVM())
+            )
+            await comm_channel.send(msg)
+        }
     }
 
     func keccak256(input: String) -> String {
@@ -233,35 +256,22 @@ final class EVM: EVMDriver {
         return _cb_enabled
     }
     
-    func load_chaindata(pathdir: String, db_kind: String) throws {
-        let started = Date.now
-        print("swift starting loading chain \(started) - \(pathdir) - \(db_kind)")
-        let db_kind = db_kind.trimmingCharacters(in: .whitespacesAndNewlines)
-        let pathdir = pathdir.trimmingCharacters(in: .whitespacesAndNewlines)
-        let path = pathdir.to_go_string2()
-        let kind = switch db_kind {
-        case "pebble":GoInt(0)
-        case "leveldb":GoInt(1)
-        default:
-            throw EVMError.load_chaindata_problem("db kind wasnt pebble or leveldb")
-        }
-        let result = EVMBridge.LoadChainData(path, kind)
-        let finished = Date.now
-        print("finished loading chain \(finished)")
-        if result.error_reason_size > 0 {
-            let error_wrapped = Data(bytes: result.error_reason, count: result.error_reason_size)
-            let error_str = String(bytes: error_wrapped, encoding: .utf8)!
-            free(result.error_reason)
-            throw EVMError.load_chaindata_problem(error_str)
-//            return .failure(reason: error_str)
+    func load_chaindata(pathdir: String, db_kind: String) {
+        Task {
+            let msg = try! JSONEncoder().encode(
+              EVMBridgeMessage(c: CMD_LOAD_CHAIN, p: BridgeCmdLoadChain(kind: db_kind, directory: pathdir))
+            )
+            await comm_channel.send(msg)
         }
     }
     
-    func load_chainhead() throws -> String {
-        let result = EVMBridge.ChainHead()
-        let wrapped = String(cString: result.chain_head_json)
-        free(result.chain_head_json)
-        return wrapped
+    func load_chainhead() {
+        Task {
+            let msg = try! JSONEncoder().encode(
+              EVMBridgeMessage(c: CMD_REPORT_CHAIN_HEAD, p: BridgeCmdSendBackChainHeader())
+            )
+            await comm_channel.send(msg)
+        }
     }
 
     func load_contract(addr: String) throws -> String {
@@ -396,12 +406,53 @@ public func evm_run_callback(
     }
 }
 
+@_cdecl("send_cmd_back")
+public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
+    let rpy = String(cString: reply)
+    free(reply)
+    let decoded = try! JSONDecoder().decode(EVMBridgeMessage<AnyDecodable>.self, from: rpy.data(using: .utf8)!)
+
+    switch decoded.Cmd {
+    case CMD_NEW_EVM:
+        print("laoded new evm")
+    case CMD_LOAD_CHAIN:
+        EVM.shared.load_chainhead()
+    case CMD_REPORT_CHAIN_HEAD:
+        let blk_header = decoded.Payload!.value as! Dictionary<String, String?>
+        let head_number = UInt32(blk_header["number"]!!.dropFirst(2), radix: 16)!
+        let state_root = blk_header["stateRoot"]!!
+        let ts_int = UInt(blk_header["timestamp"]!![2...], radix: 16)!
+        let ts = Date(timeIntervalSince1970: TimeInterval(ts_int))
+        
+        DispatchQueue.main.async {
+            withAnimation {
+                LoadChainModel.shared.is_chain_loaded = true
+                LoadChainModel.shared.show_loading_db = false
+                BlockContextModel.shared.coinbase = blk_header["miner"]!!
+                BlockContextModel.shared.time = ts.ISO8601Format()
+                CurrentBlockHeader.shared.block_number = head_number
+                CurrentBlockHeader.shared.state_root = state_root
+
+//                chaindb.db_kind = if db_kind == "pebble" { .GethDBPebble} else { .GethDBLevelDB }
+
+            }
+        }
+    default:
+        print("unknown command received", decoded)
+    }
+
+}
+
+
+
 final class AppDelegate: NSObject, NSApplicationDelegate {
     var evm_driver: any EVMDriver = EVM.shared
 
+
     func applicationDidFinishLaunching(_ notification: Notification) {
+        evm_driver.start_handling_bridge()
         evm_driver.new_evm_singleton()
-        EVMBridge.UseInMemoryStateOnEVM()
+
         OpcodeCallbackModel.shared.continue_evm_exec_break_on_opcode = {do_use, stack, memory in
             let just_hex_ints = stack.map({$0.name})
             print("should be calling evm bridge now", do_use, just_hex_ints)

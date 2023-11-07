@@ -9,6 +9,7 @@ import Foundation
 import DevStationCommon
 
 final class StubEVMDriver: EVMDriver {
+    func start_handling_bridge() {}
     
     func keccak256(input: String) -> String {
         return input.sha3(.sha256)
@@ -82,12 +83,12 @@ final class StubEVMDriver: EVMDriver {
         _cb_enabled
     }
 
-    func load_chaindata(pathdir: String, db_kind: String) throws {
+    func load_chaindata(pathdir: String, db_kind: String) {
         //
     }
 
-    func load_chainhead() throws -> String {
-        return ""
+    func load_chainhead()  {
+        //
     }
 
     func load_contract(addr: String) throws -> String{

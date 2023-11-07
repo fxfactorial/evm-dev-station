@@ -50,7 +50,12 @@ let package = Package(
     // Targets can depend on other targets in this package and products from dependencies.
     .executableTarget(
       name: "evm-dev-station",
-      dependencies: ["EVMBridge", "EVMUI", "DevStationCommon"],
+      dependencies: [
+        "EVMBridge",
+        "EVMUI",
+        "DevStationCommon",
+        .product(name: "AsyncAlgorithms", package: "swift-async-algorithms")
+      ],
       path: "Sources/DevStation"
     ),
     // remember to define the @_cdecls necessary for linking to work

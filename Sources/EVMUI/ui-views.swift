@@ -97,8 +97,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     @ObservedObject private var chaindb = LoadChainModel.shared
     @ObservedObject private var evm_run_controls = EVMRunStateControls.shared
     @ObservedObject private var execed_ops = ExecutedOperations.shared
-
-    @StateObject private var current_block_header = CurrentBlockHeader()
+    @ObservedObject private var current_block_header = CurrentBlockHeader.shared
     
     @State private var present_load_contract_sheet = false
 
@@ -337,66 +336,49 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
             .sheet(isPresented: $present_load_db_sheet, onDismiss: {
                 //
             }, content: {
-                LoadExistingDB(d:d) { db_kind, chaindata_dir in
-                    print("got the \(db_kind) - \(chaindata_dir)")
+                   LoadExistingDB(d:d) { db_kind, chaindata_dir in
                     withAnimation {
                         chaindb.show_loading_db = true
                     }
-                    
-                    Task.detached {
-                        defer {
-                            Task {
-                                await MainActor.run {
-                                    withAnimation {
-                                        chaindb.show_loading_db = false
-                                    }
-                                }
-                            }
-                        }
-                        
-                        do {
-                            // no idea why having this needless awaits just for preview to work - very dumb
-                            try await d.load_chaindata(
-                                pathdir: chaindata_dir,
-                                db_kind: db_kind
-                            )
-                            let head = try await d.load_chainhead()
-                            let decoder = JSONDecoder()
-                            guard let blk_header = try? decoder.decode(
-                                BlockHeader.self,
-                                from: head.data(using: .utf8)!) else {
-                                // should not be happening
-                                return
-                            }
-                            guard let head_number = UInt32(
-                                blk_header.number.dropFirst(2),
-                                radix: 16
-                            ) else {
-                                print("problem converting \(blk_header.number)")
-                                return
-                            }
-                            
-                            await d.use_loaded_state_on_evm()
-                            let ts_int = UInt(blk_header.timestamp[2...], radix: 16)!
-                            let ts = Date(timeIntervalSince1970: TimeInterval(ts_int))
 
-                            DispatchQueue.main.async {
-                                BlockContextModel.shared.coinbase = blk_header.miner
-                                BlockContextModel.shared.time = ts.ISO8601Format()
-                                current_block_header.block_number = head_number
-                                current_block_header.state_root = blk_header.stateRoot
-                                chaindb.is_chain_loaded = true
-                                chaindb.db_kind = if db_kind == "pebble" { .GethDBPebble} else { .GethDBLevelDB }
-                            }
+                    d.load_chaindata(
+                      pathdir: chaindata_dir,
+                      db_kind: db_kind
+                    )
+                    
+                        
+                        // do {
+                        //     // no idea why having this needless awaits just for preview to work - very dumb
+                        //     try await d.load_chaindata(
+                        //         pathdir: chaindata_dir,
+                        //         db_kind: db_kind
+                        //     )
+                        //     let head = try await d.load_chainhead()
+                        //     let decoder = JSONDecoder()
+                        //     guard let blk_header = try? decoder.decode(
+                        //         BlockHeader.self,
+                        //         from: head.data(using: .utf8)!) else {
+                        //         // should not be happening
+                        //         return
+                        //     }
                             
-                            print("head is \(head) -> \(blk_header)")
-                        } catch {
-                            print("some kind of problem \(error)")
-                            return
-                        }
+                        //     await d.use_loaded_state_on_evm()
+                        //     let ts_int = UInt(blk_header.timestamp[2...], radix: 16)!
+                        //     let ts = Date(timeIntervalSince1970: TimeInterval(ts_int))
+
+                        //     DispatchQueue.main.async {
+
+                        //         chaindb.db_kind = if db_kind == "pebble" { .GethDBPebble} else { .GethDBLevelDB }
+                        //     }
+                            
+                        //     print("head is \(head) -> \(blk_header)")
+                        // } catch {
+                        //     print("some kind of problem \(error)")
+                        //     return
+                        // }
                         
                         
-                    }
+                    // }
                 }
             })
             .sheet(isPresented: $present_eips_sheet,

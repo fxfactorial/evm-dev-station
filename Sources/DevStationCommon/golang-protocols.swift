@@ -8,6 +8,17 @@
 import Foundation
 
 public protocol EVMDriver {
+    // done ported to the channel way
+    func start_handling_bridge()
+    func new_evm_singleton()
+    func use_loaded_state_on_evm()
+    func load_chaindata(pathdir: String, db_kind: String)
+    func load_chainhead()
+
+
+
+    // still open issues
+
     func keccak256(input: String) -> String
     // not sure how to do this as the get,set way without turning into existential type/observable later
     func exec_callback_enabled() -> Bool
@@ -20,14 +31,10 @@ public protocol EVMDriver {
     func enable_breakpoint_on_opcode(yes_no: Bool)
     
     func create_new_contract(code: String, creator_addr: String) throws -> String
-    func new_evm_singleton()
     func available_eips() -> [Int]
     func all_known_opcodes() -> [String]
     func call(calldata: String, target_addr: String, msg_value: String) -> EVMCallResult
-    func load_chaindata(pathdir: String, db_kind: String) throws
-    func load_chainhead() throws -> String
     func load_contract(addr: String) throws -> String
-    func use_loaded_state_on_evm()
     func reset_evm(enableOpCodeCallback: Bool, enableCallback: Bool, useStateInMemory:  Bool)
 }
 

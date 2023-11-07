@@ -91,7 +91,7 @@ final class StubEVMDriver: EVMDriver {
         //
     }
 
-    func load_contract(addr: String) throws -> String{
-        return ""
+    func load_contract(addr: String, nickname: String, abi_json: String) {
+        //
     }
 }

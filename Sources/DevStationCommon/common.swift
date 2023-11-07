@@ -188,10 +188,15 @@ public class CurrentBlockHeader: ObservableObject {
     @Published public var block_number: UInt32 = 0
     @Published public var state_root : String = ""
     @Published public var parent_hash: String = ""
-    public init() {
-        
-    }
+    public init() {}
     
+}
+
+public class LoadedContracts: ObservableObject {
+    public static let shared = LoadedContracts()
+    @Published public var contracts : [LoadedContract] = []
+    @Published public var current_selection: LoadedContract?
+    public init() {}
 }
 
 public class LoadedContract : ObservableObject, Hashable, Equatable {

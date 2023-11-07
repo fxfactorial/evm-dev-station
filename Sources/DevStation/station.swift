@@ -32,16 +32,6 @@ extension String {
         return wrapped
     }
 
-    func to_go_string2() -> GoString {
-        //        let copy = String(self)
-        let copy = self
-        let wrapped = copy.data(using: .ascii)?.withUnsafeBytes {
-            $0.baseAddress?.assumingMemoryBound(to: CChar.self)
-        }!
-        let as_g = GoString(p: wrapped, n: copy.count)
-        return as_g
-    }
-
     func to_go_string3() -> GoString {
         let wrapped = self.data(using: .utf8)?.withUnsafeBytes {
             $0.baseAddress?.assumingMemoryBound(to: CChar.self)
@@ -259,7 +249,8 @@ final class EVM: EVMDriver {
     func load_chaindata(pathdir: String, db_kind: String) {
         Task {
             let msg = try! JSONEncoder().encode(
-              EVMBridgeMessage(c: CMD_LOAD_CHAIN, p: BridgeCmdLoadChain(kind: db_kind, directory: pathdir))
+              EVMBridgeMessage(c: CMD_LOAD_CHAIN,
+                               p: BridgeCmdLoadChain(kind: db_kind, directory: pathdir))
             )
             await comm_channel.send(msg)
         }
@@ -268,18 +259,29 @@ final class EVM: EVMDriver {
     func load_chainhead() {
         Task {
             let msg = try! JSONEncoder().encode(
-              EVMBridgeMessage(c: CMD_REPORT_CHAIN_HEAD, p: BridgeCmdSendBackChainHeader())
+              EVMBridgeMessage(c: CMD_REPORT_CHAIN_HEAD,
+                               p: BridgeCmdSendBackChainHeader())
             )
             await comm_channel.send(msg)
         }
     }
 
-    func load_contract(addr: String) throws -> String {
-        let result = EVMBridge.LoadCodeFromState(addr.to_go_string2())
-        let wrapped = Data(bytes: result.r0, count: Int(result.r1))
-        let contract = String(bytes: wrapped, encoding: .utf8)!
-        free(result.r0)
-        return contract
+    func load_contract(addr: String, nickname: String, abi_json: String) {
+        Task {
+            let msg = try! JSONEncoder().encode(
+              EVMBridgeMessage(c: CMD_LOAD_CONTRACT_FROM_STATE,
+                               p: BridgeCmdLoadContractFromState(s: addr,
+                                                                 nick: nickname,
+                                                                 abi_json: abi_json))
+            )
+            await comm_channel.send(msg)
+        }
+
+        // let result = EVMBridge.LoadCodeFromState(addr.to_go_string2())
+        // let wrapped = Data(bytes: result.r0, count: Int(result.r1))
+        // let contract = String(bytes: wrapped, encoding: .utf8)!
+        // free(result.r0)
+        // return contract
     }
 
     func all_known_opcodes() -> [String] {
@@ -417,6 +419,25 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
         print("laoded new evm")
     case CMD_LOAD_CHAIN:
         EVM.shared.load_chainhead()
+    case CMD_LOAD_CONTRACT_FROM_STATE:
+        let loaded = decoded.Payload!.value as! Dictionary<String, String>
+        print("SWIFT RECEIVED", decoded)
+
+        let contract = LoadedContract(
+          name: loaded["nickname"]!,
+          bytecode: loaded["code"]!,
+          address: loaded["address"]!,
+          contract: try? EthereumContract(loaded["abi_json"]!)
+        )
+        
+        DispatchQueue.main.async {
+            LoadedContracts.shared.contracts.append(contract)
+            withAnimation {
+                LoadedContracts.shared.current_selection = contract
+            }
+        }
+        
+
     case CMD_REPORT_CHAIN_HEAD:
         let blk_header = decoded.Payload!.value as! Dictionary<String, String?>
         let head_number = UInt32(blk_header["number"]!!.dropFirst(2), radix: 16)!
@@ -432,9 +453,8 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
                 BlockContextModel.shared.time = ts.ISO8601Format()
                 CurrentBlockHeader.shared.block_number = head_number
                 CurrentBlockHeader.shared.state_root = state_root
-
-//                chaindb.db_kind = if db_kind == "pebble" { .GethDBPebble} else { .GethDBLevelDB }
-
+                // TODO come back to this one
+                // chaindb.db_kind = if db_kind == "pebble" { .GethDBPebble} else { .GethDBLevelDB }
             }
         }
     default:

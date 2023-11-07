@@ -135,14 +135,6 @@ struct AllKnownOpcodes_return {
 	int r1;
 };
 extern struct AllKnownOpcodes_return AllKnownOpcodes();
-
-/* Return type for LoadCodeFromState */
-struct LoadCodeFromState_return {
-	char* r0;
-	int r1;
-};
-extern struct LoadCodeFromState_return LoadCodeFromState(GoString addrSwift);
-extern struct LoadChainDataResult LoadChainData(GoString pathDir, GoInt dbKind);
 extern int TestReceiveGoString(GoString input_);
 extern void NewGlobalEVM();
 extern void PauseOnOpcode(char code);

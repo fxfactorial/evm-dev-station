@@ -3,11 +3,15 @@ import Foundation
 public struct EVMBridgeMessage<P: Codable> : Codable {
     public let Cmd: String
     public let Payload: P?
-    public init(c : String, p: P) {
+    public init(c : String, p: P?) {
         self.Cmd = c
         self.Payload = p
     }
 
+    public init(c: String) {
+        self.Cmd = c
+        self.Payload = nil
+    }
 }
 
 public struct AnyDecodable : Codable {
@@ -28,8 +32,12 @@ public struct AnyDecodable : Codable {
         
         if let string = try? container.decode(String.self) {
             self.init(string)
+        } else if let ints = try? container.decode([Int].self) {
+            self.init(ints)
         } else if let int = try? container.decode(Int.self) {
             self.init(int)
+        } else if let kv = try? container.decode([String:String].self) {
+            self.init(kv)
         } else if let kv = try? container.decode([String:String?].self) {
             self.init(kv)
         } else {
@@ -56,8 +64,20 @@ public struct BridgeCmdNewGlobalEVM: Codable {
     public init() { }
 }
 
+public struct BridgeCmdLoadContractFromState: Codable {
+    public let Addr: String
+    public let Nickname: String
+    public let ABIJSON: String
+    public init(s : String, nick: String, abi_json: String) {
+        self.Addr = s
+        self.Nickname = nick
+        self.ABIJSON = abi_json
+    }
+}
+
 // TODO change to enum
 public let CMD_NEW_EVM = "new_evm"
 public let CMD_LOAD_CHAIN = "load_chaindb"
 public let CMD_REPORT_ERROR = "error"
 public let CMD_REPORT_CHAIN_HEAD = "report_chain_head"
+public let CMD_LOAD_CONTRACT_FROM_STATE = "load_contract_from_state"

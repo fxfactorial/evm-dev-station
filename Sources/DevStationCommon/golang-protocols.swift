@@ -14,11 +14,10 @@ public protocol EVMDriver {
     func use_loaded_state_on_evm()
     func load_chaindata(pathdir: String, db_kind: String)
     func load_chainhead()
-
+    func load_contract(addr: String, nickname: String, abi_json: String)
 
 
     // still open issues
-
     func keccak256(input: String) -> String
     // not sure how to do this as the get,set way without turning into existential type/observable later
     func exec_callback_enabled() -> Bool
@@ -34,7 +33,6 @@ public protocol EVMDriver {
     func available_eips() -> [Int]
     func all_known_opcodes() -> [String]
     func call(calldata: String, target_addr: String, msg_value: String) -> EVMCallResult
-    func load_contract(addr: String) throws -> String
     func reset_evm(enableOpCodeCallback: Bool, enableCallback: Bool, useStateInMemory:  Bool)
 }
 

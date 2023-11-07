@@ -98,6 +98,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     @ObservedObject private var evm_run_controls = EVMRunStateControls.shared
     @ObservedObject private var execed_ops = ExecutedOperations.shared
     @ObservedObject private var current_block_header = CurrentBlockHeader.shared
+    @ObservedObject private var contracts = LoadedContracts.shared
     
     @State private var present_load_contract_sheet = false
 
@@ -105,20 +106,15 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
         d = driver
     }
     
-    
-    @State private var loaded_contracts : [LoadedContract] = [
-      // sample_contract
-    ]
-    
-    @State private var selected_contract : LoadedContract?
     @State private var deploy_contract_result = ""
     @State var eips_used : [EIP] = []
     
     private func running_evm(calldata: String, msg_value: String) -> EVMCallResult {
         //        print("kicking off running evm \(calldata) \(msg_value) \(selected_contract!.address)")
-        let call_result = d.call(calldata: calldata, target_addr: selected_contract!.address, msg_value: msg_value)
+        // let call_result = d.call(calldata: calldata, target_addr: selected_contract!.address, msg_value: msg_value)
         //        print(call_result)
-        return call_result
+        //        return call_result
+        return .success(return_value: "")
     }
     
     
@@ -135,8 +131,8 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                             Text("Loaded contracts")
                                               .font(.title2)
                                               .help("interact with contracts loaded")
-                                            List(loaded_contracts, id:\.self,
-                                                 selection: $selected_contract) { item in
+                                            List(contracts.contracts, id:\.self,
+                                                 selection: $contracts.current_selection) { item in
                                                 Text(item.name)
                                             }
                                               .frame(maxWidth: 150)
@@ -158,14 +154,14 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                     TabView(selection: $current_contract_detail_tab) {
                                         VStack {
                                             Button {
-                                                if var contract = selected_contract {
+                                                if var contract = contracts.current_selection {
                                                     do {
                                                         contract.address = try d.create_new_contract(
                                                           code: contract.bytecode,
                                                           creator_addr: "0x00000000000000000000"
                                                         )
                                                         // needed to cause ui update
-                                                        selected_contract = contract
+                                                        contracts.current_selection = contract
                                                     } catch EVMError.deploy_issue(let reason){
                                                         deploy_contract_result = reason
                                                     }  catch {
@@ -182,7 +178,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                             HStack {
                                                 Text("Deployed Addr")
                                                 Spacer()
-                                                if let contract = selected_contract {
+                                                if let contract = contracts.current_selection {
                                                     Text(contract.address)
                                                 } else {
                                                     Text("N/A")
@@ -193,7 +189,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                           .background()
                                           .tabItem{ Text("Contract State") }.tag(0)
                                         VStack {
-                                            if let contract = selected_contract {
+                                            if let contract = contracts.current_selection {
                                                 VStack {
                                                     ScrollView {
                                                         Text(contract.bytecode)
@@ -224,7 +220,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                                      proxy.scrollTo(id)
                                                  })
                                 }
-                                if let contract = selected_contract {
+                                if let contract = contracts.current_selection {
                                     ABIEncode(loaded_contract: contract)
                                       .padding()
                                       .background()
@@ -277,15 +273,16 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                         }
                         RunningEVM(target_addr: Binding<String>(
                                      get: {
-                            if let contract = selected_contract {
+                            if let contract = contracts.current_selection {
                                 return contract.address
                             }
                             return ""
                         },
                                      set: {
-                            if var contract = selected_contract {
+                            if var contract = contracts.current_selection {
                                 contract.address = $0
-                                selected_contract = contract
+                                contracts.current_selection = contract
+
                             }
                         }
                                    ),
@@ -295,44 +292,23 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                           .environmentObject(evm_run_controls)
                     }
                       .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    
                       .sheet(isPresented: $present_load_contract_sheet,
                              onDismiss: {
                                  // something
                              },
                              content: {
-                                 LoadContractFromChain(do_load: {
-                                                           name,
-                                                           addr,
-                                                           abi_json in
-                                                           if name.isEmpty || addr.isEmpty {
-                                                               return
-                                                           }
-                                                           //                    Task.detached {
-                                                           guard let code = try? d.load_contract(addr: addr) else {
-                                                               print("problem loading contract")
-                                                               return
-                                                           }
-                                                           
-                                                           print("here is the actual contract loaded from chain", code)
-                                                           let contract = LoadedContract(
-                                                             name: name,
-                                                             bytecode: code,
-                                                             address: addr,
-                                                             contract: try? EthereumContract(abi_json)
-                                                           )
-
-                                                           DispatchQueue.main.async {
-                                                               loaded_contracts.append(contract)
-                                                               withAnimation {
-                                                                   selected_contract = loaded_contracts.last
-                                                               }
-                                                           }
-                                                           //                    }
-                                                       })
+                                 LoadContractFromChain(
+                                   do_load: {
+                                       name,
+                                       addr,
+                                       abi_json in
+                                       if name.isEmpty || addr.isEmpty {
+                                           return
+                                       }
+                                       
+                                       d.load_contract(addr: addr, nickname: name, abi_json: abi_json)
+                                   })
                              })
-                    
-                    
                       .sheet(isPresented: $present_load_db_sheet,
                              onDismiss: {
                                  //
@@ -360,21 +336,21 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                           }
                           var new_addr: String
                           
-                          do {
-                              new_addr = try d.create_new_contract(
-                                code: new_contract_bytecode,
-                                creator_addr: "0x00000000000000000000"
-                              )
-                          } catch {
-                              return
-                          }
-                          let loaded = LoadedContract(
-                            name: new_contract_name,
-                            bytecode: new_contract_bytecode,
-                            address: new_addr,
-                            contract: try? EthereumContract(new_contract_abi)
-                          )
-                          loaded_contracts.append(loaded)
+                          // do {
+                          //     new_addr = try d.create_new_contract(
+                          //       code: new_contract_bytecode,
+                          //       creator_addr: "0x00000000000000000000"
+                          //     )
+                          // } catch {
+                          //     return
+                          // }
+                          // let loaded = LoadedContract(
+                          //   name: new_contract_name,
+                          //   bytecode: new_contract_bytecode,
+                          //   address: new_addr,
+                          //   contract: try? EthereumContract(new_contract_abi)
+                          // )
+                          // loaded_contracts.append(loaded)
                       } content: {
                           NewContractByteCode(
                             contract_name: $new_contract_name,

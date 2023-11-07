@@ -130,26 +130,67 @@ let ts = Date(timeIntervalSince1970: TimeInterval(result3))
 
 
 
-func long_time() async -> String? {
-    var start_with = 0
-    return await { () async -> String in
-        try? await Task.sleep(for: .seconds(5))
-        start_with += 1
-        return "\(start_with)"
-    }()
-}
+// func long_time() async -> String? {
+//     var start_with = 0
+//     return await { () async -> String in
+//         try? await Task.sleep(for: .seconds(2))
+//         start_with += 1
+//         return "\(start_with) \(Date.now)"
+//     }()
+// }
 
+
+// let channel = AsyncChannel<String>()
+
+// Task {
+//   while let result = await long_time() {
+//     await channel.send(result)
+//   }
+
+//   channel.finish()
+// }
+
+// for await calculationResult in channel {
+//   print(calculationResult)
+// }
 
 let channel = AsyncChannel<String>()
 
-Task {
-  while let result = await long_time() {
-    await channel.send(result)
-  }
-
-  channel.finish()
+let send_commuication = Task.detached {
+    EVMBridge.MakeChannelAndListenThread()
+    EVMBridge.MakeListenCommand()
 }
 
-for await calculationResult in channel {
-  print(calculationResult)
+Task {
+    var ith = 0
+    while let _ = try? await Task.sleep(for: .seconds(3)) {
+        let now = "Calling \(ith) \(Date.now)"
+        print("Swift now sending \(now)")
+        ith += 1
+        await channel.send(now)
+    }
+}
+
+// Task {
+    for await msg in channel {
+        msg.withCString {
+            $0.withMemoryRebound(to: CChar.self, capacity: msg.count) {
+                EVMBridge.SendCmd(GoString(p: $0, n: msg.count))
+            }
+        }
+
+    }
+// }
+
+// Task {
+    
+// }
+
+@_cdecl("send_cmd_back")
+public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
+    let rpy = String(cString: reply)
+    free(reply)
+    Task {
+        await channel.send(rpy)
+    }
 }

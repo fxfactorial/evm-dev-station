@@ -59,6 +59,8 @@ struct ChainHeadResult {
   size_t chain_head_json_size;
 };
 
+extern void send_cmd_back(char*);
+
 
 #line 1 "cgo-generated-wrapper"
 
@@ -116,6 +118,9 @@ typedef struct { void *data; GoInt len; GoInt cap; } GoSlice;
 extern "C" {
 #endif
 
+extern void MakeChannelAndListenThread();
+extern void MakeListenCommand();
+extern void SendCmd(GoString msg);
 extern char* Keccak256(GoString payload);
 extern void DoHookOnOpcode(GoUint8 doHook, GoString opcodeName);
 extern void EnableHookEveryOpcode(GoUint8 status);

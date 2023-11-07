@@ -5,6 +5,8 @@ Currently ALPHA(ALPHA(ALPHA(ALPHA())))
 git clone this repo and run `./evm-dev-station` either in the arm directory (for apple silicon) or in
 the x86 directory for older intel based macs.
 
+![](./ss.png)
+
 # work flow
 
 You can run EVM code/deploy contracts immediately against in memory state OR you can load up a

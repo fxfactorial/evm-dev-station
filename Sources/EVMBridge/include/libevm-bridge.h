@@ -124,14 +124,6 @@ extern void ResetEVM(GoUint8 enableOpCodeCallback, GoUint8 enableCallback, GoUin
 extern void EnableOPCodeCallHook(GoUint8 status);
 extern void SendValueToPausedEVMInOpCode(GoUint8 useOverrides, GoString serializedStack, GoString memory);
 extern void SendValueToPausedEVMInCall(GoUint8 useOverrides, GoString caller_, GoString callee_, GoString payload_);
-extern void AddABI(GoInt name, GoString abiJSON_);
-
-/* Return type for MethodsForABI */
-struct MethodsForABI_return {
-	char** r0;
-	int r1;
-};
-extern struct MethodsForABI_return MethodsForABI(GoInt name);
 
 /* Return type for AllKnownOpcodes */
 struct AllKnownOpcodes_return {

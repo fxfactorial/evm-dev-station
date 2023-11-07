@@ -2,6 +2,7 @@ import Foundation
 import EVMBridge
 import DevStationCommon
 import BigInt
+import AsyncAlgorithms
 
 @_cdecl("evm_opcode_callback")
 public func evm_opcode_callback() {
@@ -31,28 +32,28 @@ public func evm_opcall_callback(
 
 let name = "router"
 
-EVMBridge.AddABI(GoInt(0), UNISWAP_QUOTER_ABI.to_go_string2())
-let methods_result = EVMBridge.MethodsForABI(GoInt(0))
+// EVMBridge.AddABI(GoInt(0), UNISWAP_QUOTER_ABI.to_go_string2())
+// let methods_result = EVMBridge.MethodsForABI(GoInt(0))
 // print("pulled out \(methods_result.r1)")
 
-var method_names = [String]()
-let buffer = UnsafeBufferPointer(start: methods_result.r0, count: Int(methods_result.r1))
+// var method_names = [String]()
+// let buffer = UnsafeBufferPointer(start: methods_result.r0, count: Int(methods_result.r1))
 
-let wrapped = Array(buffer)
+// let wrapped = Array(buffer)
 // print("total count is \(wrapped.count)")
 
-for i in wrapped {
-    let method = String(cString: i!)
-    free(i!)
-    method_names.append(method)
-    // print("pulled out! \(method)")
-}
+// for i in wrapped {
+//     let method = String(cString: i!)
+//     free(i!)
+//     method_names.append(method)
+//     // print("pulled out! \(method)")
+// }
 
-free(methods_result.r0)
+// free(methods_result.r0)
 
-for i in method_names {
-    // print("pulled out -> \(i)")
-}
+// for i in method_names {
+//     // print("pulled out -> \(i)")
+// }
 
 
 let jsonData = UNISWAP_QUOTER_ABI.data(using: .utf8)
@@ -125,4 +126,30 @@ let time_stamp =  "0x653aa2ef"
 
 let result3 = UInt(time_stamp[2...], radix: 16)!
 let ts = Date(timeIntervalSince1970: TimeInterval(result3))
-print(result3, ts)
+// print(result3, ts)
+
+
+
+func long_time() async -> String? {
+    var start_with = 0
+    return await { () async -> String in
+        try? await Task.sleep(for: .seconds(5))
+        start_with += 1
+        return "\(start_with)"
+    }()
+}
+
+
+let channel = AsyncChannel<String>()
+
+Task {
+  while let result = await long_time() {
+    await channel.send(result)
+  }
+
+  channel.finish()
+}
+
+for await calculationResult in channel {
+  print(calculationResult)
+}

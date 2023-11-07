@@ -76,10 +76,8 @@ struct RotatingDotAnimation: View {
     }
 }
 
-public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
+public struct EVMDevCenter<Driver: EVMDriver> : View {
     let d : Driver
-    // TODO remove this one
-    let abi: ABIDriver
     
     @State private var bytecode_add = false
     // TODO refactor these into a stateobject
@@ -104,9 +102,8 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
     
     @State private var present_load_contract_sheet = false
 
-    public init(driver : Driver, abi_driver: ABI) {
+    public init(driver : Driver) {
         d = driver
-        abi = abi_driver
     }
     
     
@@ -229,7 +226,7 @@ public struct EVMDevCenter<Driver: EVMDriver, ABI: ABIDriver> : View {
                             })
                         }
                         if let contract = selected_contract {
-                            ABIEncode(d: abi, loaded_contract: contract)
+                            ABIEncode(loaded_contract: contract)
                                 .padding()
                                 .background()
                         }
@@ -633,7 +630,6 @@ struct ListRowView: View {
 }
 
 struct ABIEncode: View {
-    let d : ABIDriver
     let loaded_contract: LoadedContract?
     
     @State private var selected: String = ""
@@ -789,7 +785,6 @@ struct ABIEncode: View {
 
 #Preview("ABI encode table") {
     ABIEncode(
-        d: StubABIDriver(),
         loaded_contract: sample_contract
     ).frame(width: 700, height: 300)
 }
@@ -1356,7 +1351,7 @@ struct RunningEVM<Driver: EVMDriver>: View {
 
 
 #Preview("dev center") {
-    EVMDevCenter(driver: StubEVMDriver(), abi_driver: StubABIDriver())
+    EVMDevCenter(driver: StubEVMDriver())
         .frame(width: 1224, height: 860)
         .onAppear {
             let dummy_items : [ExecutedEVMCode] = [

@@ -31,8 +31,3 @@ public protocol EVMDriver {
     func reset_evm(enableOpCodeCallback: Bool, enableCallback: Bool, useStateInMemory:  Bool)
 }
 
-public protocol ABIDriver {
-    func add_abi(abi_json: String) throws -> Int
-    func methods_for_abi(abi_id: Int) throws -> [String]
-    func encode_arguments(abi_id: Int, args: [String]) throws -> String
-}

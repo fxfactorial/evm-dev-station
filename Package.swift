@@ -18,6 +18,7 @@ let package = Package(
     // .package(url: "https://github.com/Boilertalk/Web3.swift.git", from: "0.8.4")
     .package(url: "https://github.com/attaswift/BigInt.git", from: "5.3.0"),
     .package(url: "https://github.com/krzyzanowskim/CryptoSwift.git", from: "1.5.1"),
+    .package(url: "https://github.com/apple/swift-async-algorithms", from: "1.0.0-beta.1")
     // .package(url: "https://github.com/apple/swift-collections.git", .upToNextMajor(from: "1.0.3"))
   ],
   targets: [
@@ -55,7 +56,11 @@ let package = Package(
     // remember to define the @_cdecls necessary for linking to work
     .executableTarget(
       name: "quick-test",
-      dependencies: ["EVMBridge", "DevStationCommon"],
+      dependencies: [
+        "EVMBridge",
+        "DevStationCommon",
+        .product(name: "AsyncAlgorithms", package: "swift-async-algorithms"),
+      ],
       path: "Sources/QuickTest"
     )
   ]

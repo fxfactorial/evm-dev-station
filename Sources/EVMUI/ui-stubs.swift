@@ -8,31 +8,6 @@
 import Foundation
 import DevStationCommon
 
-final class StubABIDriver: ABIDriver {
-    private var id = 0
-    
-    func add_abi(abi_json: String) throws -> Int {
-        id += 1
-        return id
-    }
-
-    func methods_for_abi(abi_id: Int) throws -> [String] {
-        [
-            "quoteExactInput",
-            "quoteExactInputSingle",
-            "quoteExactOutput",
-            "quoteExactOutputSingle",
-            "uniswapV3SwapCallback",
-            "WETH9",
-            "factory",
-        ]
-    }
-
-    func encode_arguments(abi_id: Int, args: [String]) throws -> String {
-        ""
-    }
-}
-
 final class StubEVMDriver: EVMDriver {
     
     func keccak256(input: String) -> String {

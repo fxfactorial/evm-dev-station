@@ -94,7 +94,8 @@ public class EVMRunStateControls: ObservableObject {
     @Published public var opcode_breakpoints_enabled = false
     @Published public var contract_currently_running = false
     @Published public var record_storage_keys = false
-    public var current_call_task : Task<Void, Error>?
+    @Published public var call_return_value = ""
+    @Published public var evm_error = ""
 }
 
 public class BlockContextModel : ObservableObject {
@@ -197,6 +198,12 @@ public class LoadedContracts: ObservableObject {
     @Published public var contracts : [LoadedContract] = []
     @Published public var current_selection: LoadedContract?
     public init() {}
+}
+
+public class RuntimeError: ObservableObject {
+    public static let shared = RuntimeError()
+    @Published public var show_error = false
+    @Published public var error_reason = ""
 }
 
 public class LoadedContract : ObservableObject, Hashable, Equatable {

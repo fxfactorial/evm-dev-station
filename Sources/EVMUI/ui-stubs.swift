@@ -42,11 +42,6 @@ final class StubEVMDriver: EVMDriver {
         
     }
 
-
-    
-    func use_loaded_state_on_evm() {
-    }
-
     func all_known_opcodes() -> [String] {
         return ["PUSH1", "PUSH2"]
     }
@@ -64,13 +59,8 @@ final class StubEVMDriver: EVMDriver {
         return [12, 14, 15]
     }
  
-    func call(calldata: String, target_addr: String, msg_value: String) -> EVMCallResult {
-        if _cb_enabled {
-            let new_one = ExecutedEVMCode(pc: "123", op_name: "PUSH0", opcode: "1234", gas: 123, gas_cost: 123, depth: 3, refund: 0)
-            ExecutedOperations.shared.execed_operations.append(new_one)
-        }
-
-        return .success(return_value:"")
+    func call(calldata: String, target_addr: String, msg_value: String) {
+        //
     }
 
     fileprivate var _cb_enabled: Bool = false

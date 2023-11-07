@@ -47,20 +47,9 @@ struct SetAccountBalanceResult {
    size_t error_reason_size;
 };
 
-struct LoadChainDataResult {
-  char *error_reason;
-  size_t error_reason_size;
-};
-
-struct ChainHeadResult {
-  char *error_reason;
-  size_t error_reason_size;
-  char *chain_head_json;
-  size_t chain_head_json_size;
-};
 
 extern void send_cmd_back(char*);
-
+extern void send_error_back(char*);
 
 #line 1 "cgo-generated-wrapper"
 
@@ -136,17 +125,12 @@ struct AllKnownOpcodes_return {
 };
 extern struct AllKnownOpcodes_return AllKnownOpcodes();
 extern int TestReceiveGoString(GoString input_);
-extern void NewGlobalEVM();
 extern void PauseOnOpcode(char code);
-extern void UseLoadedStateOnEVM();
 extern void EnableCallback(GoUint8 status);
 extern void EnableStopOnCall(GoUint8 enable);
 extern struct SetAccountBalanceResult SetAccountBalance(GoString account, GoString balance);
 extern void TestSendingInt(GoString msgValue_);
-extern struct CallContractResult CallEVM(GoString calldataSwift_, GoString targetAddrSwift_, GoString msgValueSwift_);
 extern struct NewContractResult DeployNewContract(GoString bytecode_, GoString caller_);
-extern int RunCodeOnContract(int sessionID, char* calldata, int calldataLength, char* callerAddr);
-extern void CallGoFromSwift();
 
 /* Return type for AvailableEIPS */
 struct AvailableEIPS_return {

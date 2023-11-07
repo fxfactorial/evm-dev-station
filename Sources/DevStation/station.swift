@@ -96,14 +96,10 @@ final class EVM: EVMDriver {
                    enableCallback: Bool,
                    useStateInMemory: Bool) {
         EVMBridge.ResetEVM(
-            enableOpCodeCallback.to_go_bool(),
-            enableCallback.to_go_bool(),
-            useStateInMemory.to_go_bool()
+          enableOpCodeCallback.to_go_bool(),
+          enableCallback.to_go_bool(),
+          useStateInMemory.to_go_bool()
         )
-    }
-
-    func use_loaded_state_on_evm() {
-        EVMBridge.UseLoadedStateOnEVM()
     }
 
     // NOTE THIS IS WRONG NEED TO DO WITH THE SCOPED POINTER THING
@@ -166,51 +162,15 @@ final class EVM: EVMDriver {
         return rebound
     }
     
-    func call(calldata: String, target_addr: String, msg_value: String) -> EVMCallResult {
-        let calldata = calldata
-        let target_addr = target_addr
-        let msg_value = msg_value
-        print("SWIFT using OG values:", calldata, " ", target_addr, " ", msg_value)
-//        print("about to call \(calldata_gstr) \(target_addr_gstr) \(msg_value_gstr)")
-        let result_call = msg_value.withCString {msg_value_pointee in
-            let msg_value_gstr = msg_value_pointee.withMemoryRebound(to: CChar.self, capacity: msg_value.count) {
-                GoString(p: $0, n: msg_value.count)
-            }
-
-            return calldata.withCString { calldata_pointee in
-                let calldata_gstr = calldata_pointee.withMemoryRebound(to: CChar.self, capacity: calldata.count) {
-                    GoString(p: $0, n: calldata.count)
-                }
-                
-                return target_addr.withCString { target_addr_pointee in
-                    let target_addr_gstr = target_addr_pointee.withMemoryRebound(to: CChar.self, capacity: target_addr.count) {
-                        GoString(p: $0, n: target_addr.count)
-                    }
-
-                    return EVMBridge.CallEVM(
-                        calldata_gstr,
-                        target_addr_gstr,
-                        msg_value_gstr
-                    )
-                }
-            }
+    func call(calldata: String, target_addr: String, msg_value: String) {
+        Task {
+            let msg = try! JSONEncoder().encode(
+              EVMBridgeMessage(
+                c: CMD_RUN_CONTRACT, p: BridgeCmdRunContract(calldata, target_addr, msg_value)
+              )
+            )
+            await comm_channel.send(msg)
         }
-        
-
-        if result_call.error_reason_size > 0 {
-            let error_wrapped = Data(bytes: result_call.error_reason, count: result_call.error_reason_size)
-            let error_str = String(bytes: error_wrapped, encoding: .utf8)!
-            free(result_call.error_reason)
-            return .failure(reason: error_str)
-        }
-
-        if result_call.call_return_size > 0 {
-            let result_wrapped = Data(bytes: result_call.call_return_value, count: result_call.call_return_size)
-            let result_str = String(bytes: result_wrapped, encoding: .utf8)!
-            free(result_call.call_return_value)
-            return .success(return_value: result_str)
-        }
-        return .success(return_value: "")
     }
 
     fileprivate var _opcode_call_hook_enabled = false
@@ -408,10 +368,19 @@ public func evm_run_callback(
     }
 }
 
+@_cdecl("send_error_back")
+public func send_error_back(reply: UnsafeMutablePointer<CChar>) {
+    let rpy = String(cString: reply)
+    free(reply)
+    RuntimeError.shared.show_error = true
+    RuntimeError.shared.error_reason = rpy
+}
+
 @_cdecl("send_cmd_back")
 public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
     let rpy = String(cString: reply)
     free(reply)
+    print("SWIFT GOT BACK", rpy)
     let decoded = try! JSONDecoder().decode(EVMBridgeMessage<AnyDecodable>.self, from: rpy.data(using: .utf8)!)
 
     switch decoded.Cmd {
@@ -436,7 +405,23 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
                 LoadedContracts.shared.current_selection = contract
             }
         }
-        
+
+    case CMD_RUN_CONTRACT:
+//        EVMRunStateControls.shared
+        let return_value = decoded.Payload!.value as! String
+        DispatchQueue.main.async {
+            OpcodeCallbackModel.shared.hit_breakpoint = false
+            EVMRunStateControls.shared.contract_currently_running = false
+            EVMRunStateControls.shared.call_return_value = return_value
+
+            // switch result {
+            // case .failure(reason: let r):
+            //     error_msg_evm = r
+            // case .success(return_value: let r):
+            //     error_msg_evm = ""
+            //     call_return_value = r
+            // }
+        }
 
     case CMD_REPORT_CHAIN_HEAD:
         let blk_header = decoded.Payload!.value as! Dictionary<String, String?>

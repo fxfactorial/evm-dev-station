@@ -99,6 +99,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     @ObservedObject private var execed_ops = ExecutedOperations.shared
     @ObservedObject private var current_block_header = CurrentBlockHeader.shared
     @ObservedObject private var contracts = LoadedContracts.shared
+    @ObservedObject private var error_model = RuntimeError.shared
     
     @State private var present_load_contract_sheet = false
 
@@ -108,15 +109,6 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     
     @State private var deploy_contract_result = ""
     @State var eips_used : [EIP] = []
-    
-    private func running_evm(calldata: String, msg_value: String) -> EVMCallResult {
-        //        print("kicking off running evm \(calldata) \(msg_value) \(selected_contract!.address)")
-        // let call_result = d.call(calldata: calldata, target_addr: selected_contract!.address, msg_value: msg_value)
-        //        print(call_result)
-        //        return call_result
-        return .success(return_value: "")
-    }
-    
     
     public var body: some View {
         
@@ -330,6 +322,16 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                              }, content: {
                                     KnownEIPs(known_eips: $eips_used)
                                 })
+                      .sheet(isPresented: $error_model.show_error,
+                             content: {
+                                 VStack {
+                                     Button {
+                                         error_model.show_error.toggle()
+                                     } label: {
+                                         Text(error_model.error_reason)
+                                     }
+                                 }.frame(width: 400, height: 300)
+                             })
                       .sheet(isPresented: $bytecode_add) {
                           if new_contract_name.isEmpty || new_contract_bytecode.isEmpty {
                               return
@@ -1075,8 +1077,6 @@ struct BreakOnOpcodes: View {
 struct RunningEVM<Driver: EVMDriver>: View {
     @State private var calldata = ""
     @State private var msg_value = "0"
-    @State private var call_return_value = ""
-    @State private var error_msg_evm = ""
     @State private var error_msg_contract_eval = ""
     // These can be updated from outside this view
     // as the EVM runs
@@ -1126,7 +1126,8 @@ struct RunningEVM<Driver: EVMDriver>: View {
                     HStack {
                         Text("Return value")
                           .frame(width: 120, alignment: .leading)
-                        TextField(call_return_value, text: $call_return_value)
+                        TextField(evm_run_controls.call_return_value,
+                                  text: $evm_run_controls.call_return_value)
                           .disabled(false)
                           .textSelection(.enabled)
                     }
@@ -1152,34 +1153,23 @@ struct RunningEVM<Driver: EVMDriver>: View {
                     HStack {
                         Text("EVM Error")
                           .frame(width: 120, alignment: .leading)
-                        TextField("last failure message", text: $error_msg_evm)
+                        TextField("last failure message", text: $evm_run_controls.evm_error)
                     }
                 }.padding()
                 VStack {
                     HStack {
                         Button {
                             print("calling run evm handler \(calldata)-\(msg_value)")
-                            evm_run_controls.contract_currently_running = true
-                            evm_run_controls.current_call_task = Task.detached {
-                                let result = await d.call(
-                                  calldata: calldata,
-                                  target_addr: target_addr,
-                                  msg_value: msg_value
-                                )
-                                
-                                DispatchQueue.main.async {
-                                    OpcodeCallbackModel.shared.hit_breakpoint = false
-                                    evm_run_controls.contract_currently_running = false
-                                    switch result {
-                                    case .failure(reason: let r):
-                                        error_msg_evm = r
-                                    case .success(return_value: let r):
-                                        error_msg_evm = ""
-                                        call_return_value = r
-                                    }
-                                }
+                            withAnimation {
+                                evm_run_controls.contract_currently_running = true
                             }
-                            
+
+                            d.call(
+                              calldata: calldata,
+                              target_addr: target_addr,
+                              msg_value: msg_value
+                            )
+
                         } label: {
                             Text("Run contract").frame(width: 140)
                         }.disabled(evm_run_controls.contract_currently_running)
@@ -1205,15 +1195,15 @@ struct RunningEVM<Driver: EVMDriver>: View {
                         EVMRunStateControls.shared.contract_currently_running = false
                         OpcodeCallbackModel.shared.reset()
 
-                        if let t = EVMRunStateControls.shared.current_call_task {
-                            d.reset_evm(
-                              enableOpCodeCallback: EVMRunStateControls.shared.breakpoint_on_call,
-                              enableCallback: EVMRunStateControls.shared.record_executed_operations,
-                              useStateInMemory: load_chain_model.db_kind == DBKind.InMemory
-                            )
-                            t.cancel()
-                            EVMRunStateControls.shared.current_call_task = nil
-                        }
+                        // if let t = EVMRunStateControls.shared.current_call_task {
+                        //     d.reset_evm(
+                        //       enableOpCodeCallback: EVMRunStateControls.shared.breakpoint_on_call,
+                        //       enableCallback: EVMRunStateControls.shared.record_executed_operations,
+                        //       useStateInMemory: load_chain_model.db_kind == DBKind.InMemory
+                        //     )
+                        //     t.cancel()
+                        //     EVMRunStateControls.shared.current_call_task = nil
+                        // }
                         
                         if let t = OpcodeCallbackModel.shared.current_opcode_continue_task {
                             t.cancel()

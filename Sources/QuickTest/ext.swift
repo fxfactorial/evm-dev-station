@@ -45,3 +45,9 @@ extension String {
 }
                                                                                                                
 
+
+extension Bool {
+    func to_go_bool() -> GoUint8 {
+        self ? GoUint8(1) : GoUint8(0)
+    }
+}

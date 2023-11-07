@@ -97,9 +97,9 @@ let num_3 = "999129213123123123123"
 let collect = [num_1, num_2, num_3]
 
 // print("sending over", collect)
-for i in collect {
-    EVMBridge.TestSendingInt(i.test_4())
-}
+// for i in collect {
+//     EVMBridge.TestSendingInt(i.test_4())
+// }
 
 
 let payload = "128acb08000000000000000000000000b27308f9f90d607463bb33ea1bebb41c27ce5ab600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000de0b6b3a7640000000000000000000000000000fffd8963efd1fc6a506488495d951d5263988d2500000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000002bc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2000bb8a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48000000000000000000000000000000000000000000"
@@ -157,8 +157,8 @@ let ts = Date(timeIntervalSince1970: TimeInterval(result3))
 let channel = AsyncChannel<String>()
 
 let send_commuication = Task.detached {
-    EVMBridge.MakeChannelAndListenThread()
-    EVMBridge.MakeListenCommand()
+    EVMBridge.MakeChannelAndListenThread(true.to_go_bool())
+    EVMBridge.MakeChannelAndReplyThread(true.to_go_bool())
 }
 
 Task {
@@ -175,7 +175,7 @@ Task {
     for await msg in channel {
         msg.withCString {
             $0.withMemoryRebound(to: CChar.self, capacity: msg.count) {
-                EVMBridge.SendCmd(GoString(p: $0, n: msg.count))
+                EVMBridge.UISendCmd(GoString(p: $0, n: msg.count))
             }
         }
 
@@ -190,7 +190,8 @@ Task {
 public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
     let rpy = String(cString: reply)
     free(reply)
-    Task {
-        await channel.send(rpy)
-    }
+    print("SWIFT RECEIVE", rpy)
+    // Task {
+    //     await channel.send(rpy)
+    // }
 }

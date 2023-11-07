@@ -6,7 +6,7 @@ git clone this repo and run `./evm-dev-station` either in the arm directory (for
 the x86 directory for older intel based macs.
 
 ![](./ss.png)
-![](./ss-2.png)
+![](./ss-loaded.png)
 
 # work flow
 

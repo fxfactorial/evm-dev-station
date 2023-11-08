@@ -32,6 +32,8 @@ public struct AnyDecodable : Codable {
         
         if let string = try? container.decode(String.self) {
             self.init(string)
+        } else if let strs = try? container.decode([String].self) {
+            self.init(strs)
         } else if let ints = try? container.decode([Int].self) {
             self.init(ints)
         } else if let int = try? container.decode(Int.self) {
@@ -39,6 +41,10 @@ public struct AnyDecodable : Codable {
         } else if let kv = try? container.decode([String:String].self) {
             self.init(kv)
         } else if let kv = try? container.decode([String:String?].self) {
+            self.init(kv)
+        } else if let kv = try? container.decode([String: AnyDecodable].self) {
+            self.init(kv)
+        } else if let kv = try? container.decode([AnyDecodable].self) {
             self.init(kv)
         } else {
             self.init(())

@@ -365,12 +365,14 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
         }
 
     case CMD_RUN_CONTRACT:
-        let return_value = decoded.Payload!.value as! String
+        let call_result = decoded.Payload!.value as! Dictionary<String, AnyDecodable>
+        print(call_result["call_tree"])
         DispatchQueue.main.async {
             OpcodeCallbackModel.shared.hit_breakpoint = false
             EVMRunStateControls.shared.contract_currently_running = false
-            EVMRunStateControls.shared.call_return_value = return_value
+            EVMRunStateControls.shared.call_return_value = call_result["return_value"]?.value as! String
         }
+
     case CMD_DEPLOY_NEW_CONTRACT:
         let reply = decoded.Payload!.value as! Dictionary<String, String>
         // TODO need to update the current contract selection, its gas cost used to deploy, etc

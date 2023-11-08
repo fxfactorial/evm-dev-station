@@ -134,7 +134,8 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     @State private var deploy_contract_result = ""
     @State var eips_used : [EIP] = []
     @State private var top_row_open = true
-
+    @State private var current_tab_runtime_eval = 2
+    
     public var body: some View {
         
         TabView(selection: $current_tab,
@@ -199,6 +200,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                         }
                                     }
                                 }
+                                .frame(maxHeight: .infinity)
                                 .padding()
                                 .background()
                                 .tabItem{ Text("Contract State") }.tag(0)
@@ -207,8 +209,8 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                         VStack {
                                             ScrollView {
                                                 Text(contract.bytecode)
-                                                    .lineLimit(nil)
-                                                    .frame(maxWidth:.infinity, maxHeight:300)
+                                                    .lineLimit(20)
+                                                    .frame(maxWidth:.infinity, maxHeight:.infinity)
                                                     .background()
                                             }
                                         }
@@ -272,7 +274,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                 )
                 .frame(height: top_row_open ? 250 : 40)
                 HSplitView {
-                    TabView {
+                    TabView(selection: $current_tab_runtime_eval) {
                         VStack {
                             ScrollViewReader { (proxy: ScrollViewProxy) in
                                 Text("\(execed_ops.execed_operations.count) Executed Operations")
@@ -291,7 +293,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                 })
                             }
                             
-                        }.tabItem { Text("Execution Table")                    }.tag(0)
+                        }.tabItem { Text("Execution Table") }.tag(0)
                         VStack {
                             if let contract = contracts.current_selection {
                                 ABIEncode(loaded_contract: contract)
@@ -785,7 +787,7 @@ struct ABIEncode: View {
                 }
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: 200)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -1196,9 +1198,9 @@ struct RunningEVM<Driver: EVMDriver>: View {
         VStack {
             Text("Live Contract Interaction")
                 .font(.title2)
-            Button {
-                dev_mode()
-            }label: { Text("quick fill")}
+//            Button {
+//                dev_mode()
+//            }label: { Text("quick fill")}
             HStack {
                 VStack {
                     HStack {

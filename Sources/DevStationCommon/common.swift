@@ -47,6 +47,14 @@ public class ErrorFeedbackModel: ObservableObject {
     @Published public var UIInputError = ""
 }
 
+public struct EVMCall : Identifiable {
+    public let id = UUID()
+    public let address_name : String
+    public let calldata : String
+    public var children: [EVMCall]?
+}
+
+
 public struct ExecutedEVMCode: Identifiable, Hashable{
     public let id = UUID()
     // easiest when they are all strings

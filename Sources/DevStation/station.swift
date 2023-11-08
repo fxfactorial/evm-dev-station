@@ -10,11 +10,12 @@ struct DevStation : App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var app_delegate
     @AppStorage("prefer_dark_mode") private var prefer_dark = true
     @AppStorage("show_first_load_help") private var show_help_msg = true
-
+    @AppStorage("enable_full_debug") private var enable_loud_debugging = false
 
     var body : some Scene {
         WindowGroup {
-            Rootview().preferredColorScheme(prefer_dark ? .dark : .light)
+            Rootview()
+              .preferredColorScheme(prefer_dark ? .dark : .light)
         }
     }
 }
@@ -339,17 +340,15 @@ public func send_error_back(reply: UnsafeMutablePointer<CChar>) {
 public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
     let rpy = String(cString: reply)
     free(reply)
-    print("SWIFT GOT BACK", rpy)
     let decoded = try! JSONDecoder().decode(EVMBridgeMessage<AnyDecodable>.self, from: rpy.data(using: .utf8)!)
 
     switch decoded.Cmd {
     case CMD_NEW_EVM:
-        print("laoded new evm")
+        print("loaded new evm")
     case CMD_LOAD_CHAIN:
         EVM.shared.load_chainhead()
     case CMD_LOAD_CONTRACT_FROM_STATE:
         let loaded = decoded.Payload!.value as! Dictionary<String, String>
-        print("SWIFT RECEIVED", decoded)
 
         let contract = LoadedContract(
           name: loaded["nickname"]!,
@@ -366,21 +365,15 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
         }
 
     case CMD_RUN_CONTRACT:
-//        EVMRunStateControls.shared
         let return_value = decoded.Payload!.value as! String
         DispatchQueue.main.async {
             OpcodeCallbackModel.shared.hit_breakpoint = false
             EVMRunStateControls.shared.contract_currently_running = false
             EVMRunStateControls.shared.call_return_value = return_value
-
-            // switch result {
-            // case .failure(reason: let r):
-            //     error_msg_evm = r
-            // case .success(return_value: let r):
-            //     error_msg_evm = ""
-            //     call_return_value = r
-            // }
         }
+    case CMD_DEPLOY_NEW_CONTRACT:
+        let reply = decoded.Payload!.value as! Dictionary<String, String>
+        // TODO need to update the current contract selection, its gas cost used to deploy, etc
 
     case CMD_REPORT_CHAIN_HEAD:
         let blk_header = decoded.Payload!.value as! Dictionary<String, String?>

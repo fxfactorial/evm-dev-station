@@ -133,7 +133,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     
     @State private var deploy_contract_result = ""
     @State var eips_used : [EIP] = []
-    @State private var top_row_open = false
+    @State private var top_row_open = true
 
     public var body: some View {
         
@@ -270,31 +270,47 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                         }
                     }
                 )
+                .frame(height: top_row_open ? 250 : 40)
                 HSplitView {
-                    ScrollViewReader { (proxy: ScrollViewProxy) in
-                        Text("\(execed_ops.execed_operations.count) Executed Operations")
-                            .font(.title2)
-                        Table(execed_ops.execed_operations) {
-                            TableColumn("PC", value: \.pc)
-                            TableColumn("OPNAME", value: \.op_name)
-                            TableColumn("OPCODE", value: \.opcode)
-                            TableColumn("GAS", value: \.gas_cost)
-                        }
-                        .frame(maxHeight: .infinity)
-                        .onReceive(execed_ops.$execed_operations,
-                                   perform: { item in
-                            let id = item.last
-                            proxy.scrollTo(id)
-                        })
-                    }
-                    if let contract = contracts.current_selection {
-                        ABIEncode(loaded_contract: contract)
-                            .padding()
-                            .background()
+                    TabView {
+                        VStack {
+                            ScrollViewReader { (proxy: ScrollViewProxy) in
+                                Text("\(execed_ops.execed_operations.count) Executed Operations")
+                                    .font(.title2)
+                                Table(execed_ops.execed_operations) {
+                                    TableColumn("PC", value: \.pc)
+                                    TableColumn("OPNAME", value: \.op_name)
+                                    TableColumn("OPCODE", value: \.opcode)
+                                    TableColumn("GAS", value: \.gas_cost)
+                                }
+                                .frame(maxHeight: .infinity)
+                                .onReceive(execed_ops.$execed_operations,
+                                           perform: { item in
+                                    let id = item.last
+                                    proxy.scrollTo(id)
+                                })
+                            }
+                            
+                        }.tabItem { Text("Execution Table")                    }.tag(0)
+                        VStack {
+                            if let contract = contracts.current_selection {
+                                ABIEncode(loaded_contract: contract)
+                                    .padding()
+                                    .background()
+                            } else {
+                                Text("no contract selected")
+                            }
+                        }.tabItem { Text("ABI")}.tag(1)
+                        CallTree().tabItem {
+                            Text("CALL tree")
+                        }.tag(2)
+                        JumpTree().tabItem {
+                            Text("JUMP tree")
+                        }.tag(3)
                     }
                     Spacer().frame(width: 20)
                     BreakpointView().frame(maxWidth: .infinity)
-                }.padding(10)
+                }.padding(10).frame(maxHeight: .infinity)
                 
                 RunningEVM(target_addr: Binding<String>(
                     get: {
@@ -405,6 +421,41 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
             }
         }
         .padding(10)
+    }
+}
+
+struct JumpTree: View {
+    var body: some View {
+        Text("temp")
+    }
+}
+
+struct File: Identifiable { // identifiable ✓
+  let id = UUID()
+  let name: String
+  var children: [File]? // optional array of type File ✓
+
+  var icon: String { // makes things prettier
+    if children == nil {
+       return "doc"
+    } else if children?.isEmpty == true {
+       return "folder"
+    } else {
+       return "folder.fill"
+    }
+  }
+}
+
+struct CallTree : View {
+    var body: some View {
+        HStack {
+            List(items, children: \.children) { item in
+                HStack {
+                    Image(systemName: item.icon)
+                    Text(item.name)
+                }
+            }
+        }.frame(maxHeight: .infinity)
     }
 }
 
@@ -794,10 +845,11 @@ struct LoadContractFromChain : View {
     
 }
 
-#Preview("load from chain") {
-    LoadContractFromChain { _, _ , _ in
-        //
-    }
+#Preview("Call tree") {
+//    LoadContractFromChain { _, _ , _ in
+//        //
+//    }
+    CallTree()
 }
 
 struct BreakpointView: View {

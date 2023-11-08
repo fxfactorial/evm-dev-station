@@ -33,3 +33,20 @@ let sample_contract_abi = """
 ]
 
 """
+
+let items = [
+    File(name: "Documents", children: [
+        File(name: "Work", children: [
+            File(name: "Revision 1.doc", children: nil),
+            File(name: "Revision 2.doc", children: nil),
+        ]),
+        File(name: "Sheet 1.pdf", children: nil),
+        File(name: "Sheet 2.pdf", children: nil)
+    ]),
+    File(name: "Photos", children: [
+        File(name: "Photo 1.jpg", children: nil),
+        File(name: "Photo 2.jpg", children: nil)
+    ]),
+    File(name: "Empty folder", children: []),
+    File(name: "sys.info", children: nil)
+]

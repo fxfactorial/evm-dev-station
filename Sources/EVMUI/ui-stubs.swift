@@ -46,9 +46,9 @@ final class StubEVMDriver: EVMDriver {
         return ["PUSH1", "PUSH2"]
     }
 
-    func create_new_contract(code: String, 
-                             creator_addr new_addr: String) throws -> String {
-        return "0x522B3294E6d06aA25Ad0f1B8891242E335D3B459"
+    func create_new_contract(code: String, creator_addr: String,
+                             contract_nickname: String, gas_amount: Int, initial_gas: String)  {
+        //
     }
     
     func new_evm_singleton() {

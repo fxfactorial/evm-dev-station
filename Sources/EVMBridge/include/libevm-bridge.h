@@ -28,20 +28,6 @@ extern void chain_load_finished();
 extern void evm_opcall_callback(char*, char*, char*);
 extern void evm_opcode_callback(char*, char**, int, char*);
 
-struct NewContractResult {
-   bool is_error;
-   char* error_reason;
-   size_t error_reason_size;
-   char* new_contract_addr;
-};
-
-struct CallContractResult {
-   char* error_reason;
-   size_t error_reason_size;
-   char* call_return_value;
-   size_t call_return_size;
-};
-
 struct SetAccountBalanceResult {
    char *error_reason;
    size_t error_reason_size;
@@ -130,7 +116,6 @@ extern void EnableCallback(GoUint8 status);
 extern void EnableStopOnCall(GoUint8 enable);
 extern struct SetAccountBalanceResult SetAccountBalance(GoString account, GoString balance);
 extern void TestSendingInt(GoString msgValue_);
-extern struct NewContractResult DeployNewContract(GoString bytecode_, GoString caller_);
 
 /* Return type for AvailableEIPS */
 struct AvailableEIPS_return {

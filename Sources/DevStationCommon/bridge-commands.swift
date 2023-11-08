@@ -86,12 +86,30 @@ public struct BridgeCmdRunContract: Codable {
     }
 }
 
+public struct BridgeCmdDeployNewContract: Codable {
+    public let CreationCode: String
+    public let CreatorAddr: String
+    public let Nickname: String
+    public let GasAmount: Int
+    public let InitialEthOnContract: String
+    public init(
+      _ creation: String, _ creator_addr: String, _ nickname: String,
+      _ gas_amount: Int, _ init_eth_on_contract: String
+    ) {
+        self.CreationCode = creation
+        self.CreatorAddr = creator_addr
+        self.Nickname = nickname
+        self.GasAmount = gas_amount
+        self.InitialEthOnContract = init_eth_on_contract
+    }
+}
+
 // TODO change to enum
 public let CMD_NEW_EVM = "new_evm"
 public let CMD_LOAD_CHAIN = "load_chaindb"
 public let CMD_REPORT_CHAIN_HEAD = "report_chain_head"
 public let CMD_LOAD_CONTRACT_FROM_STATE = "load_contract_from_state"
 public let CMD_RUN_CONTRACT = "run_contract"
-
+public let CMD_DEPLOY_NEW_CONTRACT = "deploy_new_contract"
 // Leave this always as last just as convention for the eyes
 public let CMD_REPORT_ERROR = "error"

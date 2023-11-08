@@ -146,19 +146,14 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                     TabView(selection: $current_contract_detail_tab) {
                                         VStack {
                                             Button {
-                                                if var contract = contracts.current_selection {
-                                                    do {
-                                                        contract.address = try d.create_new_contract(
-                                                          code: contract.bytecode,
-                                                          creator_addr: "0x00000000000000000000"
-                                                        )
-                                                        // needed to cause ui update
-                                                        contracts.current_selection = contract
-                                                    } catch EVMError.deploy_issue(let reason){
-                                                        deploy_contract_result = reason
-                                                    }  catch {
-                                                        return
-                                                    }
+                                                if let contract = contracts.current_selection {
+                                                    d.create_new_contract(
+                                                      code: contract.bytecode,
+                                                      creator_addr: "0x00000000000000000000",
+                                                      contract_nickname: "",
+                                                      gas_amount: 900_000,
+                                                      initial_gas: "0"
+                                                    )
                                                 }
                                             } label: {
                                                 Text("Try deploy contract")
@@ -1073,6 +1068,15 @@ struct BreakOnOpcodes: View {
           .padding()
     }
 }
+
+struct InitialHelpView : View {
+    var body: some View {
+        VStack {
+            Text("Welcome to EVM Dev station")
+        }
+    }
+}
+
 
 struct RunningEVM<Driver: EVMDriver>: View {
     @State private var calldata = ""

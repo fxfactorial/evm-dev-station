@@ -195,3 +195,10 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
     //     await channel.send(rpy)
     // }
 }
+
+@_cdecl("send_error_back")
+public func send_error_back(reply: UnsafeMutablePointer<CChar>) {
+    let rpy = String(cString: reply)
+    free(reply)
+    print("ERROR ", rpy)
+}

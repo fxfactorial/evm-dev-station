@@ -9,6 +9,8 @@ import AsyncAlgorithms
 struct DevStation : App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var app_delegate
     @AppStorage("prefer_dark_mode") private var prefer_dark = true
+    @AppStorage("show_first_load_help") private var show_help_msg = true
+
 
     var body : some Scene {
         WindowGroup {
@@ -21,35 +23,6 @@ extension String {
     func toHexEncodedString(uppercase: Bool = true, prefix: String = "", separator: String = "") -> String {
         return unicodeScalars.map { prefix + .init($0.value, radix: 16, uppercase: uppercase) } .joined(separator: separator)
     }
-
-    // These are all wrong because they holdonto the pointer!
-    func to_go_string() -> GoString {
-        let code = self
-        let data = Data(code.utf8)
-        let value = data.withUnsafeBytes { $0.baseAddress }!
-        let result = value.assumingMemoryBound(to: CChar.self)
-        let wrapped = GoString(p: result, n: self.count)
-        return wrapped
-    }
-
-    func to_go_string3() -> GoString {
-        let wrapped = self.data(using: .utf8)?.withUnsafeBytes {
-            $0.baseAddress?.assumingMemoryBound(to: CChar.self)
-        }!
-        let as_g = GoString(p: wrapped, n: self.count)
-        return as_g
-    }
-    
-    func as_go_string() -> GoString {
-        let payload = self.withCString {pointee in
-            pointee.withMemoryRebound(to: CChar.self, capacity: self.count) {
-                GoString(p: $0, n: self.count)
-            }
-        }
-        return payload
-    }
-
-
 }
 
 
@@ -102,33 +75,19 @@ final class EVM: EVMDriver {
         )
     }
 
-    // NOTE THIS IS WRONG NEED TO DO WITH THE SCOPED POINTER THING
-    func create_new_contract(code: String, creator_addr: String) throws -> String {
-        var code = code
-        code.makeContiguousUTF8()
-        let data = Data(code.utf8)
-        let value = data.withUnsafeBytes { $0.baseAddress }!
-        let result = value.assumingMemoryBound(to: CChar.self)
-        let wrapped = GoString(p: result, n: code.count)
 
-        let data_ = Data(creator_addr.utf8)
-        let value_ = data_.withUnsafeBytes { $0.baseAddress }!
-        let result_ = value_.assumingMemoryBound(to: CChar.self)
-        let wrapped_ = GoString(p: result_, n: creator_addr.count)
+    func create_new_contract(code: String, creator_addr: String,
+                             contract_nickname: String, gas_amount: Int, initial_gas: String)  {
+        Task {
+            let msg = try! JSONEncoder().encode(
+              EVMBridgeMessage(c: CMD_DEPLOY_NEW_CONTRACT,
+                               p: BridgeCmdDeployNewContract(
+                                 code, creator_addr, contract_nickname,
+                                 gas_amount, initial_gas))
+            )
+            await comm_channel.send(msg)
+        }
 
-        
-        let result_deploy = EVMBridge.DeployNewContract(wrapped, wrapped_)
-        if result_deploy.is_error {
-            let error_wrapped = Data(bytes: result_deploy.error_reason, count: result_deploy.error_reason_size)
-            free(result_deploy.error_reason)
-            let error_str = String(bytes: error_wrapped, encoding: .utf8)!
-            throw EVMError.deploy_issue(reason: error_str)
-        } 
-
-        let new_addr = Data(bytes: result_deploy.new_contract_addr, count: 42)
-        let addr_str = String(bytes: new_addr, encoding: .utf8)!
-        free(result_deploy.new_contract_addr)
-        return addr_str
     }
 
     func new_evm_singleton() {

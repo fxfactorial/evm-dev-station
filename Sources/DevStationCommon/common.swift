@@ -219,6 +219,8 @@ public class LoadedContract : ObservableObject, Hashable, Equatable {
         hasher.combine(id)
     }
     @Published public var contract: EthereumContract?
+    @Published public var is_loaded_against_state = false
+
     public init(name: String, 
                 bytecode: String,
                 address: String,

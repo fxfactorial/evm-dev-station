@@ -154,37 +154,51 @@ let ts = Date(timeIntervalSince1970: TimeInterval(result3))
 //   print(calculationResult)
 // }
 
-let channel = AsyncChannel<String>()
+let comm_channel = AsyncChannel<Data>()
 
-let send_commuication = Task.detached {
+Task.detached {
     EVMBridge.MakeChannelAndListenThread(true.to_go_bool())
     EVMBridge.MakeChannelAndReplyThread(true.to_go_bool())
-}
 
-Task {
-    var ith = 0
-    while let _ = try? await Task.sleep(for: .seconds(3)) {
-        let now = "Calling \(ith) \(Date.now)"
-        print("Swift now sending \(now)")
-        ith += 1
-        await channel.send(now)
-    }
-}
-
-// Task {
-    for await msg in channel {
-        msg.withCString {
+    for await msg in comm_channel {
+        String(data: msg, encoding: .utf8)!.withCString {
             $0.withMemoryRebound(to: CChar.self, capacity: msg.count) {
                 EVMBridge.UISendCmd(GoString(p: $0, n: msg.count))
             }
         }
-
     }
-// }
+}
 
-// Task {
-    
-// }
+
+let msg1 = try! JSONEncoder().encode(
+  EVMBridgeMessage<BridgeCmdNewGlobalEVM>(c: CMD_NEW_EVM, p: BridgeCmdNewGlobalEVM())
+)
+
+await comm_channel.send(msg1)
+
+let db_kind = "pebble"
+let pathdir = "/Users/edgararoutiounian/repos/mainnet-chaindata/"
+
+let msg2 = try! JSONEncoder().encode(
+  EVMBridgeMessage(c: CMD_LOAD_CHAIN,
+                   p: BridgeCmdLoadChain(kind: db_kind, directory: pathdir))
+)
+await comm_channel.send(msg2)
+
+// quoter
+let target_addr = "0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6"
+// quote encoded
+let calldata = "f7729d43000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb480000000000000000000000000000000000000000000000000000000000000bb80000000000000000000000000000000000000000000000000de0b6b3a76400000000000000000000000000000000000000000000000000000000000000000000"
+
+let msg3 = try! JSONEncoder().encode(
+  EVMBridgeMessage(
+    c: CMD_RUN_CONTRACT, p: BridgeCmdRunContract(calldata, target_addr, "0")
+  )
+)
+await comm_channel.send(msg3)
+
+
+try await Task.sleep(for: .seconds(40))
 
 @_cdecl("send_cmd_back")
 public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {

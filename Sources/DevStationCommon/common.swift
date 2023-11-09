@@ -1,27 +1,5 @@
 import SwiftUI
 
-public enum EVMCallResult {
-    case success(return_value: String)
-    case failure(reason: String)
-}
-
-public enum EVMError : Error {
-    case deploy_issue(reason: String)
-    case load_chaindata_problem(String)
-}
-
-
-//extension NSTextView {
-//  open override var frame: CGRect {
-//    didSet {
-//        // Top inset
-//        textContainerInset = NSSize(width: 0, height: 10)
-//        // Left fragment padding <<< This is what I was looking for
-//        textContainer?.lineFragmentPadding = 10
-//        }
-//    }
-//}
-
 public class LoadChainModel: ObservableObject {
     public static let shared = LoadChainModel()
     @Published public var chaindata_directory = ""
@@ -223,6 +201,7 @@ public class LoadedContract : ObservableObject, Hashable, Equatable {
     
     @Published public var name : String = ""
     @Published public var bytecode: String = ""
+    @Published public var deployed_bytecode = ""
     @Published public var address : String = ""
     public let id = UUID() // maybe just the address next time
     public func hash(into hasher: inout Hasher) {
@@ -230,15 +209,23 @@ public class LoadedContract : ObservableObject, Hashable, Equatable {
     }
     @Published public var contract: EthereumContract?
     @Published public var is_loaded_against_state = false
+    @Published public var eth_balance = "0"
+    @Published public var deployer_address : String = "0x0000000000000000000000000000000000000000"
+    @Published public var gas_limit_deployment: String = "900000"
+    @Published public var deployment_gas_cost = 0
 
-    public init(name: String, 
+
+    public init(name: String,
                 bytecode: String,
                 address: String,
-                contract: EthereumContract? = nil) {
+                contract: EthereumContract? = nil,
+                is_loaded_against_state: Bool = false
+    ) {
         self.name = name
         self.bytecode = bytecode
         self.address = address
         self.contract = contract
+        self.is_loaded_against_state = is_loaded_against_state
     }
 }
 

@@ -145,6 +145,10 @@ public struct StateRecord: Codable, Identifiable, Hashable {
 }
 
 
+public struct BridgeCmdStepForwardOnce: Codable {
+    public init( ) {}
+}
+
 // TODO change to enum
 public let CMD_NEW_EVM = "new_evm"
 public let CMD_LOAD_CHAIN = "load_chaindb"
@@ -152,5 +156,7 @@ public let CMD_REPORT_CHAIN_HEAD = "report_chain_head"
 public let CMD_LOAD_CONTRACT_FROM_STATE = "load_contract_from_state"
 public let CMD_RUN_CONTRACT = "run_contract"
 public let CMD_DEPLOY_NEW_CONTRACT = "deploy_new_contract"
+public let CMD_STEP_FORWARD_ONE = "step_once"
+
 // Leave this always as last just as convention for the eyes
 public let CMD_REPORT_ERROR = "error"

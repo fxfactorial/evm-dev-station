@@ -9,8 +9,11 @@ public protocol EVMDriver {
     func load_contract(addr: String, nickname: String, abi_json: String)
     func call(calldata: String, target_addr: String, msg_value: String) 
     func create_new_contract(code: String, creator_addr: String,
-                             contract_nickname: String, gas_amount: Int, initial_gas: String) 
-    // still open issues
+                             contract_nickname: String,
+                             gas_amount: String, initial_gas: String) 
+    func step_forward_one()
+
+    // still open issues, that is not properly ported
     func keccak256(input: String) -> String
     // not sure how to do this as the get,set way without turning into existential type/observable later
     func exec_callback_enabled() -> Bool

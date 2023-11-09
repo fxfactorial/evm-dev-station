@@ -10,6 +10,7 @@ import DevStationCommon
 
 final class StubEVMDriver: EVMDriver {
     func start_handling_bridge() {}
+    func step_forward_one(){}
     
     func keccak256(input: String) -> String {
         return input.sha3(.sha256)
@@ -47,7 +48,7 @@ final class StubEVMDriver: EVMDriver {
     }
 
     func create_new_contract(code: String, creator_addr: String,
-                             contract_nickname: String, gas_amount: Int, initial_gas: String)  {
+                             contract_nickname: String, gas_amount: String, initial_gas: String)  {
         //
     }
     

@@ -78,13 +78,13 @@ final class EVM: EVMDriver {
 
 
     func create_new_contract(code: String, creator_addr: String,
-                             contract_nickname: String, gas_amount: Int, initial_gas: String)  {
+                             contract_nickname: String, gas_amount: String, initial_gas: String)  {
         Task {
             let msg = try! JSONEncoder().encode(
               EVMBridgeMessage(c: CMD_DEPLOY_NEW_CONTRACT,
                                p: BridgeCmdDeployNewContract(
                                  code, creator_addr, contract_nickname,
-                                 gas_amount, initial_gas))
+                                 Int(gas_amount)!, initial_gas))
             )
             await comm_channel.send(msg)
         }
@@ -181,6 +181,16 @@ final class EVM: EVMDriver {
             let msg = try! JSONEncoder().encode(
               EVMBridgeMessage(c: CMD_REPORT_CHAIN_HEAD,
                                p: BridgeCmdSendBackChainHeader())
+            )
+            await comm_channel.send(msg)
+        }
+    }
+
+    func step_forward_one() {
+        Task {
+            let msg = try! JSONEncoder().encode(
+              EVMBridgeMessage(c: CMD_STEP_FORWARD_ONE,
+                               p: BridgeCmdStepForwardOnce())
             )
             await comm_channel.send(msg)
         }
@@ -379,7 +389,22 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
         }
 
     case CMD_DEPLOY_NEW_CONTRACT:
-        let reply = decoded.Payload!.value as! Dictionary<String, String>
+        let reply = decoded.Payload!.value as! Dictionary<String, AnyDecodable>
+        let gas_used = reply["gas_used"]?.value as! Int
+        let new_addr = reply["new_contract_addr"]?.value as! String
+        let deployed_code = reply["return_value"]?.value as! String
+        let name = reply["name"]?.value as! String
+        let contract = LoadedContracts.shared.contracts.filter({ $0.name == name }).first
+        if let c = contract {
+            DispatchQueue.main.async {
+                withAnimation {
+                    c.is_loaded_against_state = true
+                    c.address  = new_addr
+                    c.deployed_bytecode = deployed_code
+                    c.deployment_gas_cost = gas_used
+                }
+            }
+        }
         // TODO need to update the current contract selection, its gas cost used to deploy, etc
 
     case CMD_REPORT_CHAIN_HEAD:

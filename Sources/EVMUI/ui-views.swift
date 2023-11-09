@@ -104,10 +104,6 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     let d : Driver
     
     @State private var bytecode_add = false
-    // TODO refactor these into a stateobject
-    @State private var new_contract_name = ""
-    @State private var new_contract_bytecode = ""
-    @State private var new_contract_abi = ""
     @State private var current_code_running = ""
     @State private var current_tab = 0
     @State private var calldata = ""
@@ -134,21 +130,20 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     @State private var deploy_contract_result = ""
     @State var eips_used : [EIP] = []
     @State private var top_row_open = true
-    @State private var current_tab_runtime_eval = 2
+    @State private var current_tab_runtime_eval = 0
     
     public var body: some View {
         
         TabView(selection: $current_tab,
                 content:  {
             VSplitView {
-                
                 DisclosureGroup(
                     isExpanded: $top_row_open,
                     content: {
                         HStack {
                             NavigationStack {
                                 VStack {
-                                    Text("Loaded contracts")
+                                    Text("Contracts")
                                         .font(.title2)
                                         .help("interact with contracts loaded")
                                     List(contracts.contracts, id:\.self,
@@ -173,43 +168,67 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             }
                             TabView(selection: $current_contract_detail_tab) {
                                 VStack {
-                                    Button {
-                                        if let contract = contracts.current_selection {
-                                            d.create_new_contract(
-                                                code: contract.bytecode,
-                                                creator_addr: "0x00000000000000000000",
-                                                contract_nickname: "",
-                                                gas_amount: 900_000,
-                                                initial_gas: "0"
-                                            )
+                                    if let c = contracts.current_selection {
+                                        VStack {
+                                            HStack {
+                                                Text("Creator Address").frame(width: 100, alignment: .leading)
+                                                TextField(c.deployer_address, text: Binding<String>(
+                                                    get: { c.deployer_address },
+                                                    set: { c.deployer_address = $0 }
+                                                ))
+                                            }
+                                            HStack {
+                                                Text("Gas limit").frame(width: 100, alignment: .leading)
+                                                TextField(c.gas_limit_deployment, text: Binding<String>(
+                                                    get: { c.gas_limit_deployment },
+                                                    set: { c.gas_limit_deployment = $0 }
+                                                ))
+                                            }
+                                            HStack {
+                                                Text("Eth Balance").frame(width: 100, alignment: .leading)
+                                                TextField(c.eth_balance, text: Binding<String>(
+                                                    get: { c.eth_balance },
+                                                    set: { c.eth_balance = $0 }
+                                                ))
+                                            }
+                                            HStack {
+                                                Text("Deployed Address").frame(width: 100, alignment: .leading)
+                                                TextField(c.address, text: .constant(c.address))
+                                            }
+                                            Button {
+                                                d.create_new_contract(
+                                                    code: c.bytecode,
+                                                    creator_addr: c.deployer_address,
+                                                    contract_nickname: c.name,
+                                                    gas_amount: c.gas_limit_deployment,
+                                                    initial_gas: c.eth_balance
+                                                )
+                                            } label: {
+                                                Text("Deploy contract to state")
+                                            }
                                         }
-                                    } label: {
-                                        Text("Try deploy contract")
+                                    } else {
+                                        Text("select a contract from sidebar ")
                                     }
-                                    HStack {
-                                        Text("deploy result")
-                                        Text(deploy_contract_result)
-                                    }
-                                    HStack {
-                                        Text("Deployed Addr")
-                                        Spacer()
-                                        if let contract = contracts.current_selection {
-                                            Text(contract.address)
-                                        } else {
-                                            Text("N/A")
-                                        }
-                                    }
+                                    
                                 }
-                                .frame(maxHeight: .infinity)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
                                 .padding()
                                 .background()
-                                .tabItem{ Text("Contract State") }.tag(0)
+                                .tabItem{ Text("Deployment") }.tag(0)
+                                VStack {
+                                    Text("TODO Show state of contract (eth balance, nonce, blah) ")
+                                }
+                                .padding()
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .background()
+                                .tabItem{ Text("Contract State") }.tag(1)
                                 VStack {
                                     if let contract = contracts.current_selection {
                                         VStack {
                                             ScrollView {
                                                 Text(contract.bytecode)
-                                                    .lineLimit(20)
+                                                    .lineLimit(10)
                                                     .frame(maxWidth:.infinity, maxHeight:.infinity)
                                                     .background()
                                             }
@@ -217,7 +236,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                     } else {
                                         Text("select a contract from sidebar ")
                                     }
-                                }.tabItem { Text("Bytecode") }.tag(1)
+                                }.tabItem { Text("Raw Bytecode") }.tag(2)
                             }
                             TabView {
                                 VStack {
@@ -384,34 +403,22 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                 }.frame(width: 400, height: 300)
             })
             .sheet(isPresented: $bytecode_add) {
-                if new_contract_name.isEmpty || new_contract_bytecode.isEmpty {
-                    return
-                }
-                var new_addr: String
-                
-                // do {
-                //     new_addr = try d.create_new_contract(
-                //       code: new_contract_bytecode,
-                //       creator_addr: "0x00000000000000000000"
-                //     )
-                // } catch {
-                //     return
-                // }
-                // let loaded = LoadedContract(
-                //   name: new_contract_name,
-                //   bytecode: new_contract_bytecode,
-                //   address: new_addr,
-                //   contract: try? EthereumContract(new_contract_abi)
-                // )
-                // loaded_contracts.append(loaded)
+//                if new_contract_name.isEmpty || new_contract_bytecode.isEmpty {
+//                    return
+//                }
+//                d.create_new_contract(
+//                  code: new_contract_bytecode,
+//                  creator_addr: "0x0000000000000000000000000000000000000000",
+//                  contract_nickname: new_contract_name,
+//                  gas_amount: 900_000,
+//                  initial_gas: "0"
+//                )
+//                new_contract_name = ""
+//                new_contract_bytecode = ""
+//                new_contract_abi = ""
             } content: {
-                NewContractByteCode(
-                    contract_name: $new_contract_name,
-                    contract_bytecode: $new_contract_bytecode,
-                    contract_abi: $new_contract_abi
-                )
+                NewContractFromInput()
             }
-            
             .tabItem { Text("Live Dev") }.tag(0)
             StateInspector(d: d)
                 .tabItem { Text("Account/State Modification") }.tag(1)
@@ -540,10 +547,10 @@ struct StateDBDetails: View {
     }
 }
 
-struct NewContractByteCode: View {
-    @Binding var contract_name : String
-    @Binding var contract_bytecode : String
-    @Binding var contract_abi: String
+struct NewContractFromInput: View {
+    @State private var contract_name : String = ""
+    @State private var contract_bytecode : String = ""
+    @State private var contract_abi: String = ""
     
     @Environment(\.dismiss) var dismiss
     
@@ -559,6 +566,20 @@ struct NewContractByteCode: View {
             HStack {
                 Button { dismiss() } label: { Text("Cancel").padding(5).scaledToFit().frame(width: 120) }
                 Button {
+                    let already_have = LoadedContracts.shared.contracts.filter({$0.name == contract_name})
+                    if already_have.count > 0 {
+                        dismiss()
+                        RuntimeError.shared.error_reason = "Already have contract loaded with name `\(contract_name)`"
+                        RuntimeError.shared.show_error = true
+                        return
+                    }
+
+                    LoadedContracts.shared.contracts.append(
+                        .init(name: contract_name, 
+                              bytecode: contract_bytecode,
+                              address: "0x00",
+                              contract: try? EthereumContract(contract_abi)))
+                    LoadedContracts.shared.current_selection = LoadedContracts.shared.contracts.last
                     dismiss()
                 } label: {
                     Text("Add")
@@ -815,7 +836,6 @@ struct LoadContractFromChain : View {
     
     @Environment(\.dismiss) var dismiss
     
-    
     var body: some View {
         VStack {
             HStack {
@@ -857,12 +877,6 @@ struct LoadContractFromChain : View {
     
 }
 
-#Preview("Call tree") {
-//    LoadContractFromChain { _, _ , _ in
-//        //
-//    }
-    CallTree()
-}
 
 struct BreakpointView: View {
     @ObservedObject private var callbackmodel: OpcodeCallbackModel = OpcodeCallbackModel.shared
@@ -1039,10 +1053,15 @@ struct BreakpointView: View {
                             } label: {
                                 Text("Continue")
                             }.disabled(!callbackmodel.hit_breakpoint)
+                            Button {
+                                //
+                            } label: {
+                                Text("Step")
+                            }
                         }.padding([.bottom], 5)
                     }
                 }
-                .tabItem{ Text("OPCODE").help("internal transactions") }.tag(1)
+                .tabItem{ Text("Breakpoints").help("internal transactions") }.tag(1)
                 //                          .frame(height: 280)
                 VStack {
                     List(execed.state_records, id: \.self) {(item : StateRecord) in 
@@ -1381,6 +1400,8 @@ struct RunningEVM<Driver: EVMDriver>: View {
                 .init(pc: "0x07c9", op_name: "JUMP", opcode: "0x56", gas: 20684, gas_cost: 8, depth: 3, refund: 0)
             ]
             ExecutedOperations.shared.execed_operations.append(contentsOf: dummy_items)
+            LoadedContracts.shared.contracts = [sample_contract]
+
         }
 }
 

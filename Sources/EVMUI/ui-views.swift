@@ -127,7 +127,6 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
         d = driver
     }
     
-    @State private var deploy_contract_result = ""
     @State var eips_used : [EIP] = []
     @State private var top_row_open = true
     @State private var current_tab_runtime_eval = 0
@@ -193,7 +192,17 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                             }
                                             HStack {
                                                 Text("Deployed Address").frame(width: 100, alignment: .leading)
-                                                TextField(c.address, text: .constant(c.address))
+                                                TextField(c.address, text: Binding<String>(
+                                                    get: { c.address },
+                                                    set: { _ = $0 }
+                                                )).disabled(true)
+                                            }
+                                            HStack {
+                                                Text("Deployed Gas Cost").frame(width: 100, alignment: .leading)
+                                                TextField("\(c.deployment_gas_cost)", text: Binding<String>(
+                                                    get: { "\(c.deployment_gas_cost)" },
+                                                    set: { _ = $0 }
+                                                )).disabled(true)
                                             }
                                             Button {
                                                 d.create_new_contract(
@@ -228,7 +237,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                         VStack {
                                             ScrollView {
                                                 Text(contract.bytecode)
-                                                    .lineLimit(10)
+                                                    .lineLimit(nil)
                                                     .frame(maxWidth:.infinity, maxHeight:.infinity)
                                                     .background()
                                             }
@@ -279,7 +288,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                 .background()
                                 .tabItem { Text("EVM Config")}.tag(2)
                             }.frame(minHeight: 200)
-                        }
+                        }.frame(height: top_row_open ? 300 : 40).padding(10)
                     },
                     label: {
                         Button {
@@ -291,7 +300,6 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                         }
                     }
                 )
-                .frame(height: top_row_open ? 250 : 40)
                 HSplitView {
                     TabView(selection: $current_tab_runtime_eval) {
                         VStack {
@@ -353,7 +361,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                            d: d)
                 .environmentObject(evm_run_controls)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(maxWidth: .infinity)
             .sheet(isPresented: $present_load_contract_sheet,
                    onDismiss: {
                 // something

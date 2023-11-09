@@ -402,6 +402,8 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
                     c.address  = new_addr
                     c.deployed_bytecode = deployed_code
                     c.deployment_gas_cost = gas_used
+                    // Hack awesome way to force state to update
+                    LoadedContracts.shared.objectWillChange.send()
                 }
             }
         }

@@ -2,8 +2,8 @@
 
 Currently ALPHA(ALPHA(ALPHA(ALPHA())))
 
-git clone this repo and run `./evm-dev-station` either in the arm directory (for apple silicon) or in
-the x86 directory for older intel based macs.
+git clone this repo and run `./evm-dev-station`. Its a fat binary, so it works on both
+intel and apple silicon based darwin machines.
 
 ![](./ss.png)
 ![](./ss-loaded.png)

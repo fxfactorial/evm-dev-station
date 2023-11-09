@@ -204,7 +204,17 @@ try await Task.sleep(for: .seconds(40))
 public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
     let rpy = String(cString: reply)
     free(reply)
-    print("SWIFT RECEIVE", rpy)
+    let decoded = try! JSONDecoder().decode(EVMBridgeMessage<AnyDecodable>.self, from: rpy.data(using: .utf8)!)
+    switch decoded.Cmd {
+    case CMD_RUN_CONTRACT:
+        let call_result = decoded.Payload!.value as! Dictionary<String, AnyDecodable>
+        let tree = call_result["CallTreeJSON"]?.value as! CallEvaled
+        print(tree)
+
+
+    default:
+        print("SWIFT RECEIVE", decoded)
+    }
     // Task {
     //     await channel.send(rpy)
     // }

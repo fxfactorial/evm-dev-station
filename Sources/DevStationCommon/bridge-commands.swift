@@ -38,6 +38,8 @@ public struct AnyDecodable : Codable {
             self.init(ints)
         } else if let int = try? container.decode(Int.self) {
             self.init(int)
+        } else if let call_evaled = try? container.decode(CallEvaled.self) {
+            self.init(call_evaled)
         } else if let kv = try? container.decode([String:String].self) {
             self.init(kv)
         } else if let kv = try? container.decode([String:String?].self) {
@@ -108,6 +110,26 @@ public struct BridgeCmdDeployNewContract: Codable {
         self.GasAmount = gas_amount
         self.InitialEthOnContract = init_eth_on_contract
     }
+}
+
+public struct CallEvaled: Codable, Identifiable {
+    public let id = UUID()
+    public let Caller: String
+    public let Target: String
+    public let CallData: String
+    public let Kind: String
+    public let Children: [CallEvaled]?
+
+    public var icon: String { // makes things prettier
+        if Children == nil {
+            return "doc"
+        } else if Children?.isEmpty == true {
+            return "folder"
+        } else {
+            return "folder.fill"
+        }
+    }
+
 }
 
 // TODO change to enum

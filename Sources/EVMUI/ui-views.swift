@@ -449,12 +449,22 @@ struct File: Identifiable { // identifiable ✓
 }
 
 struct CallTree : View {
+    @ObservedObject private var evm_execed = ExecutedOperations.shared
+
     var body: some View {
         HStack {
-            List(items, children: \.children) { item in
+            List(evm_execed.call_tree, children: \.Children) { item in
                 HStack {
                     Image(systemName: item.icon)
-                    Text(item.name)
+                    Text(item.Kind)
+                    HStack {
+                        Text("FROM")
+                        Text(item.Caller)
+                    }
+                    HStack {
+                        Text("TO")
+                        Text(item.Target)
+                    }
                 }
             }
         }.frame(maxHeight: .infinity)

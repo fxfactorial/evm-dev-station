@@ -92,6 +92,7 @@ public class ExecutedOperations : ObservableObject {
     public static let shared = ExecutedOperations()
     
     @Published public var execed_operations: [ExecutedEVMCode] = []
+    @Published public var call_tree : [CallEvaled] = []
 }
 
 public class EVMRunStateControls: ObservableObject {

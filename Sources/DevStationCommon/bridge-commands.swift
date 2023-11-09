@@ -38,6 +38,8 @@ public struct AnyDecodable : Codable {
             self.init(ints)
         } else if let int = try? container.decode(Int.self) {
             self.init(int)
+        } else if let state = try? container.decode([StateRecord].self) {
+            self.init(state)
         } else if let call_evaled = try? container.decode(CallEvaled.self) {
             self.init(call_evaled)
         } else if let kv = try? container.decode([String:String].self) {
@@ -129,8 +131,19 @@ public struct CallEvaled: Codable, Identifiable {
             return "folder.fill"
         }
     }
-
 }
+
+public struct StateRecord: Codable, Identifiable, Hashable {
+    public let id = UUID()
+    public let Address: String
+    public let Key     : String
+    public let Value   : String
+    public let Kind    : String
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+}
+
 
 // TODO change to enum
 public let CMD_NEW_EVM = "new_evm"

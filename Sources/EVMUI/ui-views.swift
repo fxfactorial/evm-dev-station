@@ -866,6 +866,7 @@ struct LoadContractFromChain : View {
 
 struct BreakpointView: View {
     @ObservedObject private var callbackmodel: OpcodeCallbackModel = OpcodeCallbackModel.shared
+    @ObservedObject private var execed = ExecutedOperations.shared
     @State private var use_modified_values = false
     @Environment(\.openURL) var openURL
     @State private var possible_signature_names : [String] = []
@@ -1044,7 +1045,13 @@ struct BreakpointView: View {
                 .tabItem{ Text("OPCODE").help("internal transactions") }.tag(1)
                 //                          .frame(height: 280)
                 VStack {
-                    Text("slot keys used")
+                    List(execed.state_records, id: \.self) {(item : StateRecord) in 
+                        HStack {
+                            Text(item.Kind)
+                            Text(item.Key)
+                            Text(item.Value)
+                        }.help("either a SLOAD or SSTORE")
+                    }
                 }.tabItem{ Text("Storage")}.tag(2)
             })
         }

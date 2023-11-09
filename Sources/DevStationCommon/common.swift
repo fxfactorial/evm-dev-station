@@ -93,6 +93,7 @@ public class ExecutedOperations : ObservableObject {
     
     @Published public var execed_operations: [ExecutedEVMCode] = []
     @Published public var call_tree : [CallEvaled] = []
+    @Published public var state_records : [StateRecord] = []
 }
 
 public class EVMRunStateControls: ObservableObject {

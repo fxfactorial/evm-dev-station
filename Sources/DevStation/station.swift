@@ -367,11 +367,15 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
     case CMD_RUN_CONTRACT:
         let call_result = decoded.Payload!.value as! Dictionary<String, AnyDecodable>
         let tree = call_result["CallTreeJSON"]?.value as! CallEvaled
+        let state_tracking = call_result["State"]?.value as! [StateRecord]
+
+//        let state = call_result["State"]?.value as []
         DispatchQueue.main.async {
             OpcodeCallbackModel.shared.hit_breakpoint = false
             EVMRunStateControls.shared.contract_currently_running = false
             EVMRunStateControls.shared.call_return_value = call_result["ReturnValue"]?.value as! String
             ExecutedOperations.shared.call_tree = [tree]
+            ExecutedOperations.shared.state_records = state_tracking
         }
 
     case CMD_DEPLOY_NEW_CONTRACT:

@@ -209,7 +209,10 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
     case CMD_RUN_CONTRACT:
         let call_result = decoded.Payload!.value as! Dictionary<String, AnyDecodable>
         let tree = call_result["CallTreeJSON"]?.value as! CallEvaled
-        print(tree)
+        let other = call_result["State"]?.value as! [StateRecord]
+        print("HERE",other)
+
+//        print(tree)
 
 
     default:

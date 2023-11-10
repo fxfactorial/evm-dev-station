@@ -21,16 +21,6 @@ typedef struct { const char *p; ptrdiff_t n; } _GoString_;
 
 #line 3 "main.go"
 
-#include <stdbool.h>
-// callee, caller, args
-extern void evm_opcall_callback(char*, char*, char*);
-
-struct SetAccountBalanceResult {
-   char *error_reason;
-   size_t error_reason_size;
-};
-
-
 extern void send_cmd_back(char*);
 extern void send_error_back(char*);
 
@@ -93,10 +83,6 @@ extern "C" {
 extern void MakeChannelAndListenThread(GoUint8 enableLogging);
 extern void MakeChannelAndReplyThread(GoUint8 enableLogging);
 extern void UISendCmd(GoString msg);
-extern void ResetEVM(GoUint8 enableOpCodeCallback, GoUint8 enableCallback, GoUint8 useStateInMemory);
-extern void EnableOPCodeCallHook(GoUint8 status);
-extern void SendValueToPausedEVMInCall(GoUint8 useOverrides, GoString caller_, GoString callee_, GoString payload_);
-extern struct SetAccountBalanceResult SetAccountBalance(GoString account, GoString balance);
 
 #ifdef __cplusplus
 }

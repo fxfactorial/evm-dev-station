@@ -159,6 +159,25 @@ public struct BridgeCmdOverwrittenStackMemory : Codable {
     }
 }
 
+public struct BridgeCmdDoPauseOnCall : Codable {
+    public let Enable: Bool
+    public init(b : Bool) {
+        self.Enable = b
+    }
+}
+
+public struct BridgeCmdContinuePausedEVMInCall : Codable {
+    public let UseOverrides: Bool
+    public let Caller:       String
+    public let Callee:       String
+    public let Args:         String
+    public init(do_use: Bool, caller: String, callee: String, args: String) {
+        self.UseOverrides = do_use
+        self.Caller = caller
+        self.Callee = callee
+        self.Args = args
+    }
+}
 
 public enum EVMCommand : String, Codable {
     case CMD_REPORT_ERROR = "error"
@@ -173,7 +192,10 @@ public enum EVMCommand : String, Codable {
     case CMD_ALL_KNOWN_EIPS = "all_known_eips"
     case CMD_DO_HOOK_ON_OPCODE = "do_hook_on_opcode"
     case CMD_OVERWRITE_STACK_MEM_IN_PAUSED_EVM = "overwrite_stack_mem_paused"
-    
+    case CMD_DO_PAUSE_ON_CALL = "do_hook_on_call"
+    case CMD_CONTINUE_PAUSED_EVM_IN_CALL = "cont_evm_break_on_call"
+    // keep a space
     case RUN_EVM_OP_EXECED = "ran_one_opcode"
     case RUN_EVM_OPCODE_HIT = "hit_break_on_opcode"
+    case RUN_EVM_CALL_HIT = "hit_call"
 }

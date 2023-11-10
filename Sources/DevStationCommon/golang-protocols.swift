@@ -17,11 +17,11 @@ public protocol EVMDriver {
     func all_known_opcodes() 
     func available_eips()
     func enable_breakpoint_on_opcode(yes_no: Bool, opcode_name: String)
-    func continue_evm_exec_break_on_opcode(yes_no: Bool, stack: [Item], mem: String)
-
-    // still open issues, that is not properly ported
-    func opcode_call_hook_enabled() -> Bool
     func enable_opcode_call_callback(yes_no: Bool)
+    func continue_evm_exec_break_on_opcode(yes_no: Bool, stack: [Item], mem: String)
+    func continue_evm_exec_break_on_call(yes_no: Bool, caller: String, callee: String, payload: String)
+    // still open issues, that is not properly ported
+
     func reset_evm(enableOpCodeCallback: Bool, enableCallback: Bool, useStateInMemory:  Bool)
 }
 
@@ -31,8 +31,9 @@ public final class StubEVMDriver: EVMDriver {
     public func start_handling_bridge() {}
     public func step_forward_one(){}
     public func continue_evm_exec_break_on_opcode(yes_no: Bool, stack: [Item], mem: String) {}
+    public func continue_evm_exec_break_on_call(yes_no: Bool, caller: String, callee: String, payload: String) {}
     public func keccak256(input: String) -> String {return input.sha3(.keccak256)}
-    public func enable_breakpoint_on_opcode(yes_no: Bool) {}
+
     public func enable_breakpoint_on_opcode(yes_no: Bool, opcode_name: String) {}
     public func reset_evm(enableOpCodeCallback: Bool, 
                    enableCallback: Bool,

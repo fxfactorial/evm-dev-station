@@ -68,11 +68,11 @@ final class EVM: EVMDriver {
     func reset_evm(enableOpCodeCallback: Bool,
                    enableCallback: Bool,
                    useStateInMemory: Bool) {
-        EVMBridge.ResetEVM(
-          enableOpCodeCallback.to_go_bool(),
-          enableCallback.to_go_bool(),
-          useStateInMemory.to_go_bool()
-        )
+        // EVMBridge.ResetEVM(
+        //   enableOpCodeCallback.to_go_bool(),
+        //   enableCallback.to_go_bool(),
+        //   useStateInMemory.to_go_bool()
+        // )
     }
 
 
@@ -120,19 +120,15 @@ final class EVM: EVMDriver {
         }
     }
 
-    fileprivate var _opcode_call_hook_enabled = false
-
-    func opcode_call_hook_enabled() -> Bool {
-        return _opcode_call_hook_enabled
-    }
-
     func enable_opcode_call_callback(yes_no: Bool) {
-        if yes_no {
-            EVMBridge.EnableOPCodeCallHook(yes_no.to_go_bool())
-        } else {
-            EVMBridge.EnableOPCodeCallHook(yes_no.to_go_bool())
+        Task {
+            let msg = try! JSONEncoder().encode(
+              EVMBridgeMessage(
+                c: .CMD_DO_PAUSE_ON_CALL, p: BridgeCmdDoPauseOnCall(b: yes_no)
+              )
+            )
+            await comm_channel.send(msg)
         }
-        _opcode_call_hook_enabled = yes_no
     }
     
     func load_chaindata(pathdir: String, db_kind: String) {
@@ -180,6 +176,20 @@ final class EVM: EVMDriver {
         }
     }
 
+    func continue_evm_exec_break_on_call(yes_no: Bool, caller: String, callee: String, payload: String) {
+        Task {
+            let msg = try! JSONEncoder().encode(
+              EVMBridgeMessage<BridgeCmdContinuePausedEVMInCall>(
+                c: .CMD_CONTINUE_PAUSED_EVM_IN_CALL,
+                p: BridgeCmdContinuePausedEVMInCall(
+                  do_use: yes_no, caller: caller, callee: callee, args: payload
+                )
+              )
+            )
+            await comm_channel.send(msg)
+        }
+    }
+
     func continue_evm_exec_break_on_opcode(yes_no: Bool, stack: [Item], mem: String) {
         let just_hex_ints = stack.map({$0.name})
         Task {
@@ -192,7 +202,6 @@ final class EVM: EVMDriver {
               )
             )
             await comm_channel.send(msg)
-
         }
     }
 
@@ -205,31 +214,6 @@ struct Rootview : View {
         }.frame(minWidth: 580, idealWidth: 1480, minHeight: 460, idealHeight: 950, alignment: .center)
     }
 }
-
-@_cdecl("evm_opcall_callback")
-public func evm_opcall_callback(
-    caller_: UnsafeMutablePointer<CChar>,
-    callee_: UnsafeMutablePointer<CChar>,
-    args_: UnsafeMutablePointer<CChar>
-) {
-    let caller = String(cString: caller_)
-    let callee = String(cString: callee_)
-    let args = String(cString: args_)
-    free(caller_)
-    free(callee_)
-    free(args_)
-
-    DispatchQueue.main.async {
-        OpcodeCallbackModel.shared.current_args = args
-        OpcodeCallbackModel.shared.current_callee = callee
-        OpcodeCallbackModel.shared.current_caller = caller
-        OpcodeCallbackModel.shared.hit_breakpoint = true
-    }
-
-    print("SWIFT call back from running EVM \(caller)-\(callee)-\(args)")
-    // EVMBridge.SendValueToPausedEVMInCall()
-}
-
 
 @_cdecl("send_error_back")
 public func send_error_back(reply: UnsafeMutablePointer<CChar>) {
@@ -371,6 +355,19 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
             OpcodeCallbackModel.shared.current_opcode_hit = opcode
             OpcodeCallbackModel.shared.hit_breakpoint = true
         }
+    case .RUN_EVM_CALL_HIT:
+        let reply = decoded.Payload!.value as! Dictionary<String, AnyDecodable>
+        let caller = reply["caller"]?.value as! String
+        let callee = reply["callee"]?.value as! String
+        let args = reply["args"]?.value as! String
+        let value = reply["value"]?.value as! String
+        
+        DispatchQueue.main.async {
+            OpcodeCallbackModel.shared.current_args = args
+            OpcodeCallbackModel.shared.current_callee = callee
+            OpcodeCallbackModel.shared.current_caller = caller
+            OpcodeCallbackModel.shared.hit_breakpoint = true
+        }
         
     default:
         DispatchQueue.main.async {
@@ -383,42 +380,14 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
 
 }
 
-
-
 final class AppDelegate: NSObject, NSApplicationDelegate {
     var evm_driver: any EVMDriver = EVM.shared
-
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         evm_driver.start_handling_bridge()
         evm_driver.new_evm_singleton()
         evm_driver.all_known_opcodes()
         evm_driver.available_eips()
-
-        OpcodeCallbackModel.shared.continue_evm_exec = { do_use, caller, callee, args in
-            caller.withCString({ caller_pointee in
-                let caller_gstr = caller_pointee.withMemoryRebound(to: CChar.self, capacity: caller.count) {
-                    GoString(p: $0, n: caller.count)
-                }
-                
-                callee.withCString { callee_pointee in
-                    let callee_gstr = callee_pointee.withMemoryRebound(to: CChar.self, capacity: callee.count) {
-                        GoString(p: $0, n: callee.count)
-                    }
-                    args.withCString { args_pointee in
-                        let args_gstr = args_pointee.withMemoryRebound(to: CChar.self, capacity: args.count) {
-                            GoString(p: $0, n: args.count)
-                        }
-                        EVMBridge.SendValueToPausedEVMInCall(
-                            do_use.to_go_bool(),
-                            caller_gstr,
-                            callee_gstr,
-                            args_gstr
-                        )
-                    }
-                }
-            })
-        }
 
         // critical otherwise won't be able to get input into gui, instead via CLI
         NSApp.setActivationPolicy(.regular)

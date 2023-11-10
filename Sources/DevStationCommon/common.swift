@@ -144,11 +144,9 @@ extension Item: Hashable {
 }
 
 
-public typealias continue_evm_exec_completion = (Bool, String, String, String) -> Void
 
 public class OpcodeCallbackModel: ObservableObject {
     public static let shared = OpcodeCallbackModel()
-    public var continue_evm_exec : continue_evm_exec_completion?
     
     @Published public var hit_breakpoint = false
     @Published public var current_caller = ""

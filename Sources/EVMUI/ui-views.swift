@@ -958,22 +958,18 @@ struct BreakpointView: View {
                                 Text("Use modified values")
                             }
                             Button {
-                                //                                callbackmodel.current_opcode_continue_task = Task.detached {
-                                if let cb = callbackmodel.continue_evm_exec {
-                                    print("calling continue on paused opcode", use_modified_values)
-                                    cb(use_modified_values,
-                                       callbackmodel.current_caller,
-                                       callbackmodel.current_callee,
-                                       callbackmodel.current_args
-                                    )
-                                    
-                                    DispatchQueue.main.async {
-                                        possible_signature_names = []
-                                        callbackmodel.selected_stack_item = nil
-                                    }
+                                d.continue_evm_exec_break_on_call(
+                                  yes_no: use_modified_values,
+                                  caller: callbackmodel.current_caller,
+                                  callee: callbackmodel.current_callee,
+                                  payload:callbackmodel.current_args
+                                )
+                                
+                                DispatchQueue.main.async {
+                                    possible_signature_names = []
+                                    callbackmodel.selected_stack_item = nil
                                 }
                                 
-                                //                                }
                             } label: {
                                 Text("Continue")
                             }.disabled(!callbackmodel.hit_breakpoint)

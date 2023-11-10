@@ -206,43 +206,6 @@ struct Rootview : View {
     }
 }
 
-@_cdecl("evm_opcode_callback")
-public func evm_opcode_callback(
-    opcode_name: UnsafeMutablePointer<CChar>,
-    stack: UnsafeMutablePointer<UnsafeMutablePointer<CChar>>,
-    stack_size: Int,
-    memory: UnsafeMutablePointer<CChar>
-) {
-    let opcode = String(cString: opcode_name)
-    free(opcode_name)
-
-    var stack_rep = [Item]()
-    let buf = stack.withMemoryRebound(to: UnsafePointer<CChar>.self, capacity: stack_size) {
-        Array(UnsafeBufferPointer(start: $0, count: stack_size))
-    }
-
-
-    for (name, index) in zip(buf, buf.indices) {
-        let s = String(cString: name)
-        free(UnsafeMutableRawPointer(mutating: name))
-        stack_rep.append(Item(name: s, index: index))
-    }
-                         
-    free(stack)
-    let memory_hex = String(cString: memory)
-    free(memory)
-    print("SWIFT-> current opcode ", opcode, stack_rep, memory_hex)
-    
-    DispatchQueue.main.async {
-        OpcodeCallbackModel.shared.current_stack = stack_rep
-        OpcodeCallbackModel.shared.current_memory = memory_hex
-        OpcodeCallbackModel.shared.current_opcode_hit = opcode
-        OpcodeCallbackModel.shared.hit_breakpoint = true
-    }
-}
-
-
-
 @_cdecl("evm_opcall_callback")
 public func evm_opcall_callback(
     caller_: UnsafeMutablePointer<CChar>,

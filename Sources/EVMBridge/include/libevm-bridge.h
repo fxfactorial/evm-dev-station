@@ -24,7 +24,6 @@ typedef struct { const char *p; ptrdiff_t n; } _GoString_;
 #include <stdbool.h>
 // callee, caller, args
 extern void evm_opcall_callback(char*, char*, char*);
-extern void evm_opcode_callback(char*, char**, int, char*);
 
 struct SetAccountBalanceResult {
    char *error_reason;
@@ -97,8 +96,6 @@ extern void UISendCmd(GoString msg);
 extern void ResetEVM(GoUint8 enableOpCodeCallback, GoUint8 enableCallback, GoUint8 useStateInMemory);
 extern void EnableOPCodeCallHook(GoUint8 status);
 extern void SendValueToPausedEVMInCall(GoUint8 useOverrides, GoString caller_, GoString callee_, GoString payload_);
-extern void PauseOnOpcode(char code);
-extern void EnableStopOnCall(GoUint8 enable);
 extern struct SetAccountBalanceResult SetAccountBalance(GoString account, GoString balance);
 
 #ifdef __cplusplus

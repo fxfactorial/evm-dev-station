@@ -102,14 +102,6 @@ final class EVM: EVMDriver {
 
     func keccak256(input: String) -> String {
         return input.sha3(.sha256)
-
-//        return input.withCString {
-//            let g_str = GoString(p: $0, n: input.count)
-//            let result = EVMBridge.Keccak256(g_str)
-//            let copy = String(cString: result!)
-//            free(result)
-//            return copy
-//        }
     }
 
     func available_eips() -> [Int] {
@@ -188,29 +180,15 @@ final class EVM: EVMDriver {
             )
             await comm_channel.send(msg)
         }
-
-        // let result = EVMBridge.LoadCodeFromState(addr.to_go_string2())
-        // let wrapped = Data(bytes: result.r0, count: Int(result.r1))
-        // let contract = String(bytes: wrapped, encoding: .utf8)!
-        // free(result.r0)
-        // return contract
     }
 
-    func all_known_opcodes() -> [String] {
-        let codes = EVMBridge.AllKnownOpcodes()
-        let elem_count = Int(codes.r1)
-        var known = [String]()
-        let buf = codes.r0.withMemoryRebound(to: UnsafePointer<CChar>.self, capacity: elem_count) {
-            Array(UnsafeBufferPointer(start: $0, count: elem_count))
+    func all_known_opcodes(){
+        Task {
+            let msg = try! JSONEncoder().encode(
+              EVMBridgeMessage<Int>(c: CMD_ALL_KNOWN_OPCODES, p: 0)
+            )
+            await comm_channel.send(msg)
         }
-        for i in buf {
-            let s = String(cString: i)
-            free(UnsafeMutableRawPointer(mutating: i))
-            known.append(s)
-        }
-        
-        free(codes.r0)
-        return known
     }
 }
 
@@ -328,10 +306,17 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
         print("loaded new evm")
     case CMD_LOAD_CHAIN:
         EVM.shared.load_chainhead()
-        
+    case CMD_ALL_KNOWN_OPCODES:
+        var opcodes = decoded.Payload!.value as! [String]
+        opcodes.sort()
+        DispatchQueue.main.async {
+            for c in opcodes {
+                EVMRunStateControls.shared.opcodes_used.append(.init(name: c))
+            }
+        }
+
     case CMD_LOAD_CONTRACT_FROM_STATE:
         let loaded = decoded.Payload!.value as! Dictionary<String, String>
-
         let contract = LoadedContract(
           name: loaded["nickname"]!,
           bytecode: loaded["code"]!,
@@ -351,7 +336,6 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
         let tree = call_result["CallTreeJSON"]?.value as! CallEvaled
         let state_tracking = call_result["State"]?.value as! [StateRecord]
 
-//        let state = call_result["State"]?.value as []
         DispatchQueue.main.async {
             OpcodeCallbackModel.shared.hit_breakpoint = false
             EVMRunStateControls.shared.contract_currently_running = false
@@ -415,6 +399,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         evm_driver.start_handling_bridge()
         evm_driver.new_evm_singleton()
+        evm_driver.all_known_opcodes()
 
         OpcodeCallbackModel.shared.continue_evm_exec_break_on_opcode = {do_use, stack, memory in
             let just_hex_ints = stack.map({$0.name})

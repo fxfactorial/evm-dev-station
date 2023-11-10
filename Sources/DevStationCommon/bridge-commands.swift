@@ -158,6 +158,7 @@ public let CMD_RUN_CONTRACT = "run_contract"
 public let CMD_DEPLOY_NEW_CONTRACT = "deploy_new_contract"
 public let CMD_STEP_FORWARD_ONE = "step_once"
 public let CMD_REPORT_ERROR = "error"
+public let CMD_ALL_KNOWN_OPCODES = "all_known_opcodes"
 
 public let RUN_EVM_OP_EXECED = "ran_one_opcode"
 

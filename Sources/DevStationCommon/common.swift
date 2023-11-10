@@ -74,6 +74,16 @@ public class ExecutedOperations : ObservableObject {
     @Published public var state_records : [StateRecord] = []
 }
 
+public struct OPCodeEnable: Identifiable {
+    public let id = UUID()
+    public let name : String
+    public var enabled: Bool = false
+    public init(name: String) {
+        self.name = name
+    }
+}
+
+
 public class EVMRunStateControls: ObservableObject {
     public static let shared = EVMRunStateControls()
 
@@ -83,6 +93,7 @@ public class EVMRunStateControls: ObservableObject {
     @Published public var record_storage_keys = false
     @Published public var call_return_value = ""
     @Published public var evm_error = ""
+    @Published public var opcodes_used :[OPCodeEnable] = []
 }
 
 public class BlockContextModel : ObservableObject {

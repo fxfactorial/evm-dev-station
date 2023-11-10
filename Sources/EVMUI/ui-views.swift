@@ -1144,14 +1144,8 @@ struct LoadExistingDB : View {
     }
 }
 
-struct OPCodeEnable: Identifiable {
-    let id = UUID()
-    let name : String
-    var enabled: Bool = false
-}
-
 struct BreakOnOpcodes: View {
-    @Binding var known_ops: [OPCodeEnable]
+    @ObservedObject var evm_run_state = EVMRunStateControls.shared
     @State var break_on_all = false
     @Environment(\.dismiss) var dismiss
     let d : EVMDriver
@@ -1161,7 +1155,7 @@ struct BreakOnOpcodes: View {
     var body: some View {
         VStack {
             HStack {
-                Text("\(known_ops.count) known opcodes")
+                Text("\(evm_run_state.opcodes_used.count) known opcodes")
                 Toggle("all", isOn: $break_on_all)
                 Toggle("hook", isOn: Binding<Bool>(
                     get: {
@@ -1173,7 +1167,7 @@ struct BreakOnOpcodes: View {
                     }
                 ))
             }
-            Table(known_ops) {
+            Table(evm_run_state.opcodes_used) {
                 TableColumn("name", value: \.name)
                 TableColumn("enabled") { d in
                     Toggle("", isOn: Binding<Bool>(
@@ -1184,9 +1178,10 @@ struct BreakOnOpcodes: View {
                             return d.enabled
                         },
                         set: {
-                            if let index = known_ops.firstIndex(where: { $0.id == d.id }) {
-                                known_ops[index].enabled = $0
-                                self.d.enable_breakpoint_on_opcode(yes_no:$0, opcode_name:known_ops[index].name)
+                        if let index = evm_run_state.opcodes_used.firstIndex(where: { $0.id == d.id }) {
+                            evm_run_state.opcodes_used[index].enabled = $0
+                            self.d.enable_breakpoint_on_opcode(yes_no:$0,
+                                                               opcode_name:evm_run_state.opcodes_used[index].name)
                             }
                         }
                     ))
@@ -1228,7 +1223,6 @@ struct RunningEVM<Driver: EVMDriver>: View {
     // opcode things
     @State private var present_opcode_select_sheet = false
     @Environment(\.dismiss) var dismiss
-    @State private var opcodes_used : [OPCodeEnable] = []
     @State private var keccak_input = ""
     @State private var keccak_output = ""
     
@@ -1325,7 +1319,6 @@ struct RunningEVM<Driver: EVMDriver>: View {
                     }
                     Button {
                         present_opcode_select_sheet.toggle()
-                        print("ALL KNOWN OPCODES?", d.all_known_opcodes(), d.all_known_opcodes().count)
                     } label: {
                         Text("Break on OPCODE(s)").frame(width: 140)
                     }.frame(width: 160)
@@ -1366,23 +1359,18 @@ struct RunningEVM<Driver: EVMDriver>: View {
             }
             .padding()
             .background()
-        }.onAppear {
-            var codes = d.all_known_opcodes()
-            codes.sort()
-            for c in codes {
-                opcodes_used.append(.init(name: c))
-            }
-        }.sheet(isPresented: $present_opcode_select_sheet,
+        }
+          .sheet(isPresented: $present_opcode_select_sheet,
                 onDismiss: {
-            for c in opcodes_used {
-                if c.enabled {
-                    d.enable_breakpoint_on_opcode(yes_no:true)
-                    return
-                }
-            }
-        }, content: {
-            BreakOnOpcodes(known_ops: $opcodes_used, d: d)
-        })
+                    for c in evm_run_controls.opcodes_used {
+                        if c.enabled {
+                            d.enable_breakpoint_on_opcode(yes_no:true)
+                            return
+                        }
+                    }
+                }, content: {
+                       BreakOnOpcodes(d: d)
+                   })
         
     }
 }

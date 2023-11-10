@@ -39,13 +39,9 @@ final class StubEVMDriver: EVMDriver {
         false
     }
 
-    func enable_opcode_call_callback(yes_no: Bool) {
-        
-    }
+    func enable_opcode_call_callback(yes_no: Bool) { }
 
-    func all_known_opcodes() -> [String] {
-        return ["PUSH1", "PUSH2"]
-    }
+    func all_known_opcodes() { }
 
     func create_new_contract(code: String, creator_addr: String,
                              contract_nickname: String, gas_amount: String, initial_gas: String)  {

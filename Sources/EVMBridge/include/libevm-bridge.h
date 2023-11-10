@@ -102,13 +102,6 @@ extern void ResetEVM(GoUint8 enableOpCodeCallback, GoUint8 enableCallback, GoUin
 extern void EnableOPCodeCallHook(GoUint8 status);
 extern void SendValueToPausedEVMInOpCode(GoUint8 useOverrides, GoString serializedStack, GoString memory);
 extern void SendValueToPausedEVMInCall(GoUint8 useOverrides, GoString caller_, GoString callee_, GoString payload_);
-
-/* Return type for AllKnownOpcodes */
-struct AllKnownOpcodes_return {
-	char** r0;
-	int r1;
-};
-extern struct AllKnownOpcodes_return AllKnownOpcodes();
 extern int TestReceiveGoString(GoString input_);
 extern void PauseOnOpcode(char code);
 extern void EnableStopOnCall(GoUint8 enable);

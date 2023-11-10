@@ -12,6 +12,9 @@ public protocol EVMDriver {
                              contract_nickname: String,
                              gas_amount: String, initial_gas: String) 
     func step_forward_one()
+    func all_known_opcodes() 
+
+
 
     // still open issues, that is not properly ported
     func keccak256(input: String) -> String
@@ -23,7 +26,6 @@ public protocol EVMDriver {
     func enable_breakpoint_on_opcode(yes_no: Bool)
     
     func available_eips() -> [Int]
-    func all_known_opcodes() -> [String]
     func reset_evm(enableOpCodeCallback: Bool, enableCallback: Bool, useStateInMemory:  Bool)
 }
 

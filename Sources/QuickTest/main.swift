@@ -4,26 +4,17 @@ import DevStationCommon
 import BigInt
 import AsyncAlgorithms
 
-
-
-// just to make it link 
-@_cdecl("evm_run_callback")
-public func evm_run_callback(
-  num: Int32,
-  opcode_name: UnsafeMutablePointer<CChar>,
-  opcode_hex: UnsafeMutablePointer<CChar>,
-  gas_cost: Int
-) {
+extension String {
+    func toHexEncodedString(uppercase: Bool = true, prefix: String = "", separator: String = "") -> String {
+        return unicodeScalars.map { prefix + .init($0.value, radix: 16, uppercase: uppercase) } .joined(separator: separator)
+    }
 
 }
 
-@_cdecl("evm_opcall_callback")
-public func evm_opcall_callback(
-    caller_: UnsafeMutablePointer<CChar>,
-    callee_: UnsafeMutablePointer<CChar>,
-    args_: UnsafeMutablePointer<CChar>
-) {
-
+extension Bool {
+    func to_go_bool() -> GoUint8 {
+        self ? GoUint8(1) : GoUint8(0)
+    }
 }
 
 let name = "router"
@@ -172,30 +163,48 @@ await comm_channel.send(msg1)
 
 let db_kind_pebble = "pebble"
 let db_kind_leveldb = "leveldb"
+
 let pathdir_pebble = "/Users/edgararoutiounian/repos/mainnet-chaindata/"
 let pathdir_leveldb = "/Volumes/photos-media-backup/eth-mainnet-backup-11-07-23/chaindata"
 
-let db_kind = db_kind_leveldb
-let pathdir = pathdir_leveldb
+let db_kind = db_kind_pebble
+let pathdir = pathdir_pebble
+let at_block = 18_523_344
 
 let msg2 = try! JSONEncoder().encode(
   EVMBridgeMessage(c: .CMD_LOAD_CHAIN,
-                   p: BridgeCmdLoadChain(kind: db_kind, directory: pathdir))
+                   p: BridgeCmdLoadChain(kind: db_kind,
+                                         directory: pathdir,
+                                         at_block_num: at_block)
+  )
 )
 await comm_channel.send(msg2)
 
 // quoter
-let target_addr = "0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6"
-// quote encoded
-let calldata = "f7729d43000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb480000000000000000000000000000000000000000000000000000000000000bb80000000000000000000000000000000000000000000000000de0b6b3a76400000000000000000000000000000000000000000000000000000000000000000000"
+// let target_addr = "0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6"
+// // quote encoded
+// let calldata = "f7729d43000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb480000000000000000000000000000000000000000000000000000000000000bb80000000000000000000000000000000000000000000000000de0b6b3a76400000000000000000000000000000000000000000000000000000000000000000000"
+
+let caller_addr = "0x46d9B3dFbc163465ca9E306487CbA60bC438F5a2"
+let target_addr = "0xeaDF72Fd4733665854C76926F4473389FF1B78B1"
+let calldata = "20a9341f0000000000000000000000000000000000000000000005c57f1b50d2377c0000"
+let gas_limit = 5_000_000 
 
 let msg3 = try! JSONEncoder().encode(
   EVMBridgeMessage(
-    c: .CMD_RUN_CONTRACT, p: BridgeCmdRunContract(calldata, target_addr, "0")
+    c: .CMD_RUN_CONTRACT,
+    p: BridgeCmdRunContract(
+      calldata: calldata,
+      caller_addr: caller_addr,
+      target_addr: target_addr,
+      msg_value: "0",
+      gas_price: "0",
+      gas_limit: gas_limit
+    )
   )
 )
-await comm_channel.send(msg3)
 
+// await comm_channel.send(msg3)
 
 try await Task.sleep(for: .seconds(40))
 
@@ -227,4 +236,5 @@ public func send_error_back(reply: UnsafeMutablePointer<CChar>) {
     let rpy = String(cString: reply)
     free(reply)
     print("ERROR ", rpy)
+    exit(-1)
 }

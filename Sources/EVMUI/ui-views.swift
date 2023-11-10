@@ -243,9 +243,18 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                             }
                                         }
                                     } else {
-                                        Text("select a contract from sidebar ")
+                                        Text("select a contract from sidebar")
                                     }
                                 }.tabItem { Text("Raw Bytecode") }.tag(2)
+                                VStack {
+                                    if let c = contracts.current_selection {
+                                        Text("Edit state")
+                                    } else {
+                                        Text("select a contract from sidebar")
+                                    }
+                                }
+                                .padding()
+                                .tabItem{ Text("Edit State") }.tag(3)
                             }
                             TabView {
                                 VStack {
@@ -304,8 +313,12 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                     TabView(selection: $current_tab_runtime_eval) {
                         VStack {
                             ScrollViewReader { (proxy: ScrollViewProxy) in
-                                Text("\(execed_ops.execed_operations.count) Executed Operations")
-                                    .font(.title2)
+                                HStack {
+                                    Text("\(execed_ops.execed_operations.count) Executed Operations")
+                                      .font(.title2)
+                                    Spacer()
+                                    Text("\(execed_ops.total_gas_cost_so_far) total gas cost so far")
+                                }
                                 Table(execed_ops.execed_operations) {
                                     TableColumn("PC", value: \.pc)
                                     TableColumn("OPNAME", value: \.op_name)
@@ -349,7 +362,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                         return ""
                     },
                     set: {
-                        if var contract = contracts.current_selection {
+                        if let contract = contracts.current_selection {
                             contract.address = $0
                             contracts.current_selection = contract
                             
@@ -380,18 +393,21 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
             })
             .sheet(isPresented: $present_load_db_sheet,
                    onDismiss: {
-                //
-            }, content: {
-                LoadExistingDB(d:d) { db_kind, chaindata_dir in
+                if !chaindb.is_chain_loaded && 
+                    !chaindb.chaindata_directory.isEmpty {
                     withAnimation {
                         chaindb.show_loading_db = true
                     }
-                    
+
                     d.load_chaindata(
-                        pathdir: chaindata_dir,
-                        db_kind: db_kind
+                      chaindb_pathdir: chaindb.chaindata_directory,
+                      db_kind: chaindb.db_kind.rawValue,
+                      ancientdb_pathdir: chaindb.ancientdb_dir,
+                      at_block: Int(chaindb.at_block_number)
                     )
                 }
+            }, content: {
+                LoadExistingDB(d:d)
             })
             .sheet(isPresented: $present_eips_sheet,
                    onDismiss: {
@@ -1061,43 +1077,70 @@ struct LoadExistingDB : View {
     @Environment(\.dismiss) var dismiss
     @State private var options = ["pebble", "leveldb"]
     @State private var selected_option = "pebble"
-    @State private var chaindata_dir = ""
     @State private var present_fileimporter = false
-    let finished: ((db_kind: String, chaindata: String)) -> Void
+    @State private var at_block_number = ""
+    @ObservedObject private var chain = LoadChainModel.shared
     
     var body: some View {
         VStack {
-            Picker("Database kind", selection: $selected_option) {
+            Picker(selection: $selected_option,
+                   label: Text("Database Kind").frame(width: 100, alignment: .center)) {
                 ForEach(options, id: \.self) { option in
                     Text(option).tag(option)
                 }
             }
             .tint(.black)
-            .pickerStyle(.menu)
-            HStack {
-                Text("Chaindata")
-                TextField("directory", text: $chaindata_dir)
-            }
+            .pickerStyle(.segmented)
             HStack {
                 Button {
                     present_fileimporter.toggle()
                 } label: {
-                    Text("Select directory")
-                }.fileImporter(isPresented: $present_fileimporter,
+                    Text("Chaindata").frame(width: 84, alignment: .center)
+                }
+                .fileImporter(isPresented: $present_fileimporter,
                                allowedContentTypes: [.directory]) { result in
                     switch result {
                     case .success(let directory):
-                        chaindata_dir = directory.path()
+                        chain.chaindata_directory = directory.path()
                         // gain access to the directory
                     case .failure(let error):
                         // how would this even happen?
                         print(error)
                     }
                 }
+                TextField("directory", text: $chain.chaindata_directory)
+            }
+            HStack {
+                Button {
+                    present_fileimporter.toggle()
+                } label: {
+                    Text("AncientDB").frame(width: 84, alignment: .center)
+                }
+                .fileImporter(isPresented: $present_fileimporter,
+                               allowedContentTypes: [.directory]) { result in
+                    switch result {
+                    case .success(let directory):
+                        chain.ancientdb_dir = directory.path()
+                        // gain access to the directory
+                    case .failure(let error):
+                        // how would this even happen?
+                        print(error)
+                    }
+                }
+                TextField("optional directory but might need it", text: $chain.ancientdb_dir)
+            }
+            HStack {
+                Text("BlockNumber").frame(width: 100, alignment: .center)
+                TextField("defaults to latest block if none given", text: $chain.at_block_number)
+            }
+            HStack {
                 Spacer()
                 Button {
-                    finished((db_kind: selected_option,
-                              chaindata: chaindata_dir))
+                    if selected_option == "pebble" {
+                        chain.db_kind = .GethDBPebble
+                    } else {
+                        chain.db_kind = .GethDBLevelDB
+                    }
                     dismiss()
                 } label: {
                     Text("Ok")
@@ -1105,7 +1148,7 @@ struct LoadExistingDB : View {
             }
         }
         .padding()
-        .frame(width: 400, height: 300)
+        .frame(width: 500, height: 300)
     }
 }
 
@@ -1163,11 +1206,20 @@ struct InitialHelpView : View {
     }
 }
 
+struct CallParams {
+    var calldata : String
+    var caller_addr: String
+    var target_addr: String
+    var gas_price: String
+    var gas_limit : Int = 900_000
+}
 
 struct RunningEVM<Driver: EVMDriver>: View {
+    // TODO remove these and use single @State CallParams
     @State private var calldata = ""
     @State private var msg_value = "0"
     @State private var error_msg_contract_eval = ""
+
     // These can be updated from outside this view
     // as the EVM runs
     @Binding var target_addr: String
@@ -1252,11 +1304,13 @@ struct RunningEVM<Driver: EVMDriver>: View {
                             withAnimation {
                                 evm_run_controls.contract_currently_running = true
                             }
-                            
                             d.call(
-                                calldata: calldata,
-                                target_addr: target_addr,
-                                msg_value: msg_value
+                              calldata: calldata,
+                              caller_addr: target_addr,
+                              target_addr: target_addr,
+                              msg_value: msg_value,
+                              gas_price: "1",
+                              gas_limit: 900_000
                             )
                             
                         } label: {
@@ -1345,12 +1399,10 @@ struct RunningEVM<Driver: EVMDriver>: View {
         }
 }
 
-//#Preview("load existing db") {
-//    LoadExistingDB(d: StubEVMDriver(), finished: { _, _ in
-//        //
-//    })
-//    .frame(width: 480, height: 380)
-//}
+#Preview("load existing db") {
+    LoadExistingDB(d: StubEVMDriver())
+    .frame(width: 480, height: 380)
+}
 
 
 

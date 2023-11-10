@@ -20,19 +20,6 @@ struct DevStation : App {
     }
 }
 
-extension String {
-    func toHexEncodedString(uppercase: Bool = true, prefix: String = "", separator: String = "") -> String {
-        return unicodeScalars.map { prefix + .init($0.value, radix: 16, uppercase: uppercase) } .joined(separator: separator)
-    }
-}
-
-
-extension Bool {
-    func to_go_bool() -> GoUint8 {
-        self ? GoUint8(1) : GoUint8(0)
-    }
-}
-
 final class EVM: EVMDriver {
     
     static let shared = EVM()
@@ -109,11 +96,24 @@ final class EVM: EVMDriver {
         }
     }
     
-    func call(calldata: String, target_addr: String, msg_value: String) {
+    func call(calldata: String,
+              caller_addr: String,
+              target_addr: String,
+              msg_value: String,
+              gas_price: String,
+              gas_limit: Int) {
         Task {
             let msg = try! JSONEncoder().encode(
               EVMBridgeMessage(
-                c: .CMD_RUN_CONTRACT, p: BridgeCmdRunContract(calldata, target_addr, msg_value)
+                c: .CMD_RUN_CONTRACT,
+                p: BridgeCmdRunContract(
+                  calldata: calldata,
+                  caller_addr: caller_addr,
+                  target_addr:target_addr,
+                  msg_value:msg_value,
+                  gas_price: gas_price,
+                  gas_limit: gas_limit
+                )
               )
             )
             await comm_channel.send(msg)
@@ -130,12 +130,16 @@ final class EVM: EVMDriver {
             await comm_channel.send(msg)
         }
     }
-    
-    func load_chaindata(pathdir: String, db_kind: String) {
+
+    func load_chaindata(chaindb_pathdir: String, db_kind: String, ancientdb_pathdir: String?, at_block: Int?) {
         Task {
             let msg = try! JSONEncoder().encode(
               EVMBridgeMessage(c: .CMD_LOAD_CHAIN,
-                               p: BridgeCmdLoadChain(kind: db_kind, directory: pathdir))
+                               p: BridgeCmdLoadChain(kind: db_kind,
+                                                     directory: chaindb_pathdir,
+                                                     ancientdb_directory: ancientdb_pathdir == nil ? "" : ancientdb_pathdir!,
+                                                     at_block_num: at_block
+                                                    ))
             )
             await comm_channel.send(msg)
         }
@@ -236,8 +240,10 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
         let gas_cost = execed_op["gas_cost"]?.value as! Int
         let opcode_name = execed_op["opcode_name"]?.value as! String
         let opcode_num = execed_op["opcode_hex"]?.value as! String
+        
 
         DispatchQueue.main.async {
+            ExecutedOperations.shared.total_gas_cost_so_far += gas_cost
             ExecutedOperations.shared.execed_operations.append(
               ExecutedEVMCode(pc: "\(num)",
                               op_name: opcode_name,

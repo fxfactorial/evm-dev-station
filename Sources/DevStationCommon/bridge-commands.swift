@@ -60,9 +60,13 @@ public struct AnyDecodable : Codable {
 public struct BridgeCmdLoadChain : Codable {
     public let DBKind:     String 
     public let Directory:  String
-    public init(kind: String, directory: String) {
+    public let AncientDBDirectory : String
+    public let AtSpecificNumber : Int?
+    public init(kind: String, directory: String, ancientdb_directory: String = "", at_block_num: Int? = nil) {
         self.DBKind = kind
         self.Directory = directory
+        self.AncientDBDirectory = ancientdb_directory
+        self.AtSpecificNumber = at_block_num
     }
 }
 
@@ -80,12 +84,24 @@ public struct BridgeCmdLoadContractFromState: Codable {
 
 public struct BridgeCmdRunContract: Codable {
     public let CallData: String
+    public let CallerAddr: String
     public let TargetAddr: String
     public let MsgValue: String
-    public init (_ calldata: String, _ target_addr: String, _ msg_value: String) {
+    public let GasPrice: String
+    public let GasLimit: Int
+    public init (calldata: String,
+                 caller_addr: String,
+                 target_addr: String,
+                 msg_value: String,
+                 gas_price: String,
+                 gas_limit: Int
+    ) {
         self.CallData = calldata
+        self.CallerAddr = caller_addr
         self.TargetAddr = target_addr
         self.MsgValue = msg_value
+        self.GasPrice = gas_price
+        self.GasLimit = gas_limit
     }
 }
 
@@ -108,7 +124,7 @@ public struct BridgeCmdDeployNewContract: Codable {
 }
 
 public struct CallEvaled: Codable, Identifiable {
-    public let id = UUID()
+    public var id = UUID()
     public let Caller: String
     public let Target: String
     public let CallData: String
@@ -127,7 +143,7 @@ public struct CallEvaled: Codable, Identifiable {
 }
 
 public struct StateRecord: Codable, Identifiable, Hashable {
-    public let id = UUID()
+    public var id = UUID()
     public let Address: String
     public let Key     : String
     public let Value   : String
@@ -136,8 +152,6 @@ public struct StateRecord: Codable, Identifiable, Hashable {
         hasher.combine(id)
     }
 }
-
-
 
 public struct BridgeCmdDoHookOnOpCode: Codable {
     public let OpCode: String

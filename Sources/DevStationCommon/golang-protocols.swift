@@ -6,10 +6,15 @@ public protocol EVMDriver {
     // done ported to the channel way
     func start_handling_bridge()
     func new_evm_singleton()
-    func load_chaindata(pathdir: String, db_kind: String)
+    func load_chaindata(chaindb_pathdir: String, db_kind: String, ancientdb_pathdir: String?, at_block: Int?)
     func load_chainhead()
     func load_contract(addr: String, nickname: String, abi_json: String)
-    func call(calldata: String, target_addr: String, msg_value: String) 
+    func call(calldata: String,
+              caller_addr: String,
+              target_addr: String,
+              msg_value: String,
+              gas_price: String,
+              gas_limit: Int) 
     func create_new_contract(code: String, creator_addr: String,
                              contract_nickname: String,
                              gas_amount: String, initial_gas: String) 
@@ -46,8 +51,17 @@ public final class StubEVMDriver: EVMDriver {
                                     contract_nickname: String, gas_amount: String, initial_gas: String)  {}
     public func new_evm_singleton() {}
     public func available_eips() {}
-    public func call(calldata: String, target_addr: String, msg_value: String) {}
-    public func load_chaindata(pathdir: String, db_kind: String) {}
+    public func call(calldata: String,
+              caller_addr: String,
+              target_addr: String,
+              msg_value: String,
+              gas_price: String,
+              gas_limit: Int) {}
+    public func load_chaindata(
+      chaindb_pathdir: String,
+      db_kind: String,
+      ancientdb_pathdir: String?,
+      at_block: Int?) {}
     public func load_chainhead()  {}
     public func load_contract(addr: String, nickname: String, abi_json: String) {}
 }

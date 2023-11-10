@@ -6,6 +6,8 @@ public class LoadChainModel: ObservableObject {
     @Published public var is_chain_loaded = false
     @Published public var show_loading_db = false
     @Published public var db_kind : DBKind = .InMemory
+    @Published public var ancientdb_dir = ""
+    @Published public var at_block_number = ""
 //    public init(chaindata_directory: String = "",
 //                is_chain_loaded: Bool = false,
 //                show_loading_db: Bool = false,
@@ -70,6 +72,7 @@ public class ExecutedOperations : ObservableObject {
     public static let shared = ExecutedOperations()
     
     @Published public var execed_operations: [ExecutedEVMCode] = []
+    @Published public var total_gas_cost_so_far = 0
     @Published public var call_tree : [CallEvaled] = []
     @Published public var state_records : [StateRecord] = []
 }
@@ -179,10 +182,9 @@ public class OpcodeCallbackModel: ObservableObject {
 
 public enum DBKind : String {
     case InMemory = "in memory state"
-    case GethDBPebble = "pebble based"
-    case GethDBLevelDB = "leveldb based"
+    case GethDBPebble = "pebble"
+    case GethDBLevelDB = "leveldb"
 }
-
 
 public class CurrentBlockHeader: ObservableObject {
     public static let shared = CurrentBlockHeader()
@@ -210,6 +212,12 @@ public class RuntimeError: ObservableObject {
     @Published public var error_reason = ""
 }
 
+public struct StateChange {
+    public let key: String
+    public let original_value: String
+    public var new_value: String
+}
+
 public class LoadedContract : ObservableObject, Hashable, Equatable {
     static public func == (lhs: LoadedContract, rhs: LoadedContract) -> Bool {
         lhs.id == rhs.id
@@ -229,7 +237,7 @@ public class LoadedContract : ObservableObject, Hashable, Equatable {
     @Published public var deployer_address : String = "0x0000000000000000000000000000000000000000"
     @Published public var gas_limit_deployment: String = "900000"
     @Published public var deployment_gas_cost = 0
-
+    @Published public var state_overrides : [StateChange] = []
 
     public init(name: String,
                 bytecode: String,

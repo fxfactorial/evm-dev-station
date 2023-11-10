@@ -199,8 +199,8 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                             }
                                             HStack {
                                                 Text("Deployed Gas Cost").frame(width: 100, alignment: .leading)
-                                                TextField("\(c.deployment_gas_cost)", text: Binding<String>(
-                                                    get: { "\(c.deployment_gas_cost)" },
+                                                TextField("\(Int(c.gas_limit_deployment)! - c.deployment_gas_cost)", text: Binding<String>(
+                                                    get: { "\(Int(c.gas_limit_deployment)! - c.deployment_gas_cost)" },
                                                     set: { _ = $0 }
                                                 )).disabled(true)
                                             }
@@ -375,7 +375,6 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                         if name.isEmpty || addr.isEmpty {
                             return
                         }
-                        
                         d.load_contract(addr: addr, nickname: name, abi_json: abi_json)
                     })
             })
@@ -409,19 +408,6 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                 }.frame(width: 400, height: 300)
             })
             .sheet(isPresented: $bytecode_add) {
-//                if new_contract_name.isEmpty || new_contract_bytecode.isEmpty {
-//                    return
-//                }
-//                d.create_new_contract(
-//                  code: new_contract_bytecode,
-//                  creator_addr: "0x0000000000000000000000000000000000000000",
-//                  contract_nickname: new_contract_name,
-//                  gas_amount: 900_000,
-//                  initial_gas: "0"
-//                )
-//                new_contract_name = ""
-//                new_contract_bytecode = ""
-//                new_contract_abi = ""
             } content: {
                 NewContractFromInput()
             }
@@ -1059,14 +1045,13 @@ struct BreakpointView: View {
                 .tabItem{ Text("Breakpoints").help("internal transactions") }.tag(1)
                 //                          .frame(height: 280)
                 VStack {
-                    List(execed.state_records, id: \.self) {(item : StateRecord) in 
-                        HStack {
-                            Text(item.Kind)
-                            Text(item.Key)
-                            Text(item.Value)
-                        }.help("either a SLOAD or SSTORE")
+                    Text("\(execed.state_records.count) total state loads/stores")
+                    Table(execed.state_records) {
+                        TableColumn("Kind", value: \.Kind)
+                        TableColumn("Key", value: \.Key)
+                        TableColumn("Value", value:\.Value)
                     }
-                }.tabItem{ Text("Storage")}.tag(2)
+                }.tabItem{ Text("Storage") }.tag(2)
             })
         }
     }

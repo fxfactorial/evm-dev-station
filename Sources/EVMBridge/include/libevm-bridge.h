@@ -22,7 +22,6 @@ typedef struct { const char *p; ptrdiff_t n; } _GoString_;
 #line 3 "main.go"
 
 #include <stdbool.h>
-extern void evm_run_callback(int, char*, char*, int);
 extern void chain_load_finished();
 // callee, caller, args
 extern void evm_opcall_callback(char*, char*, char*);
@@ -112,7 +111,6 @@ struct AllKnownOpcodes_return {
 extern struct AllKnownOpcodes_return AllKnownOpcodes();
 extern int TestReceiveGoString(GoString input_);
 extern void PauseOnOpcode(char code);
-extern void EnableCallback(GoUint8 status);
 extern void EnableStopOnCall(GoUint8 enable);
 extern struct SetAccountBalanceResult SetAccountBalance(GoString account, GoString balance);
 extern void TestSendingInt(GoString msgValue_);

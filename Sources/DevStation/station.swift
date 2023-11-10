@@ -146,24 +146,6 @@ final class EVM: EVMDriver {
             EVMBridge.EnableOPCodeCallHook(yes_no.to_go_bool())
         }
         _opcode_call_hook_enabled = yes_no
-
-    }
-
-    
-    
-    fileprivate var _cb_enabled : Bool = false
-
-    func enable_exec_callback(yes_no: Bool) {
-        if yes_no {
-            EVMBridge.EnableCallback(GoUint8(1))
-        } else {
-            EVMBridge.EnableCallback(GoUint8(0))
-        }
-        _cb_enabled = yes_no
-    }
-    
-    func exec_callback_enabled() -> Bool {
-        return _cb_enabled
     }
     
     func load_chaindata(pathdir: String, db_kind: String) {
@@ -245,11 +227,6 @@ struct Rootview : View {
     }
 }
 
-//@_cdecl("chain_load_finished")
-//public func chain_load_finished() {
-//    let when_done = Date.now
-//    print("finished loading chain at \(when_done)")
-//}
 @_cdecl("evm_opcode_callback")
 public func evm_opcode_callback(
     opcode_name: UnsafeMutablePointer<CChar>,
@@ -311,32 +288,6 @@ public func evm_opcall_callback(
     // EVMBridge.SendValueToPausedEVMInCall()
 }
 
-@_cdecl("evm_run_callback")
-public func evm_run_callback(
-  num: Int32,
-  // TODO Remember to free the pointers to cchar
-  opcode_name: UnsafeMutablePointer<CChar>,
-  opcode_hex: UnsafeMutablePointer<CChar>,
-  gas_cost: Int
-) {
-    let opcode = String(cString: opcode_name)
-    let opcode_num = String(cString: opcode_hex)
-    free(opcode_name)
-    free(opcode_hex)
-
-    DispatchQueue.main.async {
-        ExecutedOperations.shared.execed_operations.append(
-          ExecutedEVMCode(pc: "\(num)",
-                          op_name: opcode,
-                          opcode: opcode_num,
-                          gas: gas_cost,
-                          gas_cost: gas_cost,
-                          depth: 3,
-                          refund: 0
-          )
-        )
-    }
-}
 
 @_cdecl("send_error_back")
 public func send_error_back(reply: UnsafeMutablePointer<CChar>) {
@@ -353,10 +304,31 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
     let decoded = try! JSONDecoder().decode(EVMBridgeMessage<AnyDecodable>.self, from: rpy.data(using: .utf8)!)
 
     switch decoded.Cmd {
+    case RUN_EVM_OP_EXECED:
+        let execed_op = decoded.Payload!.value as! Dictionary<String, AnyDecodable>
+        let num = execed_op["program_counter"]?.value as! Int
+        let gas_cost = execed_op["gas_cost"]?.value as! Int
+        let opcode_name = execed_op["opcode_name"]?.value as! String
+        let opcode_num = execed_op["opcode_hex"]?.value as! String
+
+        DispatchQueue.main.async {
+            ExecutedOperations.shared.execed_operations.append(
+              ExecutedEVMCode(pc: "\(num)",
+                              op_name: opcode_name,
+                              opcode: opcode_num,
+                              gas: gas_cost,
+                              gas_cost: gas_cost,
+                              depth: 3,
+                              refund: 0
+              )
+            )
+        }
+
     case CMD_NEW_EVM:
         print("loaded new evm")
     case CMD_LOAD_CHAIN:
         EVM.shared.load_chainhead()
+        
     case CMD_LOAD_CONTRACT_FROM_STATE:
         let loaded = decoded.Payload!.value as! Dictionary<String, String>
 

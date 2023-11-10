@@ -1362,17 +1362,6 @@ struct RunningEVM<Driver: EVMDriver>: View {
                     ), label: {
                         Text("Break on CALL")
                     })
-                    Toggle(isOn: Binding<Bool>(
-                        get: {
-                            evm_run_controls.record_executed_operations
-                        },
-                        set: {
-                            d.enable_exec_callback(yes_no: $0)
-                            evm_run_controls.record_executed_operations = $0
-                        }
-                    ), label: {
-                        Text("Record all Operations")
-                    })
                 }
             }
             .padding()

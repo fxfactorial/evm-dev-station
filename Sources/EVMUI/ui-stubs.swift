@@ -64,16 +64,6 @@ final class StubEVMDriver: EVMDriver {
         //
     }
 
-    fileprivate var _cb_enabled: Bool = false
-
-    func enable_exec_callback(yes_no: Bool) {
-        _cb_enabled = yes_no
-    }
-
-    func exec_callback_enabled() -> Bool {
-        _cb_enabled
-    }
-
     func load_chaindata(pathdir: String, db_kind: String) {
         //
     }

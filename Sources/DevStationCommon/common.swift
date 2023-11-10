@@ -77,7 +77,6 @@ public class ExecutedOperations : ObservableObject {
 public class EVMRunStateControls: ObservableObject {
     public static let shared = EVMRunStateControls()
 
-    @Published public var record_executed_operations = false
     @Published public var breakpoint_on_call = false
     @Published public var opcode_breakpoints_enabled = false
     @Published public var contract_currently_running = false

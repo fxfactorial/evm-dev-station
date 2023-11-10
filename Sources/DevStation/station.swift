@@ -104,14 +104,13 @@ final class EVM: EVMDriver {
         return input.sha3(.sha256)
     }
 
-    func available_eips() -> [Int] {
-        let eips = EVMBridge.AvailableEIPS()
-        let elem_count = Int(eips.r1)
-        let rebound = eips.r0.withMemoryRebound(to: Int.self, capacity: elem_count) {
-            Array(UnsafeBufferPointer(start: $0, count: elem_count))
+    func available_eips() {
+        Task {
+            let msg = try! JSONEncoder().encode(
+              EVMBridgeMessage<Int>(c: CMD_ALL_KNOWN_EIPS, p: 0)
+            )
+            await comm_channel.send(msg)
         }
-        free(eips.r0)
-        return rebound
     }
     
     func call(calldata: String, target_addr: String, msg_value: String) {
@@ -306,6 +305,16 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
         print("loaded new evm")
     case CMD_LOAD_CHAIN:
         EVM.shared.load_chainhead()
+    case CMD_ALL_KNOWN_EIPS:
+        var eips = decoded.Payload!.value as! [String]
+        eips.sort()
+        DispatchQueue.main.async {
+            for c in eips {
+                EVMRunStateControls.shared.eips_used.append(.init(num: c))
+            }
+        }
+        
+
     case CMD_ALL_KNOWN_OPCODES:
         var opcodes = decoded.Payload!.value as! [String]
         opcodes.sort()
@@ -400,6 +409,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         evm_driver.start_handling_bridge()
         evm_driver.new_evm_singleton()
         evm_driver.all_known_opcodes()
+        evm_driver.available_eips()
 
         OpcodeCallbackModel.shared.continue_evm_exec_break_on_opcode = {do_use, stack, memory in
             let just_hex_ints = stack.map({$0.name})

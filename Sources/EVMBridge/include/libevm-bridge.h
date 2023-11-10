@@ -22,7 +22,6 @@ typedef struct { const char *p; ptrdiff_t n; } _GoString_;
 #line 3 "main.go"
 
 #include <stdbool.h>
-extern void chain_load_finished();
 // callee, caller, args
 extern void evm_opcall_callback(char*, char*, char*);
 extern void evm_opcode_callback(char*, char**, int, char*);
@@ -102,18 +101,9 @@ extern void ResetEVM(GoUint8 enableOpCodeCallback, GoUint8 enableCallback, GoUin
 extern void EnableOPCodeCallHook(GoUint8 status);
 extern void SendValueToPausedEVMInOpCode(GoUint8 useOverrides, GoString serializedStack, GoString memory);
 extern void SendValueToPausedEVMInCall(GoUint8 useOverrides, GoString caller_, GoString callee_, GoString payload_);
-extern int TestReceiveGoString(GoString input_);
 extern void PauseOnOpcode(char code);
 extern void EnableStopOnCall(GoUint8 enable);
 extern struct SetAccountBalanceResult SetAccountBalance(GoString account, GoString balance);
-extern void TestSendingInt(GoString msgValue_);
-
-/* Return type for AvailableEIPS */
-struct AvailableEIPS_return {
-	int* r0;
-	GoInt r1;
-};
-extern struct AvailableEIPS_return AvailableEIPS();
 
 #ifdef __cplusplus
 }

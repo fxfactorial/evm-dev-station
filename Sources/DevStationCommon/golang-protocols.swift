@@ -13,6 +13,7 @@ public protocol EVMDriver {
                              gas_amount: String, initial_gas: String) 
     func step_forward_one()
     func all_known_opcodes() 
+    func available_eips()
 
 
 
@@ -25,7 +26,6 @@ public protocol EVMDriver {
     func enable_breakpoint_on_opcode(yes_no: Bool, opcode_name: String)
     func enable_breakpoint_on_opcode(yes_no: Bool)
     
-    func available_eips() -> [Int]
     func reset_evm(enableOpCodeCallback: Bool, enableCallback: Bool, useStateInMemory:  Bool)
 }
 

@@ -397,9 +397,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
             .sheet(isPresented: $present_eips_sheet,
                    onDismiss: {
                 // just hold onto it
-            }, content: {
-                KnownEIPs(known_eips: $eips_used)
-            })
+            }, content: { KnownEIPs() })
             .sheet(isPresented: $error_model.show_error,
                    content: {
                 VStack {
@@ -430,13 +428,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
             .tabItem { Text("Live Dev") }.tag(0)
             StateInspector(d: d)
                 .tabItem { Text("Account/State Modification") }.tag(1)
-        }).onAppear {
-            // only needs to happen once
-            let all = d.available_eips()
-            for item in all {
-                eips_used.append(EIP(num: item, enabled: true))
-            }
-        }
+        })
         .padding(10)
     }
 }
@@ -608,17 +600,12 @@ struct NewContractFromInput: View {
     }
 }
 
-struct EIP : Identifiable {
-    let id = UUID()
-    let num : Int
-    var enabled: Bool
-}
 
 struct KnownEIPs: View {
-    @Binding var known_eips : [EIP]
     @State var enable_all = false
     @Environment(\.dismiss) var dismiss
     @Environment(\.openURL) var openURL
+    @ObservedObject private var evm_run_state = EVMRunStateControls.shared
     
     let base_url = "https://eips.ethereum.org/EIPS"
     
@@ -634,7 +621,7 @@ struct KnownEIPs: View {
                     Text("Ok")
                 }
             }
-            Table(known_eips) {
+            Table(evm_run_state.eips_used) {
                 TableColumn("EIP") { d in
                     Button {
                         guard let url = URL(string: "\(base_url)/eip-\(d.num)") else {
@@ -655,9 +642,9 @@ struct KnownEIPs: View {
                             return d.enabled
                         },
                         set: {
-                            if let index = known_eips.firstIndex(where: { $0.id == d.id }) {
-                                known_eips[index].enabled = $0
-                            }
+                        if let index = evm_run_state.eips_used.firstIndex(where: { $0.id == d.id }) {
+                            evm_run_state.eips_used[index].enabled = $0
+                        }
                         }
                     ))
                 }

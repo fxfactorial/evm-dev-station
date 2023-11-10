@@ -83,6 +83,14 @@ public struct OPCodeEnable: Identifiable {
     }
 }
 
+public struct EIP : Identifiable {
+    public let id = UUID()
+    public let num : String
+    public var enabled = true
+    public init(num: String) {
+        self.num = num
+    }
+}
 
 public class EVMRunStateControls: ObservableObject {
     public static let shared = EVMRunStateControls()
@@ -94,6 +102,8 @@ public class EVMRunStateControls: ObservableObject {
     @Published public var call_return_value = ""
     @Published public var evm_error = ""
     @Published public var opcodes_used :[OPCodeEnable] = []
+    @Published public var eips_used :[EIP] = []
+
 }
 
 public class BlockContextModel : ObservableObject {

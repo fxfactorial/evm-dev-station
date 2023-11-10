@@ -48,14 +48,9 @@ final class StubEVMDriver: EVMDriver {
         //
     }
     
-    func new_evm_singleton() {
-        //
-    }
-    
-    func available_eips() -> [Int] {
-        return [12, 14, 15]
-    }
- 
+    func new_evm_singleton() {}
+    func available_eips() {}
+
     func call(calldata: String, target_addr: String, msg_value: String) {
         //
     }

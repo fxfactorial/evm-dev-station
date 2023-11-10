@@ -34,9 +34,6 @@ extension Bool {
 }
 
 final class EVM: EVMDriver {
-    func enable_breakpoint_on_opcode(yes_no: Bool) {
-        EVMBridge.EnableHookEveryOpcode(yes_no.to_go_bool())
-    }
     
     static let shared = EVM()
     let comm_channel = AsyncChannel<Data>()
@@ -58,12 +55,14 @@ final class EVM: EVMDriver {
     }
     
     func enable_breakpoint_on_opcode(yes_no: Bool, opcode_name: String) {
-        opcode_name.withCString {pointee in
-            let opcode_name_gstr = pointee.withMemoryRebound(to: CChar.self, capacity: opcode_name.count) {
-                GoString(p: $0, n: opcode_name.count)
-            }
-            EVMBridge.DoHookOnOpcode(yes_no.to_go_bool(), opcode_name_gstr)
+        Task {
+            let msg = try! JSONEncoder().encode(
+              EVMBridgeMessage<BridgeCmdDoHookOnOpCode>(c: .CMD_DO_HOOK_ON_OPCODE,
+                               p: BridgeCmdDoHookOnOpCode(opcode: opcode_name, enable: yes_no))
+            )
+            await comm_channel.send(msg)
         }
+
     }
 
     func reset_evm(enableOpCodeCallback: Bool,
@@ -78,10 +77,11 @@ final class EVM: EVMDriver {
 
 
     func create_new_contract(code: String, creator_addr: String,
-                             contract_nickname: String, gas_amount: String, initial_gas: String)  {
+                             contract_nickname: String, gas_amount: String,
+                             initial_gas: String)  {
         Task {
             let msg = try! JSONEncoder().encode(
-              EVMBridgeMessage(c: CMD_DEPLOY_NEW_CONTRACT,
+              EVMBridgeMessage(c: .CMD_DEPLOY_NEW_CONTRACT,
                                p: BridgeCmdDeployNewContract(
                                  code, creator_addr, contract_nickname,
                                  Int(gas_amount)!, initial_gas))
@@ -93,22 +93,18 @@ final class EVM: EVMDriver {
 
     func new_evm_singleton() {
         Task {
-            let msg = try! JSONEncoder().encode(
-              EVMBridgeMessage<BridgeCmdNewGlobalEVM>(c: CMD_NEW_EVM, p: BridgeCmdNewGlobalEVM())
-            )
+            let msg = try! JSONEncoder().encode(EVMBridgeMessage<Int>(c: .CMD_NEW_EVM, p: 0))
             await comm_channel.send(msg)
         }
     }
 
     func keccak256(input: String) -> String {
-        return input.sha3(.sha256)
+        return input.sha3(.keccak256)
     }
 
     func available_eips() {
         Task {
-            let msg = try! JSONEncoder().encode(
-              EVMBridgeMessage<Int>(c: CMD_ALL_KNOWN_EIPS, p: 0)
-            )
+            let msg = try! JSONEncoder().encode(EVMBridgeMessage<Int>(c: .CMD_ALL_KNOWN_EIPS, p: 0))
             await comm_channel.send(msg)
         }
     }
@@ -117,7 +113,7 @@ final class EVM: EVMDriver {
         Task {
             let msg = try! JSONEncoder().encode(
               EVMBridgeMessage(
-                c: CMD_RUN_CONTRACT, p: BridgeCmdRunContract(calldata, target_addr, msg_value)
+                c: .CMD_RUN_CONTRACT, p: BridgeCmdRunContract(calldata, target_addr, msg_value)
               )
             )
             await comm_channel.send(msg)
@@ -142,7 +138,7 @@ final class EVM: EVMDriver {
     func load_chaindata(pathdir: String, db_kind: String) {
         Task {
             let msg = try! JSONEncoder().encode(
-              EVMBridgeMessage(c: CMD_LOAD_CHAIN,
+              EVMBridgeMessage(c: .CMD_LOAD_CHAIN,
                                p: BridgeCmdLoadChain(kind: db_kind, directory: pathdir))
             )
             await comm_channel.send(msg)
@@ -151,20 +147,14 @@ final class EVM: EVMDriver {
     
     func load_chainhead() {
         Task {
-            let msg = try! JSONEncoder().encode(
-              EVMBridgeMessage(c: CMD_REPORT_CHAIN_HEAD,
-                               p: BridgeCmdSendBackChainHeader())
-            )
+            let msg = try! JSONEncoder().encode(EVMBridgeMessage<Int>(c: .CMD_REPORT_CHAIN_HEAD, p: 0))
             await comm_channel.send(msg)
         }
     }
 
     func step_forward_one() {
         Task {
-            let msg = try! JSONEncoder().encode(
-              EVMBridgeMessage(c: CMD_STEP_FORWARD_ONE,
-                               p: BridgeCmdStepForwardOnce())
-            )
+            let msg = try! JSONEncoder().encode(EVMBridgeMessage<Int>(c: .CMD_STEP_FORWARD_ONE,p: 0))
             await comm_channel.send(msg)
         }
     }
@@ -172,7 +162,7 @@ final class EVM: EVMDriver {
     func load_contract(addr: String, nickname: String, abi_json: String) {
         Task {
             let msg = try! JSONEncoder().encode(
-              EVMBridgeMessage(c: CMD_LOAD_CONTRACT_FROM_STATE,
+              EVMBridgeMessage(c: .CMD_LOAD_CONTRACT_FROM_STATE,
                                p: BridgeCmdLoadContractFromState(s: addr,
                                                                  nick: nickname,
                                                                  abi_json: abi_json))
@@ -184,16 +174,28 @@ final class EVM: EVMDriver {
     func all_known_opcodes(){
         Task {
             let msg = try! JSONEncoder().encode(
-              EVMBridgeMessage<Int>(c: CMD_ALL_KNOWN_OPCODES, p: 0)
+              EVMBridgeMessage<Int>(c: .CMD_ALL_KNOWN_OPCODES, p: 0)
             )
             await comm_channel.send(msg)
         }
     }
-}
 
-func convert(length: Int, data: UnsafePointer<Int>) -> [Int] {
-    let buffer = UnsafeBufferPointer(start: data, count: length);
-    return Array(buffer)
+    func continue_evm_exec_break_on_opcode(yes_no: Bool, stack: [Item], mem: String) {
+        let just_hex_ints = stack.map({$0.name})
+        Task {
+            let msg = try! JSONEncoder().encode(
+              EVMBridgeMessage<BridgeCmdOverwrittenStackMemory>(
+                c: .CMD_OVERWRITE_STACK_MEM_IN_PAUSED_EVM,
+                p: BridgeCmdOverwrittenStackMemory(
+                  stack: just_hex_ints,mem: mem, do_use: yes_no
+                )
+              )
+            )
+            await comm_channel.send(msg)
+
+        }
+    }
+
 }
 
 struct Rootview : View {
@@ -280,8 +282,8 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
     free(reply)
     let decoded = try! JSONDecoder().decode(EVMBridgeMessage<AnyDecodable>.self, from: rpy.data(using: .utf8)!)
 
-    switch decoded.Cmd {
-    case RUN_EVM_OP_EXECED:
+    switch decoded.Cmd  {
+    case .RUN_EVM_OP_EXECED:
         let execed_op = decoded.Payload!.value as! Dictionary<String, AnyDecodable>
         let num = execed_op["program_counter"]?.value as! Int
         let gas_cost = execed_op["gas_cost"]?.value as! Int
@@ -301,11 +303,11 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
             )
         }
 
-    case CMD_NEW_EVM:
+    case .CMD_NEW_EVM:
         print("loaded new evm")
-    case CMD_LOAD_CHAIN:
+    case .CMD_LOAD_CHAIN:
         EVM.shared.load_chainhead()
-    case CMD_ALL_KNOWN_EIPS:
+    case .CMD_ALL_KNOWN_EIPS:
         var eips = decoded.Payload!.value as! [String]
         eips.sort()
         DispatchQueue.main.async {
@@ -315,7 +317,7 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
         }
         
 
-    case CMD_ALL_KNOWN_OPCODES:
+    case .CMD_ALL_KNOWN_OPCODES:
         var opcodes = decoded.Payload!.value as! [String]
         opcodes.sort()
         DispatchQueue.main.async {
@@ -324,7 +326,7 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
             }
         }
 
-    case CMD_LOAD_CONTRACT_FROM_STATE:
+    case .CMD_LOAD_CONTRACT_FROM_STATE:
         let loaded = decoded.Payload!.value as! Dictionary<String, String>
         let contract = LoadedContract(
           name: loaded["nickname"]!,
@@ -340,7 +342,7 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
             }
         }
 
-    case CMD_RUN_CONTRACT:
+    case .CMD_RUN_CONTRACT:
         let call_result = decoded.Payload!.value as! Dictionary<String, AnyDecodable>
         let tree = call_result["CallTreeJSON"]?.value as! CallEvaled
         let state_tracking = call_result["State"]?.value as! [StateRecord]
@@ -353,7 +355,7 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
             ExecutedOperations.shared.state_records = state_tracking
         }
 
-    case CMD_DEPLOY_NEW_CONTRACT:
+    case .CMD_DEPLOY_NEW_CONTRACT:
         let reply = decoded.Payload!.value as! Dictionary<String, AnyDecodable>
         let gas_used = reply["gas_used"]?.value as! Int
         let new_addr = reply["new_contract_addr"]?.value as! String
@@ -374,7 +376,7 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
         }
         // TODO need to update the current contract selection, its gas cost used to deploy, etc
 
-    case CMD_REPORT_CHAIN_HEAD:
+    case .CMD_REPORT_CHAIN_HEAD:
         let blk_header = decoded.Payload!.value as! Dictionary<String, String?>
         let head_number = UInt32(blk_header["number"]!!.dropFirst(2), radix: 16)!
         let state_root = blk_header["stateRoot"]!!
@@ -393,7 +395,26 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
                 // chaindb.db_kind = if db_kind == "pebble" { .GethDBPebble} else { .GethDBLevelDB }
             }
         }
+    case .RUN_EVM_OPCODE_HIT:
+        let reply = decoded.Payload!.value as! Dictionary<String, AnyDecodable>
+        let memory_hex = reply["memory"]?.value as! String
+        let opcode = reply["opcode"]?.value as! String
+        let stack = reply["stack"]?.value as! [String]
+        let stack_rep = stack.enumerated().map({ (idx, name) in Item(name: name, index: idx )})
+        
+        DispatchQueue.main.async {
+            OpcodeCallbackModel.shared.current_stack = stack_rep
+            OpcodeCallbackModel.shared.current_memory = memory_hex
+            OpcodeCallbackModel.shared.current_opcode_hit = opcode
+            OpcodeCallbackModel.shared.hit_breakpoint = true
+        }
+        
     default:
+        DispatchQueue.main.async {
+            RuntimeError.shared.show_error = true
+            RuntimeError.shared.error_reason = "unhandled reply \(decoded)"
+        }
+
         print("unknown command received", decoded)
     }
 
@@ -410,25 +431,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         evm_driver.new_evm_singleton()
         evm_driver.all_known_opcodes()
         evm_driver.available_eips()
-
-        OpcodeCallbackModel.shared.continue_evm_exec_break_on_opcode = {do_use, stack, memory in
-            let just_hex_ints = stack.map({$0.name})
-            print("should be calling evm bridge now", do_use, just_hex_ints)
-            let encoded = try? JSONEncoder().encode(just_hex_ints)
-            guard let s = encoded else {
-                EVMBridge.SendValueToPausedEVMInOpCode(false.to_go_bool(), GoString(p: nil, n: 0), GoString(p: nil, n: 0))
-                return
-            }
-            
-            s.withUnsafeBytes {
-                let stack_gstr = GoString(p: $0, n: s.count)
-                memory.withCString {
-                    let memory_gstr =  GoString(p: $0, n: memory.count)
-                    // but actually this showed a bug anyway
-                    EVMBridge.SendValueToPausedEVMInOpCode(do_use.to_go_bool(), stack_gstr, memory_gstr)
-                }
-            }
-        }
 
         OpcodeCallbackModel.shared.continue_evm_exec = { do_use, caller, callee, args in
             caller.withCString({ caller_pointee in

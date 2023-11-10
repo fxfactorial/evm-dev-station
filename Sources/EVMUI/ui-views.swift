@@ -338,7 +338,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                         }.tag(3)
                     }
                     Spacer().frame(width: 20)
-                    BreakpointView().frame(maxWidth: .infinity)
+                    BreakpointView(d: d).frame(maxWidth: .infinity)
                 }.padding(10).frame(maxHeight: .infinity)
                 
                 RunningEVM(target_addr: Binding<String>(
@@ -867,21 +867,21 @@ struct BreakpointView: View {
     @State private var possible_signature_names : [String] = []
     @State private var selected : String?
     @State private var current_tab = 1
+    let d : EVMDriver
     
     var body: some View {
         VStack {
-            //            Text("Suspended EVM")
-            //              .font(.title2)
             TabView(selection: $current_tab,
                     content: {
-                VStack {
-                    VStack {
+                        VStack {
+                            VStack {
                         HStack {
                             Text("caller").frame(width: 75)
                             TextField("", text: $callbackmodel.current_caller)
                             Button {
                                 if !callbackmodel.current_caller.isEmpty {
-                                    guard let link = URL(string: "https://etherscan.com/address/\(callbackmodel.current_caller)") else {
+                                    let s = "https://etherscan.com/address/\(callbackmodel.current_caller)"
+                                    guard let link = URL(string: s) else {
                                         return
                                     }
                                     openURL(link)
@@ -895,7 +895,8 @@ struct BreakpointView: View {
                             TextField("", text: $callbackmodel.current_callee)
                             Button {
                                 if !callbackmodel.current_callee.isEmpty {
-                                    guard let link = URL(string: "https://etherscan.com/address/\(callbackmodel.current_callee)") else {
+                                    let s = "https://etherscan.com/address/\(callbackmodel.current_callee)"
+                                    guard let link = URL(string: s) else {
                                         return
                                     }
                                     openURL(link)
@@ -1021,16 +1022,12 @@ struct BreakpointView: View {
                         HStack {
                             Toggle("use modified values", isOn: $callbackmodel.use_modified_values)
                             Button {
-                                Task {
-                                    if let cb = callbackmodel.continue_evm_exec_break_on_opcode {
-                                        cb(
-                                            callbackmodel.use_modified_values,
-                                            callbackmodel.current_stack,
-                                            callbackmodel.current_memory
-                                        )
-                                        callbackmodel.selected_stack_item = nil
-                                    }
-                                }
+                                d.continue_evm_exec_break_on_opcode(
+                                  yes_no: callbackmodel.use_modified_values,
+                                  stack: callbackmodel.current_stack,
+                                  mem: callbackmodel.current_memory
+                                )
+                                callbackmodel.selected_stack_item = nil
                             } label: {
                                 Text("Continue")
                             }.disabled(!callbackmodel.hit_breakpoint)
@@ -1060,7 +1057,7 @@ struct BreakpointView: View {
 
 
 #Preview("breakpoint view") {
-    BreakpointView()
+    BreakpointView(d : StubEVMDriver())
 }
 
 struct LoadExistingDB : View {
@@ -1129,15 +1126,6 @@ struct BreakOnOpcodes: View {
             HStack {
                 Text("\(evm_run_state.opcodes_used.count) known opcodes")
                 Toggle("all", isOn: $break_on_all)
-                Toggle("hook", isOn: Binding<Bool>(
-                    get: {
-                        controls.opcode_breakpoints_enabled
-                    },
-                    set: {
-                        d.enable_breakpoint_on_opcode(yes_no: $0)
-                        controls.opcode_breakpoints_enabled = $0
-                    }
-                ))
             }
             Table(evm_run_state.opcodes_used) {
                 TableColumn("name", value: \.name)
@@ -1336,14 +1324,13 @@ struct RunningEVM<Driver: EVMDriver>: View {
                 onDismiss: {
                     for c in evm_run_controls.opcodes_used {
                         if c.enabled {
-                            d.enable_breakpoint_on_opcode(yes_no:true)
-                            return
+                            d.enable_breakpoint_on_opcode(yes_no:true, opcode_name: c.name)
                         }
                     }
                 }, content: {
                        BreakOnOpcodes(d: d)
-                   })
-        
+                   }
+          )
     }
 }
 

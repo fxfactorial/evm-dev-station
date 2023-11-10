@@ -4,10 +4,6 @@ import DevStationCommon
 import BigInt
 import AsyncAlgorithms
 
-@_cdecl("evm_opcode_callback")
-public func evm_opcode_callback() {
-    //
-}
 
 
 // just to make it link 
@@ -170,9 +166,7 @@ Task.detached {
 }
 
 
-let msg1 = try! JSONEncoder().encode(
-  EVMBridgeMessage<BridgeCmdNewGlobalEVM>(c: CMD_NEW_EVM, p: BridgeCmdNewGlobalEVM())
-)
+let msg1 = try! JSONEncoder().encode(EVMBridgeMessage<Int>(c: .CMD_NEW_EVM, p: 0))
 
 await comm_channel.send(msg1)
 
@@ -185,7 +179,7 @@ let db_kind = db_kind_leveldb
 let pathdir = pathdir_leveldb
 
 let msg2 = try! JSONEncoder().encode(
-  EVMBridgeMessage(c: CMD_LOAD_CHAIN,
+  EVMBridgeMessage(c: .CMD_LOAD_CHAIN,
                    p: BridgeCmdLoadChain(kind: db_kind, directory: pathdir))
 )
 await comm_channel.send(msg2)
@@ -197,7 +191,7 @@ let calldata = "f7729d43000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead908
 
 let msg3 = try! JSONEncoder().encode(
   EVMBridgeMessage(
-    c: CMD_RUN_CONTRACT, p: BridgeCmdRunContract(calldata, target_addr, "0")
+    c: .CMD_RUN_CONTRACT, p: BridgeCmdRunContract(calldata, target_addr, "0")
   )
 )
 await comm_channel.send(msg3)
@@ -211,7 +205,7 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
     free(reply)
     let decoded = try! JSONDecoder().decode(EVMBridgeMessage<AnyDecodable>.self, from: rpy.data(using: .utf8)!)
     switch decoded.Cmd {
-    case CMD_RUN_CONTRACT:
+    case .CMD_RUN_CONTRACT:
         let call_result = decoded.Payload!.value as! Dictionary<String, AnyDecodable>
         let tree = call_result["CallTreeJSON"]?.value as! CallEvaled
         let other = call_result["State"]?.value as! [StateRecord]

@@ -1,14 +1,14 @@
 import Foundation
 
 public struct EVMBridgeMessage<P: Codable> : Codable {
-    public let Cmd: String
+    public let Cmd: EVMCommand
     public let Payload: P?
-    public init(c : String, p: P?) {
+    public init(c : EVMCommand, p: P?) {
         self.Cmd = c
         self.Payload = p
     }
 
-    public init(c: String) {
+    public init(c: EVMCommand) {
         self.Cmd = c
         self.Payload = nil
     }
@@ -66,13 +66,6 @@ public struct BridgeCmdLoadChain : Codable {
     }
 }
 
-public struct BridgeCmdSendBackChainHeader: Codable {
-    public init() {}
-}
-
-public struct BridgeCmdNewGlobalEVM: Codable {
-    public init() { }
-}
 
 public struct BridgeCmdLoadContractFromState: Codable {
     public let Addr: String
@@ -145,21 +138,42 @@ public struct StateRecord: Codable, Identifiable, Hashable {
 }
 
 
-public struct BridgeCmdStepForwardOnce: Codable {
-    public init( ) {}
+
+public struct BridgeCmdDoHookOnOpCode: Codable {
+    public let OpCode: String
+    public let Enable: Bool
+    public init(opcode: String, enable: Bool)  {
+        self.OpCode = opcode
+        self.Enable = enable
+    }
 }
 
-// TODO change to enum
-public let CMD_NEW_EVM = "new_evm"
-public let CMD_LOAD_CHAIN = "load_chaindb"
-public let CMD_REPORT_CHAIN_HEAD = "report_chain_head"
-public let CMD_LOAD_CONTRACT_FROM_STATE = "load_contract_from_state"
-public let CMD_RUN_CONTRACT = "run_contract"
-public let CMD_DEPLOY_NEW_CONTRACT = "deploy_new_contract"
-public let CMD_STEP_FORWARD_ONE = "step_once"
-public let CMD_REPORT_ERROR = "error"
-public let CMD_ALL_KNOWN_OPCODES = "all_known_opcodes"
-public let CMD_ALL_KNOWN_EIPS = "all_known_eips"
+public struct BridgeCmdOverwrittenStackMemory : Codable {
+    public let SerializedStack: [String]
+    public let Memory:          String
+    public let UseOverrides:    Bool
+    public init(stack: [String], mem: String, do_use: Bool) {
+        self.SerializedStack = stack
+        self.Memory = mem
+        self.UseOverrides = do_use
+    }
+}
 
-public let RUN_EVM_OP_EXECED = "ran_one_opcode"
 
+public enum EVMCommand : String, Codable {
+    case CMD_REPORT_ERROR = "error"
+    case CMD_NEW_EVM = "new_evm"
+    case CMD_LOAD_CHAIN = "load_chaindb"
+    case CMD_REPORT_CHAIN_HEAD = "report_chain_head"
+    case CMD_LOAD_CONTRACT_FROM_STATE = "load_contract_from_state"
+    case CMD_RUN_CONTRACT = "run_contract"
+    case CMD_DEPLOY_NEW_CONTRACT = "deploy_new_contract"
+    case CMD_STEP_FORWARD_ONE = "step_once"
+    case CMD_ALL_KNOWN_OPCODES = "all_known_opcodes"
+    case CMD_ALL_KNOWN_EIPS = "all_known_eips"
+    case CMD_DO_HOOK_ON_OPCODE = "do_hook_on_opcode"
+    case CMD_OVERWRITE_STACK_MEM_IN_PAUSED_EVM = "overwrite_stack_mem_paused"
+    
+    case RUN_EVM_OP_EXECED = "ran_one_opcode"
+    case RUN_EVM_OPCODE_HIT = "hit_break_on_opcode"
+}

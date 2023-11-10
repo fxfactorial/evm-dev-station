@@ -94,12 +94,8 @@ extern "C" {
 extern void MakeChannelAndListenThread(GoUint8 enableLogging);
 extern void MakeChannelAndReplyThread(GoUint8 enableLogging);
 extern void UISendCmd(GoString msg);
-extern char* Keccak256(GoString payload);
-extern void DoHookOnOpcode(GoUint8 doHook, GoString opcodeName);
-extern void EnableHookEveryOpcode(GoUint8 status);
 extern void ResetEVM(GoUint8 enableOpCodeCallback, GoUint8 enableCallback, GoUint8 useStateInMemory);
 extern void EnableOPCodeCallHook(GoUint8 status);
-extern void SendValueToPausedEVMInOpCode(GoUint8 useOverrides, GoString serializedStack, GoString memory);
 extern void SendValueToPausedEVMInCall(GoUint8 useOverrides, GoString caller_, GoString callee_, GoString payload_);
 extern void PauseOnOpcode(char code);
 extern void EnableStopOnCall(GoUint8 enable);

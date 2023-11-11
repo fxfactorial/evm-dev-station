@@ -295,11 +295,11 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                 .background()
                                 .tabItem { Text("EVM Config")}.tag(2)
                             }.frame(minHeight: 200)
-                        }.frame(height: top_row_open ? 300 : 40).padding(10)
+                        }.frame(idealHeight: 300)
                     },
                     label: {
                         Button {
-                            withAnimation(.linear(duration: 1)) {
+                            withAnimation(.easeInOut) {
                                 top_row_open.toggle()
                             }
                         } label: {
@@ -317,7 +317,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                     Spacer()
                                     Text("\(execed_ops.total_gas_cost_so_far) total gas cost so far")
                                       .font(.title2)
-                                }
+                                }.padding([.leading, .trailing], 10)
                                 Table(execed_ops.execed_operations) {
                                     TableColumn("PC", value: \.pc)
                                     TableColumn("OPNAME", value: \.op_name)

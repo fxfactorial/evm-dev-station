@@ -24,7 +24,7 @@ public protocol EVMDriver {
     func enable_breakpoint_on_opcode(yes_no: Bool, opcode_name: String)
     func enable_opcode_call_callback(yes_no: Bool)
     func enable_step_each_op(yes_no: Bool)
-    func continue_evm_exec_break_on_opcode(yes_no: Bool, stack: [Item], mem: String)
+    func continue_evm_exec_break_on_opcode(yes_no: Bool, stack: [StackItem], mem: String)
     func continue_evm_exec_break_on_call(yes_no: Bool, caller: String, callee: String, payload: String)
     // still open issues, that is not properly ported
 
@@ -37,7 +37,7 @@ public final class StubEVMDriver: EVMDriver {
     public func enable_step_each_op(yes_no: Bool) {}
     public func start_handling_bridge() {}
     public func step_forward_one(){}
-    public func continue_evm_exec_break_on_opcode(yes_no: Bool, stack: [Item], mem: String) {}
+    public func continue_evm_exec_break_on_opcode(yes_no: Bool, stack: [StackItem], mem: String) {}
     public func continue_evm_exec_break_on_call(yes_no: Bool, caller: String, callee: String, payload: String) {}
     public func keccak256(input: String) -> String {return input.sha3(.keccak256)}
 

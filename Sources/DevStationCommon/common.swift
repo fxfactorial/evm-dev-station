@@ -176,6 +176,28 @@ extension Item: Hashable {
     }
 }
 
+public class StackItem: ObservableObject, Hashable {
+    public let id = UUID()
+    public let index : Int
+    @Published public var name: String = ""
+    @Published public var pretty: String = ""
+
+    public init(name: String, index: Int, pretty: String) {
+        self.name = name
+        self.index = index
+        self.pretty = pretty
+    }
+
+    public static func == (lhs: StackItem, rhs: StackItem) -> Bool {
+        lhs.id == rhs.id
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
+}
+
 
 
 public class OpcodeCallbackModel: ObservableObject {
@@ -186,7 +208,7 @@ public class OpcodeCallbackModel: ObservableObject {
     @Published public var current_callee = ""
     @Published public var current_args = ""
     // how to update these effectively
-    @Published public var current_stack : [Item] = [
+    @Published public var current_stack : [StackItem] = [
 //        Item(name: "0x01", index: 0),
 //        Item(name: "0x02", index: 1),
 //        Item(name: "0x03", index: 2)

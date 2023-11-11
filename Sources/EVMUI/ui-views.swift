@@ -670,15 +670,14 @@ struct KnownEIPs: View {
     }
 }
 
-
-struct ListRowView: View {
-    @ObservedObject var item: Item
+struct StackListRowView: View {
+    @ObservedObject var item: StackItem
     
     var body: some View {
         HStack {
             Text("\(item.index)")
             Spacer()
-            Text(item.name)
+            Text(item.name).help(item.pretty)
         }
     }
 }
@@ -945,7 +944,8 @@ struct BreakpointView: View {
                                     return
                                 }
                                 let sig = callbackmodel.current_args.prefix(8)
-                                guard let url = URL(string:"\(SIG_DIR_URL)/api/v1/signatures/?format=json&hex_signature=0x\(sig)") else {
+                                let s = "\(SIG_DIR_URL)/api/v1/signatures/?format=json&hex_signature=0x\(sig)"
+                                guard let url = URL(string:s) else {
                                     return
                                 }
                                 
@@ -1019,7 +1019,7 @@ struct BreakpointView: View {
                         List(Array(zip(callbackmodel.current_stack.indices, callbackmodel.current_stack)),
                              id: \.1.self,
                              selection: $callbackmodel.selected_stack_item) { index, item in
-                            ListRowView(item: item)
+                            StackListRowView(item: item)
                         }
                     }
                     VStack {
@@ -1059,7 +1059,7 @@ struct BreakpointView: View {
                         }.padding([.bottom], 5)
                     }
                 }
-                .tabItem{ Text("Breakpoints").help("internal transactions") }.tag(1)
+                .tabItem{ Text("Stack & Memory").help("live stack and memory") }.tag(1)
                 //                          .frame(height: 280)
                 VStack {
                     Text("\(execed.state_records.count) total state loads/stores")

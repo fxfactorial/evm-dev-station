@@ -202,7 +202,7 @@ final class EVM: EVMDriver {
         }
     }
 
-    func continue_evm_exec_break_on_opcode(yes_no: Bool, stack: [Item], mem: String) {
+    func continue_evm_exec_break_on_opcode(yes_no: Bool, stack: [StackItem], mem: String) {
         let just_hex_ints = stack.map({$0.name})
         Task {
             let msg = try! JSONEncoder().encode(
@@ -372,8 +372,10 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
         let memory_hex = reply["memory"]?.value as! String
         let opcode = reply["opcode"]?.value as! String
         let stack = reply["stack"]?.value as! [String]
-        let stack_rep = stack.enumerated().map({ (idx, name) in Item(name: name, index: idx )})
-        
+        let stack_pretty = reply["stack_pretty"]?.value as! [String]
+        let stack_rep = stack.enumerated()
+          .map({ (idx, name) in StackItem(name: name, index: idx, pretty: stack_pretty[idx] )})
+
         DispatchQueue.main.async {
             OpcodeCallbackModel.shared.current_stack = stack_rep
             OpcodeCallbackModel.shared.current_memory = memory_hex

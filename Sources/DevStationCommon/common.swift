@@ -77,6 +77,15 @@ public class ExecutedOperations : ObservableObject {
     @Published public var total_gas_cost_so_far = 0
     @Published public var call_tree : [CallEvaled] = []
     @Published public var state_records : [StateRecord] = []
+
+    public func reset() {
+        execed_operations = []
+        state_records = []
+        call_tree = []
+        total_static_gas_cost_so_far = 0
+        total_dynamic_gas_cost_so_far = 0
+        total_gas_cost_so_far = 0
+    }
 }
 
 public struct OPCodeEnable: Identifiable {
@@ -108,6 +117,12 @@ public class EVMRunStateControls: ObservableObject {
     @Published public var evm_error = ""
     @Published public var opcodes_used :[OPCodeEnable] = []
     @Published public var eips_used :[EIP] = []
+    public func reset() {
+        evm_error = ""
+        call_return_value = ""
+        breakpoint_on_call = false
+        opcode_breakpoints_enabled = false
+    }
 
 }
 
@@ -167,7 +182,6 @@ public class OpcodeCallbackModel: ObservableObject {
     @Published public var current_memory = ""
     @Published public var current_opcode_hit = ""
     @Published public var use_modified_values = false
-    public var current_opcode_continue_task : Task<Void, Error>?
 
     public func reset() {
         hit_breakpoint = false
@@ -212,6 +226,10 @@ public class RuntimeError: ObservableObject {
     public static let shared = RuntimeError()
     @Published public var show_error = false
     @Published public var error_reason = ""
+    public func reset() {
+        show_error = false
+        error_reason = ""
+    }
 }
 
 public struct StateChange {

@@ -111,6 +111,8 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     @State private var msg_sender = ""
     @State private var msg_sender_eth_balance = ""
     @State private var current_contract_detail_tab = 0
+
+    @AppStorage("show_first_load_help") private var show_first_load_help = true
     
     // NOTE Use observedobject on singletons
     @ObservedObject private var chaindb = LoadChainModel.shared
@@ -401,7 +403,18 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                         }
                         d.load_contract(addr: addr, nickname: name, abi_json: abi_json)
                     })
-            })
+                   })
+            .sheet(isPresented: $show_first_load_help) {
+                VStack {
+                    Text("welcome to evm-dev-station")
+                    Text("load a chain database or work directly against an in-memory state db")
+                    Button {
+                        show_first_load_help.toggle()
+                    } label: {
+                        Text("dont show this again")
+                    }
+                }.frame(width: 400, height: 300)
+            }
             .sheet(isPresented: $present_load_db_sheet,
                    onDismiss: {
                 if !chaindb.is_chain_loaded && 
@@ -1341,24 +1354,10 @@ struct RunningEVM<Driver: EVMDriver>: View {
                         Text("Break on OPCODE(s)").frame(width: 140)
                     }.frame(width: 160)
                     Button {
-                        ExecutedOperations.shared.execed_operations = []
-                        EVMRunStateControls.shared.contract_currently_running = false
+                        ExecutedOperations.shared.reset()
+                        EVMRunStateControls.shared.reset()
                         OpcodeCallbackModel.shared.reset()
-                        
-                        // if let t = EVMRunStateControls.shared.current_call_task {
-                        //     d.reset_evm(
-                        //       enableOpCodeCallback: EVMRunStateControls.shared.breakpoint_on_call,
-                        //       enableCallback: EVMRunStateControls.shared.record_executed_operations,
-                        //       useStateInMemory: load_chain_model.db_kind == DBKind.InMemory
-                        //     )
-                        //     t.cancel()
-                        //     EVMRunStateControls.shared.current_call_task = nil
-                        // }
-                        
-                        if let t = OpcodeCallbackModel.shared.current_opcode_continue_task {
-                            t.cancel()
-                            OpcodeCallbackModel.shared.current_opcode_continue_task = nil
-                        }
+                        RuntimeError.shared.reset()
                     } label : {
                         Text("Reset").frame(width: 140)
                     }.frame(width: 160)

@@ -9,7 +9,6 @@ import AsyncAlgorithms
 struct DevStation : App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var app_delegate
     @AppStorage("prefer_dark_mode") private var prefer_dark = true
-    @AppStorage("show_first_load_help") private var show_help_msg = true
     @AppStorage("enable_full_debug") private var enable_loud_debugging = false
 
     var body : some Scene {

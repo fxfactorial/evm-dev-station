@@ -146,7 +146,8 @@ public struct StateRecord: Codable, Identifiable, Hashable {
     public let id = UUID()
     public let Address: String
     public let Key     : String
-    public let Value   : String
+    public let BeforeValue   : String
+    public let AfterValue   : String
     public let Kind    : String
     public func hash(into hasher: inout Hasher) {
         hasher.combine(id)

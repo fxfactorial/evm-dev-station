@@ -1064,9 +1064,43 @@ struct BreakpointView: View {
                 VStack {
                     Text("\(execed.state_records.count) total state loads/stores")
                     Table(execed.state_records) {
-                        TableColumn("Kind", value: \.Kind).width(min: 60, ideal: 70, max: 90)
-                        TableColumn("Key", value: \.Key)
-                        TableColumn("Value", value:\.Value)
+                        TableColumn("Kind", value: \.Kind).width(min: 60, ideal: 60, max: 90)
+                        TableColumn("Storage") { st in
+                            VStack {
+                                HStack {
+                                    Text("Contract Address")
+                                    Button {
+                                        let s = "https://etherscan.com/address/\(st.Address)"
+                                        guard let link = URL(string: s) else {
+                                            return
+                                        }
+                                        openURL(link)
+                                    } label : { 
+                                        Text(st.Address)
+                                    }
+                                }
+                                if st.Kind == "SLOAD" {
+                                    HStack {
+                                        Text("Value")
+                                        Text(st.BeforeValue)
+                                    }
+                                    
+                                } else if st.Kind == "SSTORE" {
+                                    VStack {
+                                        HStack {
+                                            Text("Prior Value")
+                                            Text(st.BeforeValue)
+                                        }
+                                        HStack {
+                                            Text("After Update")
+                                            Text(st.AfterValue)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        // TableColumn("Key", value: \.Key)
+                        // TableColumn("Value", value:\.Value)
                     }
                 }.tabItem{ Text("Storage") }.tag(2)
             })

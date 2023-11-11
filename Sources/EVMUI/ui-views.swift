@@ -105,11 +105,8 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     
     @State private var bytecode_add = false
     @State private var current_code_running = ""
-    @State private var calldata = ""
     @State private var present_eips_sheet = false
     @State private var present_load_db_sheet = false
-    @State private var msg_sender = ""
-    @State private var msg_sender_eth_balance = ""
     @State private var current_contract_detail_tab = 0
 
     @AppStorage("show_first_load_help") private var show_first_load_help = true
@@ -366,8 +363,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                     Spacer().frame(width: 20)
                     BreakpointView(d: d).frame(maxWidth: .infinity)
                 }.padding(10).frame(maxHeight: .infinity)
-                
-                RunningEVM(target_addr: Binding<String>(
+                RunningEVM(d: d, target_addr: Binding<String>(
                     get: {
                         if let contract = contracts.current_selection {
                             return contract.address
@@ -378,13 +374,9 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                         if let contract = contracts.current_selection {
                             contract.address = $0
                             contracts.current_selection = contract
-                            
                         }
                     }
-                ),
-                           msg_sender: $msg_sender,
-                           msg_sender_eth_balance: $msg_sender_eth_balance,
-                           d: d)
+                ))
                 .environmentObject(evm_run_controls)
             }
             .frame(maxWidth: .infinity)
@@ -1064,11 +1056,6 @@ struct BreakpointView: View {
                             } label: {
                                 Text("Continue")
                             }.disabled(!callbackmodel.hit_breakpoint)
-                            Button {
-                                //
-                            } label: {
-                                Text("Step")
-                            }
                         }.padding([.bottom], 5)
                     }
                 }
@@ -1227,58 +1214,30 @@ struct InitialHelpView : View {
     }
 }
 
-struct CallParams {
-    var calldata : String
-    var caller_addr: String
-    var target_addr: String
-    var gas_price: String
-    var gas_limit : Int = 900_000
-}
-
 struct RunningEVM<Driver: EVMDriver>: View {
-    // TODO remove these and use single @State CallParams
-    @State private var calldata = ""
-    @State private var msg_value = "0"
-    @State private var error_msg_contract_eval = ""
-
-    // These can be updated from outside this view
-    // as the EVM runs
-    @Binding var target_addr: String
-    @Binding var msg_sender: String
-    @Binding var msg_sender_eth_balance: String
     let d : Driver
+    @Binding var target_addr : String
     @ObservedObject private var evm_run_controls = EVMRunStateControls.shared
+    @ObservedObject private var call_params = EVMRunStateControls.shared.current_call_params
     @ObservedObject private var load_chain_model = LoadChainModel.shared
-    // opcode things
     @State private var present_opcode_select_sheet = false
     @Environment(\.dismiss) var dismiss
     @State private var keccak_input = ""
     @State private var keccak_output = ""
     
-    func dev_mode() {
-        // entry_point(address,uint256)
-        calldata = "f4bd333800000000000000000000000001010101010101010101010101010101010101010000000000000000000000000000000000000000000000004563918244f40000"
-        msg_value = "6000000000000000000"
-    }
-    
     var body: some View {
         VStack {
-            Text("Live Contract Interaction")
-                .font(.title2)
-//            Button {
-//                dev_mode()
-//            }label: { Text("quick fill")}
             HStack {
                 VStack {
                     HStack {
                         Text("Input")
                             .frame(width: 120, alignment: .leading)
-                        TextField("calldata", text: $calldata)
+                        TextField("calldata", text: $call_params.calldata)
                     }
                     HStack {
                         Text("Value")
                             .frame(width: 120, alignment: .leading)
-                        TextField("0", text: $msg_value)
+                        TextField("0", text: $call_params.msg_value)
                     }
                     HStack {
                         Text("Target Addr")
@@ -1286,15 +1245,15 @@ struct RunningEVM<Driver: EVMDriver>: View {
                         TextField("target addr", text: $target_addr)
                     }
                     HStack {
-                        Text("Return value")
-                            .frame(width: 120, alignment: .leading)
-                        TextField(evm_run_controls.call_return_value,
-                                  text: $evm_run_controls.call_return_value)
-                        .disabled(false)
-                        .textSelection(.enabled)
+                        Text("Gas Price").frame(width: 120, alignment: .leading)
+                        TextField("gas price", text: $call_params.gas_price)
+                    }
+                    HStack {
+                        Text("Gas limit").frame(width: 120, alignment: .leading)
+                        TextField("900000", text: $call_params.gas_limit)
                     }
                 }
-                VStack{
+                VStack {
                     HStack {
                         Button {
                             keccak_output = d.keccak256(input: $keccak_input.wrappedValue)
@@ -1305,49 +1264,65 @@ struct RunningEVM<Driver: EVMDriver>: View {
                     HStack {
                         Text("Sender Addr")
                             .frame(width: 120, alignment: .leading)
-                        TextField("msg.sender", text: $msg_sender)
+                        TextField("msg.sender", text: $call_params.caller_addr)
                     }
                     HStack {
                         Text("Sender eth balance")
                             .frame(width: 120, alignment: .leading)
-                        TextField("eth balance", text: $msg_sender_eth_balance)
+                        TextField("eth balance", text: $call_params.caller_eth_bal)
+                    }
+                    HStack {
+                        Text("Return value")
+                            .frame(width: 120, alignment: .leading)
+                        TextField(evm_run_controls.call_return_value,
+                                  text: $evm_run_controls.call_return_value)
+                        .disabled(false)
+                        .textSelection(.enabled)
                     }
                     HStack {
                         Text("EVM Error")
                             .frame(width: 120, alignment: .leading)
                         TextField("last failure message", text: $evm_run_controls.evm_error)
                     }
-                }.padding()
+                }
                 VStack {
                     HStack {
                         Button {
-                            print("calling run evm handler \(calldata)-\(msg_value)")
                             withAnimation {
                                 evm_run_controls.contract_currently_running = true
                             }
+                            // TODO come back validations
+                            call_params.target_addr = target_addr
+                            if call_params.caller_addr.isEmpty {
+                                call_params.caller_addr = EMPTY_ADDR
+                            }
                             d.call(
-                              calldata: calldata,
-                              caller_addr: target_addr,
-                              target_addr: target_addr,
-                              msg_value: msg_value,
-                              gas_price: "1",
-                              gas_limit: 900_000
+                                calldata: call_params.calldata,
+                                caller_addr: call_params.caller_addr,
+                                target_addr: call_params.target_addr,
+                                msg_value: call_params.msg_value,
+                                gas_price: call_params.gas_price,
+                                gas_limit: Int(call_params.gas_limit) ?? 900_000
                             )
-                            
                         } label: {
-                            Text("Run contract").frame(width: 140)
+                            HStack {
+                                Text("Run contract").frame(width: evm_run_controls.contract_currently_running ? 110 : 140, height: 25)
+                                if evm_run_controls.contract_currently_running {
+                                    RotatingDotAnimation(param: .init(
+                                        inner_circle_width: 5,
+                                        inner_circle_height: 5,
+                                        inner_circle_offset: -5,
+                                        outer_circle_width: 20,
+                                        outer_circle_height: 20
+                                    ))
+                                }
+                            }
                         }.disabled(evm_run_controls.contract_currently_running)
-                            .frame(width: 160)
-                        if evm_run_controls.contract_currently_running {
-                            RotatingDotAnimation(param: .init(
-                                inner_circle_width: 6,
-                                inner_circle_height: 6,
-                                inner_circle_offset: -12,
-                                outer_circle_width: 20,
-                                outer_circle_height: 20
-                            ))
-                        }
+                            .frame(width: evm_run_controls.contract_currently_running ? 110 : 160)
                     }
+                    Button { d.step_forward_one() } label: { Text("Step").frame(width: 140) }
+                        .disabled(!evm_run_controls.step_each_op)
+                        .frame(width: 160)
                     Button {
                         present_opcode_select_sheet.toggle()
                     } label: {
@@ -1362,15 +1337,22 @@ struct RunningEVM<Driver: EVMDriver>: View {
                         Text("Reset").frame(width: 140)
                     }.frame(width: 160)
                     Toggle(isOn: Binding<Bool>(
-                        get: {
-                            evm_run_controls.breakpoint_on_call
-                        },
+                        get: { evm_run_controls.breakpoint_on_call },
                         set: {
                             d.enable_opcode_call_callback(yes_no: $0)
                             evm_run_controls.breakpoint_on_call = $0
                         }
                     ), label: {
                         Text("Break on CALL")
+                    })
+                    Toggle(isOn: Binding<Bool>(
+                        get: { evm_run_controls.step_each_op },
+                        set: {
+                            d.enable_step_each_op(yes_no: $0)
+                            evm_run_controls.step_each_op = $0
+                        }
+                    ), label: {
+                        Text("Step OPCODE one by one")
                     })
                 }
             }
@@ -1423,11 +1405,9 @@ struct RunningEVM<Driver: EVMDriver>: View {
 
 #Preview("running EVM") {
     RunningEVM(
-        target_addr: .constant(""),
-        msg_sender: .constant(""),
-        msg_sender_eth_balance: .constant(""),
-        d: StubEVMDriver()
-    )
+        d: StubEVMDriver(),
+        target_addr: .constant("")
+    ).frame(width: 768)
 }
 
 //#Preview("enabled EIPs") {

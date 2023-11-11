@@ -106,10 +106,21 @@ public struct EIP : Identifiable {
     }
 }
 
+public class CallParams : ObservableObject {
+    public var calldata : String = ""
+    public var caller_addr: String = ""
+    public var caller_eth_bal = ""
+    public var target_addr: String = ""
+    public var gas_price: String = ""
+    public var gas_limit : String = ""
+    public var msg_value : String = "0"
+}
+
 public class EVMRunStateControls: ObservableObject {
     public static let shared = EVMRunStateControls()
 
     @Published public var breakpoint_on_call = false
+    @Published public var step_each_op = false
     @Published public var opcode_breakpoints_enabled = false
     @Published public var contract_currently_running = false
     @Published public var record_storage_keys = false
@@ -117,6 +128,8 @@ public class EVMRunStateControls: ObservableObject {
     @Published public var evm_error = ""
     @Published public var opcodes_used :[OPCodeEnable] = []
     @Published public var eips_used :[EIP] = []
+    @Published public var current_call_params = CallParams()
+
     public func reset() {
         evm_error = ""
         call_return_value = ""

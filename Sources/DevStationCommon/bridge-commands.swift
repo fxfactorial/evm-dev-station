@@ -180,6 +180,13 @@ public struct BridgeCmdDoPauseOnCall : Codable {
     }
 }
 
+public struct BridgeCmdDoPauseEachTime : Codable {
+    public let Enable: Bool
+    public init(b : Bool) {
+        self.Enable = b
+    }
+}
+
 public struct BridgeCmdContinuePausedEVMInCall : Codable {
     public let UseOverrides: Bool
     public let Caller:       String
@@ -208,6 +215,7 @@ public enum EVMCommand : String, Codable {
     case CMD_OVERWRITE_STACK_MEM_IN_PAUSED_EVM = "overwrite_stack_mem_paused"
     case CMD_DO_PAUSE_ON_CALL = "do_hook_on_call"
     case CMD_CONTINUE_PAUSED_EVM_IN_CALL = "cont_evm_break_on_call"
+    case CMD_STEP_ONE_BY_ONE = "enable_step_by_step"
     // keep a space
     case RUN_EVM_OP_EXECED = "ran_one_opcode"
     case RUN_EVM_OPCODE_HIT = "hit_break_on_opcode"

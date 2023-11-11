@@ -130,6 +130,15 @@ final class EVM: EVMDriver {
         }
     }
 
+    func enable_step_each_op(yes_no: Bool) {
+        Task {
+            let msg = try! JSONEncoder().encode(EVMBridgeMessage(
+                c: .CMD_STEP_ONE_BY_ONE, p: BridgeCmdDoPauseEachTime(b: yes_no)
+            ))
+            await comm_channel.send(msg)
+        }
+    }
+
     func load_chaindata(chaindb_pathdir: String, db_kind: String, ancientdb_pathdir: String?, at_block: Int?) {
         Task {
             let msg = try! JSONEncoder().encode(
@@ -232,6 +241,8 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
     free(reply)
     let decoded = try! JSONDecoder().decode(EVMBridgeMessage<AnyDecodable>.self, from: rpy.data(using: .utf8)!)
 
+    print("SWIFT RECEIVED", decoded)
+
     switch decoded.Cmd  {
     case .RUN_EVM_OP_EXECED:
         let execed_op = decoded.Payload!.value as! Dictionary<String, AnyDecodable>
@@ -329,12 +340,13 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
                     c.address  = new_addr
                     c.deployed_bytecode = deployed_code
                     c.deployment_gas_cost = gas_used
+                    EVMRunStateControls.shared.contract_currently_running = false
                     // Hack awesome way to force state to update
                     LoadedContracts.shared.objectWillChange.send()
                 }
             }
         }
-        // TODO need to update the current contract selection, its gas cost used to deploy, etc
+
 
     case .CMD_REPORT_CHAIN_HEAD:
         let blk_header = decoded.Payload!.value as! Dictionary<String, String?>

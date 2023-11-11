@@ -124,7 +124,7 @@ public struct BridgeCmdDeployNewContract: Codable {
 }
 
 public struct CallEvaled: Codable, Identifiable {
-    public var id = UUID()
+    public let id = UUID()
     public let Caller: String
     public let Target: String
     public let CallData: String
@@ -143,7 +143,7 @@ public struct CallEvaled: Codable, Identifiable {
 }
 
 public struct StateRecord: Codable, Identifiable, Hashable {
-    public var id = UUID()
+    public let id = UUID()
     public let Address: String
     public let Key     : String
     public let Value   : String

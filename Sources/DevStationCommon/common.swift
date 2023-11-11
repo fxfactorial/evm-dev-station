@@ -72,6 +72,8 @@ public class ExecutedOperations : ObservableObject {
     public static let shared = ExecutedOperations()
     
     @Published public var execed_operations: [ExecutedEVMCode] = []
+    @Published public var total_static_gas_cost_so_far = 0
+    @Published public var total_dynamic_gas_cost_so_far = 0
     @Published public var total_gas_cost_so_far = 0
     @Published public var call_tree : [CallEvaled] = []
     @Published public var state_records : [StateRecord] = []

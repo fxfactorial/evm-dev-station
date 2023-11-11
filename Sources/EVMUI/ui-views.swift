@@ -136,165 +136,168 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                 DisclosureGroup(
                     isExpanded: $top_row_open,
                     content: {
-                        HStack {
-                            NavigationStack {
-                                VStack {
-                                    Text("Contracts")
-                                        .font(.title2)
-                                        .help("interact with contracts loaded")
-                                    List(contracts.contracts, id:\.self,
-                                         selection: $contracts.current_selection) { item in
-                                        Text(item.name)
-                                    }
-                                         .frame(maxWidth: 150)
-                                         .padding([.trailing, .leading])
-                                    Button {
-                                        bytecode_add.toggle()
-                                    } label: {
-                                        Text("Add New Contract").frame(maxWidth: 150)
-                                    }
-                                    Button {
-                                        present_load_contract_sheet.toggle()
-                                    } label: {
-                                        Text("Load from chain").frame(maxWidth: 150)
-                                    }
-                                    .disabled(!chaindb.is_chain_loaded)
-                                    .help("must first load an existing blockchain database")
-                                }
-                            }
-                            TabView(selection: $current_contract_detail_tab) {
-                                VStack {
-                                    if let c = contracts.current_selection {
-                                        VStack {
-                                            HStack {
-                                                Text("Creator Address").frame(width: 100, alignment: .leading)
-                                                TextField(c.deployer_address, text: Binding<String>(
-                                                    get: { c.deployer_address },
-                                                    set: { c.deployer_address = $0 }
-                                                ))
-                                            }
-                                            HStack {
-                                                Text("Gas limit").frame(width: 100, alignment: .leading)
-                                                TextField(c.gas_limit_deployment, text: Binding<String>(
-                                                    get: { c.gas_limit_deployment },
-                                                    set: { c.gas_limit_deployment = $0 }
-                                                ))
-                                            }
-                                            HStack {
-                                                Text("Eth Balance").frame(width: 100, alignment: .leading)
-                                                TextField(c.eth_balance, text: Binding<String>(
-                                                    get: { c.eth_balance },
-                                                    set: { c.eth_balance = $0 }
-                                                ))
-                                            }
-                                            HStack {
-                                                Text("Deployed Address").frame(width: 100, alignment: .leading)
-                                                TextField(c.address, text: Binding<String>(
-                                                    get: { c.address },
-                                                    set: { _ = $0 }
-                                                )).disabled(true)
-                                            }
-                                            HStack {
-                                                Text("Deployed Gas Cost").frame(width: 100, alignment: .leading)
-                                                TextField("\(Int(c.gas_limit_deployment)! - c.deployment_gas_cost)", text: Binding<String>(
-                                                    get: { "\(Int(c.gas_limit_deployment)! - c.deployment_gas_cost)" },
-                                                    set: { _ = $0 }
-                                                )).disabled(true)
-                                            }
-                                            Button {
-                                                d.create_new_contract(
-                                                    code: c.bytecode,
-                                                    creator_addr: c.deployer_address,
-                                                    contract_nickname: c.name,
-                                                    gas_amount: c.gas_limit_deployment,
-                                                    initial_gas: c.eth_balance
-                                                )
-                                            } label: {
-                                                Text("Deploy contract to state")
-                                            }
+                        VStack {
+                            HStack {
+                                NavigationStack {
+                                    VStack {
+                                        Text("Contracts")
+                                            .font(.title2)
+                                            .help("interact with contracts loaded")
+                                        List(contracts.contracts, id:\.self,
+                                             selection: $contracts.current_selection) { item in
+                                            Text(item.name)
                                         }
-                                    } else {
-                                        Text("select a contract from sidebar ")
-                                    }
-                                    
-                                }
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                .padding()
-                                .background()
-                                .tabItem{ Text("Deployment") }.tag(0)
-                                VStack {
-                                    Text("TODO Show state of contract (eth balance, nonce, blah) ")
-                                }
-                                .padding()
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                .background()
-                                .tabItem{ Text("Contract State") }.tag(1)
-                                VStack {
-                                    if let contract = contracts.current_selection {
-                                        VStack {
-                                            ScrollView {
-                                                Text(contract.bytecode)
-                                                    .lineLimit(nil)
-                                                    .frame(maxWidth:.infinity, maxHeight:.infinity)
-                                                    .background()
-                                            }
+                                             .frame(maxWidth: 150)
+                                             .padding([.trailing, .leading])
+                                        Button {
+                                            bytecode_add.toggle()
+                                        } label: {
+                                            Text("Add New Contract").frame(maxWidth: 150)
                                         }
-                                    } else {
-                                        Text("select a contract from sidebar")
-                                    }
-                                }.tabItem { Text("Raw Bytecode") }.tag(2)
-                                VStack {
-                                    if let c = contracts.current_selection {
-                                        Text("Edit state")
-                                    } else {
-                                        Text("select a contract from sidebar")
+                                        Button {
+                                            present_load_contract_sheet.toggle()
+                                        } label: {
+                                            Text("Load from chain").frame(maxWidth: 150)
+                                        }
+                                        .disabled(!chaindb.is_chain_loaded)
+                                        .help("must first load an existing blockchain database")
                                     }
                                 }
-                                .padding()
-                                .tabItem{ Text("Edit State") }.tag(3)
-                            }
-                            TabView {
-                                VStack {
-                                    BlockContext()
-                                        .frame(maxWidth: .infinity)
-                                    Button {
-                                        present_load_db_sheet.toggle()
-                                    } label: {
-                                        Text("Load Chaindata")
-                                    }.disabled(chaindb.is_chain_loaded)
-                                    if chaindb.show_loading_db {
-                                        RotatingDotAnimation(param: .init(
-                                            inner_circle_width: 12,
-                                            inner_circle_height: 12,
-                                            inner_circle_offset: -9,
-                                            outer_circle_width: 35,
-                                            outer_circle_height: 35)
-                                        )
+                                TabView(selection: $current_contract_detail_tab) {
+                                    VStack {
+                                        if let c = contracts.current_selection {
+                                            VStack {
+                                                HStack {
+                                                    Text("Creator Address").frame(width: 100, alignment: .leading)
+                                                    TextField(c.deployer_address, text: Binding<String>(
+                                                        get: { c.deployer_address },
+                                                        set: { c.deployer_address = $0 }
+                                                    ))
+                                                }
+                                                HStack {
+                                                    Text("Gas limit").frame(width: 100, alignment: .leading)
+                                                    TextField(c.gas_limit_deployment, text: Binding<String>(
+                                                        get: { c.gas_limit_deployment },
+                                                        set: { c.gas_limit_deployment = $0 }
+                                                    ))
+                                                }
+                                                HStack {
+                                                    Text("Eth Balance").frame(width: 100, alignment: .leading)
+                                                    TextField(c.eth_balance, text: Binding<String>(
+                                                        get: { c.eth_balance },
+                                                        set: { c.eth_balance = $0 }
+                                                    ))
+                                                }
+                                                HStack {
+                                                    Text("Deployed Address").frame(width: 100, alignment: .leading)
+                                                    TextField(c.address, text: Binding<String>(
+                                                        get: { c.address },
+                                                        set: { _ = $0 }
+                                                    )).disabled(true)
+                                                }
+                                                HStack {
+                                                    Text("Deployed Gas Cost").frame(width: 100, alignment: .leading)
+                                                    TextField("\(Int(c.gas_limit_deployment)! - c.deployment_gas_cost)", text: Binding<String>(
+                                                        get: { "\(Int(c.gas_limit_deployment)! - c.deployment_gas_cost)" },
+                                                        set: { _ = $0 }
+                                                    )).disabled(true)
+                                                }
+                                                Button {
+                                                    d.create_new_contract(
+                                                        code: c.bytecode,
+                                                        creator_addr: c.deployer_address,
+                                                        contract_nickname: c.name,
+                                                        gas_amount: c.gas_limit_deployment,
+                                                        initial_gas: c.eth_balance
+                                                    )
+                                                } label: {
+                                                    Text("Deploy contract to state")
+                                                }
+                                            }
+                                        } else {
+                                            Text("select a contract from sidebar ")
+                                        }
+                                        
                                     }
-                                }
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                .background()
-                                .tabItem {
-                                    Text("Load Blockchain")
-                                }.tag(0)
-                                StateDBDetails()
-                                    .environmentObject(current_block_header)
-                                    .environmentObject(chaindb)
                                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                                     .padding()
                                     .background()
-                                    .tabItem { Text("StateDB Details") }.tag(1)
-                                VStack {
-                                    Button {
-                                        present_eips_sheet.toggle()
-                                    } label: {
-                                        Text("EIPS enabled")
+                                    .tabItem{ Text("Deployment") }.tag(0)
+                                    VStack {
+                                        Text("TODO Show state of contract (eth balance, nonce, blah) ")
                                     }
+                                    .padding()
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .background()
+                                    .tabItem{ Text("Contract State") }.tag(1)
+                                    VStack {
+                                        if let contract = contracts.current_selection {
+                                            VStack {
+                                                ScrollView {
+                                                    Text(contract.bytecode)
+                                                        .lineLimit(nil)
+                                                        .frame(maxWidth:.infinity, maxHeight:.infinity)
+                                                        .background()
+                                                }
+                                            }
+                                        } else {
+                                            Text("select a contract from sidebar")
+                                        }
+                                    }.tabItem { Text("Raw Bytecode") }.tag(2)
+                                    VStack {
+                                        if let c = contracts.current_selection {
+                                            Text("Edit state")
+                                        } else {
+                                            Text("select a contract from sidebar")
+                                        }
+                                    }
+                                    .padding()
+                                    .tabItem{ Text("Edit State") }.tag(3)
                                 }
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                .background()
-                                .tabItem { Text("EVM Config")}.tag(2)
-                            }.frame(minHeight: 200)
+                                TabView {
+                                    VStack {
+                                        BlockContext()
+                                            .frame(maxWidth: .infinity)
+                                        Button {
+                                            present_load_db_sheet.toggle()
+                                        } label: {
+                                            Text("Load Chaindata")
+                                        }.disabled(chaindb.is_chain_loaded)
+                                        if chaindb.show_loading_db {
+                                            RotatingDotAnimation(param: .init(
+                                                inner_circle_width: 12,
+                                                inner_circle_height: 12,
+                                                inner_circle_offset: -9,
+                                                outer_circle_width: 35,
+                                                outer_circle_height: 35)
+                                            )
+                                        }
+                                    }
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .background()
+                                    .tabItem {
+                                        Text("Load Blockchain")
+                                    }.tag(0)
+                                    StateDBDetails()
+                                        .environmentObject(current_block_header)
+                                        .environmentObject(chaindb)
+                                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                        .padding()
+                                        .background()
+                                        .tabItem { Text("StateDB Details") }.tag(1)
+                                    VStack {
+                                        Button {
+                                            present_eips_sheet.toggle()
+                                        } label: {
+                                            Text("EIPS enabled")
+                                        }
+                                    }
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .background()
+                                    .tabItem { Text("EVM Config")}.tag(2)
+                                }
+                            }
+                            Spacer()
                         }.frame(idealHeight: 300)
                     },
                     label: {
@@ -314,9 +317,6 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                 HStack {
                                     Text("\(execed_ops.execed_operations.count) Executed Operations")
                                       .font(.title2)
-                                    Spacer()
-                                    Text("\(execed_ops.total_gas_cost_so_far) total gas cost so far")
-                                      .font(.title2)
                                 }.padding([.leading, .trailing], 10)
                                 Table(execed_ops.execed_operations) {
                                     TableColumn("PC", value: \.pc)
@@ -329,7 +329,19 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                            perform: { item in
                                     let id = item.last
                                     proxy.scrollTo(id)
-                                })
+                                           })
+                                HStack {
+                                    Text("\(execed_ops.total_gas_cost_so_far) total gas cost")
+                                      .font(.title2)
+                                    Spacer()
+                                    Text("\(execed_ops.total_static_gas_cost_so_far) static gas")
+                                      .font(.title2)
+                                    Spacer()
+                                    Text("\(execed_ops.total_dynamic_gas_cost_so_far) dynamic gas")
+                                      .font(.title2)
+                                }
+                                  .padding([.leading, .trailing], 10)
+                                  .frame(maxWidth: .infinity)
                             }
                             
                         }.tabItem { Text("Execution Table") }.tag(0)

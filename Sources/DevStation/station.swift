@@ -237,19 +237,24 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
     case .RUN_EVM_OP_EXECED:
         let execed_op = decoded.Payload!.value as! Dictionary<String, AnyDecodable>
         let num = execed_op["program_counter"]?.value as! Int
-        let gas_cost = execed_op["gas_cost"]?.value as! Int
+        let gas_cost_static = execed_op["gas_cost_static"]?.value as! Int
+        let gas_cost_dynamic = execed_op["gas_cost_dynamic"]?.value as! Int
+        let gas_cost_total = execed_op["gas_cost_total"]?.value as! Int
+
         let opcode_name = execed_op["opcode_name"]?.value as! String
         let opcode_num = execed_op["opcode_hex"]?.value as! String
         
-
         DispatchQueue.main.async {
-            ExecutedOperations.shared.total_gas_cost_so_far += gas_cost
+            ExecutedOperations.shared.total_static_gas_cost_so_far += gas_cost_static
+            ExecutedOperations.shared.total_dynamic_gas_cost_so_far += gas_cost_dynamic
+            ExecutedOperations.shared.total_gas_cost_so_far += gas_cost_total
+
             ExecutedOperations.shared.execed_operations.append(
               ExecutedEVMCode(pc: "\(num)",
                               op_name: opcode_name,
                               opcode: opcode_num,
-                              gas: gas_cost,
-                              gas_cost: gas_cost,
+                              gas: gas_cost_static,
+                              gas_cost: gas_cost_static,
                               depth: 3,
                               refund: 0
               )

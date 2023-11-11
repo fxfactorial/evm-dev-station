@@ -1064,7 +1064,7 @@ struct BreakpointView: View {
                 VStack {
                     Text("\(execed.state_records.count) total state loads/stores")
                     Table(execed.state_records) {
-                        TableColumn("Kind", value: \.Kind).width(min: 60, ideal: 60, max: 90)
+                        TableColumn("Kind", value: \.Kind).width(min: 55, ideal: 55, max: 90)
                         TableColumn("Storage") { st in
                             VStack {
                                 HStack {
@@ -1078,21 +1078,36 @@ struct BreakpointView: View {
                                     } label : { 
                                         Text(st.Address)
                                     }
-                                }
+                                }.frame(alignment: .leading)
                                 if st.Kind == "SLOAD" {
-                                    HStack {
-                                        Text("Value")
-                                        Text(st.BeforeValue)
+                                    VStack {
+                                        HStack {
+                                            Text("Key")
+                                            Spacer()
+                                            Text(st.Key)
+                                        }
+                                        HStack {
+                                            Text("Value")
+                                            Spacer()
+                                            Text(st.BeforeValue)
+                                        }
                                     }
                                     
                                 } else if st.Kind == "SSTORE" {
                                     VStack {
                                         HStack {
+                                            Text("Key")
+                                            Spacer()
+                                            Text(st.Key)
+                                        }
+                                        HStack {
                                             Text("Prior Value")
+                                            Spacer()
                                             Text(st.BeforeValue)
                                         }
                                         HStack {
                                             Text("After Update")
+                                            Spacer()
                                             Text(st.AfterValue)
                                         }
                                     }

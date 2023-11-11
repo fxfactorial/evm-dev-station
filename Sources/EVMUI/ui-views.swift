@@ -677,7 +677,7 @@ struct StackListRowView: View {
         HStack {
             Text("\(item.index)")
             Spacer()
-            Text(item.name).help(item.pretty)
+            Text(item.name).help("formatted decimal: \(item.pretty)")
         }
     }
 }

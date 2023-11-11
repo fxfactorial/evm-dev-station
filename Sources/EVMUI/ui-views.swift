@@ -1077,7 +1077,7 @@ struct BreakpointView: View {
                 VStack {
                     Text("\(execed.state_records.count) total state loads/stores")
                     Table(execed.state_records) {
-                        TableColumn("Kind", value: \.Kind)
+                        TableColumn("Kind", value: \.Kind).width(min: 60, ideal: 70, max: 90)
                         TableColumn("Key", value: \.Key)
                         TableColumn("Value", value:\.Value)
                     }

@@ -38,7 +38,7 @@ public struct AnyDecodable : Codable {
             self.init(ints)
         } else if let int = try? container.decode(Int.self) {
             self.init(int)
-        } else if let state = try? container.decode([StateRecord].self) {
+        } else if let state = try? container.decode(StateRecord.self) {
             self.init(state)
         } else if let call_evaled = try? container.decode(CallEvaled.self) {
             self.init(call_evaled)
@@ -212,4 +212,6 @@ public enum EVMCommand : String, Codable {
     case RUN_EVM_OP_EXECED = "ran_one_opcode"
     case RUN_EVM_OPCODE_HIT = "hit_break_on_opcode"
     case RUN_EVM_CALL_HIT = "hit_call"
+    case RUN_EVM_STATE_TOUCHED = "running_evm_state_touched"
+
 }

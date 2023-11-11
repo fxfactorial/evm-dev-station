@@ -105,7 +105,6 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     
     @State private var bytecode_add = false
     @State private var current_code_running = ""
-    @State private var current_tab = 0
     @State private var calldata = ""
     @State private var present_eips_sheet = false
     @State private var present_load_db_sheet = false
@@ -132,9 +131,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     @State private var current_tab_runtime_eval = 0
     
     public var body: some View {
-        
-        TabView(selection: $current_tab,
-                content:  {
+        VStack {
             VSplitView {
                 DisclosureGroup(
                     isExpanded: $top_row_open,
@@ -275,7 +272,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                         )
                                     }
                                 }
-                                .frame(maxWidth: .infinity)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
                                 .background()
                                 .tabItem {
                                     Text("Load Blockchain")
@@ -283,7 +280,8 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                 StateDBDetails()
                                     .environmentObject(current_block_header)
                                     .environmentObject(chaindb)
-                                    .frame(maxWidth: .infinity)
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .padding()
                                     .background()
                                     .tabItem { Text("StateDB Details") }.tag(1)
                                 VStack {
@@ -293,7 +291,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                         Text("EIPS enabled")
                                     }
                                 }
-                                .frame(maxWidth: .infinity)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
                                 .background()
                                 .tabItem { Text("EVM Config")}.tag(2)
                             }.frame(minHeight: 200)
@@ -318,6 +316,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                       .font(.title2)
                                     Spacer()
                                     Text("\(execed_ops.total_gas_cost_so_far) total gas cost so far")
+                                      .font(.title2)
                                 }
                                 Table(execed_ops.execed_operations) {
                                     TableColumn("PC", value: \.pc)
@@ -427,10 +426,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
             } content: {
                 NewContractFromInput()
             }
-            .tabItem { Text("Live Dev") }.tag(0)
-            StateInspector(d: d)
-                .tabItem { Text("Account/State Modification") }.tag(1)
-        })
+        }
         .padding(10)
     }
 }

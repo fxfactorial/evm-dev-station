@@ -1170,6 +1170,7 @@ struct CommonABIs : View {
     @State private var present_add_abi_sheet = false
     @State private var fields : [String: [String]] = [:]
     @State private var encoded = ""
+    @State private var decode_input = ""
     @State private var decoded_output : [String: Any]? = [:]
     
     var body: some View {
@@ -1177,44 +1178,79 @@ struct CommonABIs : View {
             List(Array(abis.abis.keys).sorted(), id: \.self, selection: $selected) {item in
                 Text(item.description)
             }.frame(maxWidth: 325)
-            Spacer()
-            VStack {
-                // TODO This doesn't work right yet
-                if let s = selected,
-                   let element = abis.all_methods.first(where: {$0.signature == s}) {
-                    VStack {
-                        if element.inputs.count == 0 {
-                            Spacer()
-                                .frame(height: 1)
-                        } else {
-                            ForEach(Array(zip(element.inputs.indices, element.inputs)), id: \.1.name) { index, input in
-                                HStack {
-                                    Text(input.name)
-                                    TextField(input.name, text: Binding<String>(
-                                        get: {
-                                            return fields[element.signature]![index]
-                                        },
-                                        set: {
-                                            fields[element.signature]![index] = $0
-                                        }
-                                    ))
+            TabView {
+                VStack {
+                    // TODO This doesn't work right yet
+                    if let s = selected,
+                       let element = abis.all_methods.first(where: {$0.signature == s}) {
+                        VStack {
+                            if element.inputs.count == 0 {
+                                Spacer()
+                                    .frame(height: 1)
+                            } else {
+                                ForEach(Array(zip(element.inputs.indices, element.inputs)), id: \.1.name) { index, input in
+                                    HStack {
+                                        Text(input.name)
+                                        TextField(input.name, text: Binding<String>(
+                                            get: {
+                                                return fields[element.signature]![index]
+                                            },
+                                            set: {
+                                                fields[element.signature]![index] = $0
+                                            }
+                                        ))
+                                    }
+                                }
+                            }
+                            HStack {
+                                Button {
+                                    if let result = element.encodeParameters(fields[s]!) {
+                                        encoded = result.toHexString()
+                                    }
+                                } label: { Text("Encode") }
+                                TextField("...", text:$encoded)
+                            }
+                        }
+                    } else {
+                        Button {
+                            present_add_abi_sheet.toggle()
+                        } label: { Text("Add ABI") }
+                    }
+                }
+                .tabItem { Text("Encode") }.tag(0)
+                VStack {
+                    // TODO This doesn't work right yet
+                    if let s = selected,
+                       let element = abis.all_methods.first(where: {$0.signature == s}) {
+                        HStack {
+                            Button {
+                                decoded_output = element.decodeReturnData(Data(hex: decode_input))
+                            } label: {
+                                Text("decode")
+                            }.disabled(decode_input.isEmpty)
+                            TextField("return...", text: $decode_input)
+                        }
+                        HStack {
+                            Text("results(s)")
+                            if var have = decoded_output {
+                                let _ = have.removeValue(forKey: "_success")
+                                let zipped = Array(zip(have.keys, have.values))
+                                List(zipped, id:\.0.self) { item in
+                                    HStack {
+                                        Text(item.0)
+                                        Spacer()
+                                        Text("\((item.1 as AnyObject).description)")
+                                    }
                                 }
                             }
                         }
-                        HStack {
-                            Button {
-                                if let result = element.encodeParameters(fields[s]!) {
-                                    encoded = result.toHexString()
-                                }
-                            } label: { Text("Encode") }
-                            TextField("...", text:$encoded)
-                        }
+                    } else {
+                        Button {
+                            present_add_abi_sheet.toggle()
+                        } label: { Text("Add ABI") }
                     }
-                } else {
-                    Button {
-                        present_add_abi_sheet.toggle()
-                    } label: { Text("Add ABI") }
                 }
+                .tabItem{ Text("Decode") }.tag(1)
             }
         }.sheet(isPresented: $present_add_abi_sheet, content: {
             VStack {

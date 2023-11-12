@@ -295,7 +295,7 @@ public class StateChanges: ObservableObject {
 
 public class SideEVMResult: ObservableObject {
     static public let shared = SideEVMResult()
-    @Published public var call_input = "06fdde03"
+    @Published public var call_input = ""
     @Published public var call_result = ""
 }
 

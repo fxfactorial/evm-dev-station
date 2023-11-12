@@ -10,21 +10,31 @@ import DevStationCommon
 
 struct BlockContext : View {
     @ObservedObject private var model = BlockContextModel.shared
-    
+    @EnvironmentObject var current_head : CurrentBlockHeader
+
     var body : some View {
         VStack {
             VStack {
                 HStack {
-                    Text("Coinbase")
+                    Text("Coinbase").frame(width: 80, alignment: .leading)
                     TextField("0x..", text: $model.coinbase)
                 }
                 HStack {
-                    Text("Base Gas Price")
+                    Text("Base Gas Price").frame(width: 80, alignment: .leading)
                     TextField("base gas", text: $model.base_gas)
                 }
                 HStack {
-                    Text("Time")
+                    Text("Time").frame(width: 80, alignment: .leading)
                     TextField("time", text: $model.time)
+                }
+                HStack {
+                    let num = "\(current_head.block_number)"
+                    Text("Number").frame(width: 80, alignment: .leading)
+                    TextField("block number", 
+                              text: Binding<String>(
+                                get: {current_head.block_number == 0 ? "" : num},
+                                set: {_ = $0})
+                    )
                 }
             }
             .padding()
@@ -255,12 +265,20 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                         TabView {
                             VStack {
                                 BlockContext()
+                                    .environmentObject(current_block_header)
                                     .frame(maxWidth: .infinity)
-                                Button {
-                                    present_load_db_sheet.toggle()
-                                } label: {
-                                    Text("Load Chaindata")
-                                }.disabled(chaindb.is_chain_loaded)
+                                HStack {
+                                    Button {
+                                        present_load_db_sheet.toggle()
+                                    } label: {
+                                        Text("Load Database")
+                                    }.disabled(chaindb.is_chain_loaded)
+                                    Button {
+                                        // close db
+                                    } label: {
+                                        Text("Close Database")
+                                    }.disabled(!chaindb.is_chain_loaded)
+                                }
                                 if chaindb.show_loading_db {
                                     RotatingDotAnimation(param: .init(
                                         inner_circle_width: 12,

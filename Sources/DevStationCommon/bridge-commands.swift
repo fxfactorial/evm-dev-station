@@ -62,7 +62,10 @@ public struct BridgeCmdLoadChain : Codable {
     public let Directory:  String
     public let AncientDBDirectory : String
     public let AtSpecificNumber : Int?
-    public init(kind: String, directory: String, ancientdb_directory: String = "", at_block_num: Int? = nil) {
+    public init(kind: String,
+                directory: String,
+                ancientdb_directory: String = "",
+                at_block_num: Int? = nil) {
         self.DBKind = kind
         self.Directory = directory
         self.AncientDBDirectory = ancientdb_directory

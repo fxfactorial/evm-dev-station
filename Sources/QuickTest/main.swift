@@ -164,12 +164,13 @@ await comm_channel.send(msg1)
 let db_kind_pebble = "pebble"
 let db_kind_leveldb = "leveldb"
 
-let pathdir_pebble = "/Users/edgararoutiounian/repos/mainnet-chaindata/"
+var pathdir_pebble = "/Users/edgararoutiounian/repos/mainnet-chaindata/"
+pathdir_pebble = "/Users/edgararoutiounian/repos/mainnet-chaindata-11-11-23/geth/chaindata"
 let pathdir_leveldb = "/Volumes/photos-media-backup/eth-mainnet-backup-11-07-23/chaindata"
 
 let db_kind = db_kind_pebble
 let pathdir = pathdir_pebble
-let at_block = 18_523_344
+let at_block = 18_523_343
 
 let msg2 = try! JSONEncoder().encode(
   EVMBridgeMessage(c: .CMD_LOAD_CHAIN,

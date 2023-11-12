@@ -1490,6 +1490,7 @@ struct EditState<Driver: EVMDriver> : View {
                                               text: .constant(st.original_value),
                                               axis: .vertical)
                                       .disabled(true)
+                                      .textSelection(.enabled)
                                       .lineLimit(2, reservesSpace: true)
                                 }
                                 HStack {

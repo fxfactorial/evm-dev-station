@@ -217,6 +217,28 @@ final class EVM: EVMDriver {
         }
     }
 
+    func read_contract_state(addr: String, key: String) {
+        Task {
+            let msg = try! JSONEncoder().encode(
+              EVMBridgeMessage<BridgeCmdStateLookup>(
+                c: .CMD_STATE_LOOKUP, p:BridgeCmdStateLookup(addr: addr, key: key)
+              )
+            )
+            await comm_channel.send(msg)
+        }
+    }
+
+    func write_contract_state(addr: String, key: String, value: String) {
+        Task {
+            let msg = try! JSONEncoder().encode(
+              EVMBridgeMessage<BridgeCmdStateWrite>(
+                c: .CMD_STATE_WRITE, p:BridgeCmdStateWrite(addr: addr, key: key, new_value: value)
+              )
+            )
+            await comm_channel.send(msg)
+        }
+    }
+
 }
 
 struct Rootview : View {
@@ -250,7 +272,6 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
         let gas_cost_static = execed_op["gas_cost_static"]?.value as! Int
         let gas_cost_dynamic = execed_op["gas_cost_dynamic"]?.value as! Int
         let gas_cost_total = execed_op["gas_cost_total"]?.value as! Int
-
         let opcode_name = execed_op["opcode_name"]?.value as! String
         let opcode_num = execed_op["opcode_hex"]?.value as! String
         
@@ -270,6 +291,21 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
               )
             )
         }
+    case .CMD_STATE_LOOKUP:
+        let loaded = decoded.Payload!.value as! Dictionary<String, String>
+        let addr = loaded["addr"]!
+        let value = loaded["value"]!
+        let key = loaded["key"]!
+
+        DispatchQueue.main.async {
+            for c in LoadedContracts.shared.contracts {
+                if c.address == addr {
+//                    c.state_overrides.temp_key = key
+                    c.state_overrides.temp_value = value
+                    return
+                }
+            }
+        }
 
     case .CMD_NEW_EVM:
         print("loaded new evm")
@@ -283,7 +319,6 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
                 EVMRunStateControls.shared.eips_used.append(.init(num: c))
             }
         }
-        
 
     case .CMD_ALL_KNOWN_OPCODES:
         var opcodes = decoded.Payload!.value as! [String]

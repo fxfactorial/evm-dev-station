@@ -245,7 +245,10 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                     }.tabItem { Text("Raw Bytecode") }.tag(2)
                                     VStack {
                                         if let c = contracts.current_selection {
-                                            Text("Edit state")
+                                            EditState(driver: d, 
+                                                      c: Binding<LoadedContract>(get: {c}, set: { _ in ()}),
+                                                      overrides: c.state_overrides
+                                            )
                                         } else {
                                             Text("select a contract from sidebar")
                                         }
@@ -589,11 +592,7 @@ struct NewContractFromInput: View {
                         return
                     }
 
-                    LoadedContracts.shared.contracts.append(
-                        .init(name: contract_name, 
-                              bytecode: contract_bytecode,
-                              address: "0x00",
-                              contract: try? EthereumContract(contract_abi)))
+                    LoadedContracts.shared.contracts.append(sample_contract)
                     LoadedContracts.shared.current_selection = LoadedContracts.shared.contracts.last
                     dismiss()
                 } label: {
@@ -1084,12 +1083,12 @@ struct BreakpointView: View {
                                         HStack {
                                             Text("Key")
                                             Spacer()
-                                            Text(st.Key)
+                                            Text(st.Key).textSelection(.enabled)
                                         }
                                         HStack {
                                             Text("Value")
                                             Spacer()
-                                            Text(st.BeforeValue)
+                                            Text(st.BeforeValue).textSelection(.enabled)
                                         }
                                     }
                                     
@@ -1098,17 +1097,17 @@ struct BreakpointView: View {
                                         HStack {
                                             Text("Key")
                                             Spacer()
-                                            Text(st.Key)
+                                            Text(st.Key).textSelection(.enabled)
                                         }
                                         HStack {
                                             Text("Prior Value")
                                             Spacer()
-                                            Text(st.BeforeValue)
+                                            Text(st.BeforeValue).textSelection(.enabled)
                                         }
                                         HStack {
                                             Text("After Update")
                                             Spacer()
-                                            Text(st.AfterValue)
+                                            Text(st.AfterValue).textSelection(.enabled)
                                         }
                                     }
                                 }
@@ -1457,6 +1456,113 @@ struct RunningEVM<Driver: EVMDriver>: View {
         d: StubEVMDriver(),
         target_addr: .constant("")
     ).frame(width: 768)
+}
+
+struct EditState<Driver: EVMDriver> : View {
+    let driver : Driver
+    @Binding var c : LoadedContract
+    @State private var select: StateChange?
+    @State private var new_item_lookup_name = ""
+    @ObservedObject var overrides: StateChanges
+
+    var body: some View {
+        VStack {
+            HStack {
+                List($overrides.overrides,
+                     id: \.self,
+                     selection: $select) {row in
+                    Text(row.nice_name.wrappedValue).help(row.key.wrappedValue)
+                }.frame(maxWidth: 150)
+                VStack {
+                    if let st = select {
+                        VStack {
+                            VStack {
+                                HStack {
+                                    Text("Key").frame(width: 120, alignment: .leading)
+                                    TextField("state key", text: Binding<String>(
+                                        get: { st.key },
+                                        set: { st.key = $0 }
+                                    ), axis: .vertical).lineLimit(2, reservesSpace: true)
+                                }
+                                HStack {
+                                    Text("Original Value").frame(width: 120, alignment: .leading)
+                                    TextField("..",
+                                              text: .constant(st.original_value),
+                                              axis: .vertical)
+                                      .disabled(true)
+                                      .lineLimit(2, reservesSpace: true)
+                                }
+                                HStack {
+                                    Text("Modified Value").frame(width: 120, alignment: .leading)
+                                    TextField("..", text: Binding<String>(
+                                        get: { st.new_value },
+                                        set: { st.new_value = $0 }
+                                    ), axis: .vertical).lineLimit(2, reservesSpace: true)
+                                }
+                            }
+                            HStack {
+                                Button {
+                                    driver.write_contract_state(addr: c.address, key: st.key, value: st.new_value)
+                                } label: { Text("Update value to state")}
+                            }
+                        }
+                    } else {
+                        VStack {
+                            HStack {
+                                Text("Helper copy paste for 0")
+                                Text(EMPTY_HASH).textSelection(.enabled)
+                            }
+                            HStack {
+                                Button {
+                                    driver.read_contract_state(addr: c.address, key: c.state_overrides.temp_key)
+                                } label: { Text("Do State Lookup") }
+                                    .frame(width: 120, alignment: .leading)
+                                TextField("state key", text: $c.state_overrides.temp_key, axis: .vertical)
+                                  .lineLimit(2, reservesSpace: true)
+                            }
+                            HStack {
+                                Text("Value")
+                                    .frame(width: 120, alignment: .leading)
+                                TextField("...",
+                                          text: Binding<String>(
+                                            get: { c.state_overrides.temp_value },
+                                            set: { c.state_overrides.temp_value = $0 }
+                                          ), axis: .vertical)
+                                  .lineLimit(2, reservesSpace: true)
+                            }
+                            HStack {
+                                Button {
+                                    if new_item_lookup_name.isEmpty {
+                                        return
+                                    }
+                                    let new_record = StateChange(
+                                        nice_name: new_item_lookup_name,
+                                        key: c.state_overrides.temp_key,
+                                        original_value: c.state_overrides.temp_value,
+                                        new_value: ""
+                                    )
+                                    c.state_overrides.overrides.append(new_record)	
+                                    c.state_overrides.temp_key = ""
+                                    c.state_overrides.temp_value = ""
+                                    new_item_lookup_name = ""
+                                } label : { Text("Save to list")  }
+                                    .frame(width: 120, alignment: .leading)
+                                TextField("some name", text: $new_item_lookup_name)
+                            }
+                        }.frame(maxHeight: .infinity)
+                    }
+                }.frame(maxWidth: .infinity)
+            }
+        }
+    }
+}
+
+
+#Preview("Edit State") {
+    EditState(driver: StubEVMDriver(), 
+              c: .constant(sample_contract),
+              overrides: sample_contract.state_overrides)
+    .frame(width: 600, height: 300)
 }
 
 //#Preview("enabled EIPs") {

@@ -201,6 +201,26 @@ public struct BridgeCmdContinuePausedEVMInCall : Codable {
     }
 }
 
+public struct BridgeCmdStateLookup : Codable {
+    public let ContractAddr: String
+    public let Key:          String
+    public init(addr: String, key: String) {
+        self.ContractAddr = addr
+        self.Key = key
+    }
+}
+
+public struct BridgeCmdStateWrite : Codable {
+    public let ContractAddr: String
+    public let Key: String
+    public let NewValue: String
+    public init(addr: String, key: String, new_value: String) {
+        self.ContractAddr = addr
+        self.Key = key
+        self.NewValue = new_value
+    }
+}
+
 public enum EVMCommand : String, Codable {
     case CMD_REPORT_ERROR = "error"
     case CMD_NEW_EVM = "new_evm"
@@ -217,6 +237,9 @@ public enum EVMCommand : String, Codable {
     case CMD_DO_PAUSE_ON_CALL = "do_hook_on_call"
     case CMD_CONTINUE_PAUSED_EVM_IN_CALL = "cont_evm_break_on_call"
     case CMD_STEP_ONE_BY_ONE = "enable_step_by_step"
+    case CMD_STATE_LOOKUP = "get_state"
+    case CMD_STATE_WRITE = "write_state"
+    
     // keep a space
     case RUN_EVM_OP_EXECED = "ran_one_opcode"
     case RUN_EVM_OPCODE_HIT = "hit_break_on_opcode"

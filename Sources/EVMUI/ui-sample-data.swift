@@ -9,9 +9,14 @@ let sample_contract = LoadedContract(
     address: "",
     contract: try? EthereumContract(sample_contract_abi),
     is_loaded_against_state: false
-)
+//    state_overrides: [StateChange(nice_name: "balance",
+//                                  key: "",
+//                                  original_value: "0x00",
+//                                  new_value: "")]
+    )
+    
 
-
+    
 let sample_contract_abi = """
 [
   {

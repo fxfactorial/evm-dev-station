@@ -267,10 +267,33 @@ public class RuntimeError: ObservableObject {
     }
 }
 
-public struct StateChange {
-    public let key: String
-    public let original_value: String
-    public var new_value: String
+public class StateChange: ObservableObject, Identifiable, Hashable {
+    public let id = UUID()
+    public var nice_name: String
+    @Published public var key: String
+    @Published public var original_value: String
+    @Published public var new_value: String
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
+    public init(nice_name: String, key: String, original_value: String, new_value: String) {
+        self.nice_name = nice_name
+        self.key = key
+        self.original_value = original_value
+        self.new_value = new_value
+    }
+    
+    static public func == (lhs: StateChange, rhs: StateChange) -> Bool {
+        lhs.id == rhs.id
+    }
+
+}
+
+public class StateChanges: ObservableObject {
+    @Published public var overrides : [StateChange] = []
+    @Published public var temp_key = ""
+    @Published public var temp_value = ""
 }
 
 public class LoadedContract : ObservableObject, Hashable, Equatable {
@@ -292,19 +315,21 @@ public class LoadedContract : ObservableObject, Hashable, Equatable {
     @Published public var deployer_address : String = "0x0000000000000000000000000000000000000000"
     @Published public var gas_limit_deployment: String = "900000"
     @Published public var deployment_gas_cost = 0
-    @Published public var state_overrides : [StateChange] = []
-
+    @Published public var state_overrides = StateChanges()
+    
     public init(name: String,
                 bytecode: String,
                 address: String,
                 contract: EthereumContract? = nil,
                 is_loaded_against_state: Bool = false
+//                state_overrides: [StateChange] = []
     ) {
         self.name = name
         self.bytecode = bytecode
         self.address = address
         self.contract = contract
         self.is_loaded_against_state = is_loaded_against_state
+//        self.state_overrides = state_overrides
     }
 }
 
@@ -419,6 +444,8 @@ public struct Result: Codable {
         case bytesSignature = "bytes_signature"
     }
 }
+
+public let EMPTY_HASH = "0x0000000000000000000000000000000000000000000000000000000000000000"
 
 public let SIG_DIR_URL = "https://www.4byte.directory"
 public let UNISWAP_QUOTER_ABI = """

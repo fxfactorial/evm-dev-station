@@ -26,14 +26,19 @@ public protocol EVMDriver {
     func enable_step_each_op(yes_no: Bool)
     func continue_evm_exec_break_on_opcode(yes_no: Bool, stack: [StackItem], mem: String)
     func continue_evm_exec_break_on_call(yes_no: Bool, caller: String, callee: String, payload: String)
+    
+    func read_contract_state(addr: String, key: String)
+    func write_contract_state(addr: String, key: String, value: String)
+    
     // still open issues, that is not properly ported
-
     func reset_evm(enableOpCodeCallback: Bool, enableCallback: Bool, useStateInMemory:  Bool)
 }
 
 
 public final class StubEVMDriver: EVMDriver {
     public init() { }
+    public func read_contract_state(addr: String, key: String) {}
+    public func write_contract_state(addr: String, key: String, value: String) {}
     public func enable_step_each_op(yes_no: Bool) {}
     public func start_handling_bridge() {}
     public func step_forward_one(){}

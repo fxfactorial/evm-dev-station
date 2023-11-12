@@ -734,6 +734,7 @@ struct ABIEncode: View {
                                     if let contract = loaded_contract,
                                        let c = contract.contract,
                                        let element = c.allMethods.first(where: { $0.name == selected }) {
+                                        // TODO This is wrong because if inputs is 0, then the ForEach never goes off
                                         ForEach(Array(zip(element.inputs.indices, element.inputs)), id: \.1.name) {index, input in
                                             HStack {
                                                 Text(input.name)
@@ -1185,10 +1186,11 @@ struct CommonABIs : View {
     @State private var present_add_abi_sheet = false
     @State private var fields : [String: [String]] = [:]
     @State private var encoded = ""
+    @State private var decoded_output : [String: Any]? = [:]
     
     var body: some View {
         HStack {
-            List(Array(abis.abis.keys), id: \.self, selection: $selected) {item in
+            List(Array(abis.abis.keys).sorted(), id: \.self, selection: $selected) {item in
                 Text(item.description)
             }.frame(maxWidth: 325)
             Spacer()
@@ -1197,44 +1199,47 @@ struct CommonABIs : View {
                 if let s = selected,
                    let element = abis.all_methods.first(where: {$0.signature == s}) {
                     VStack {
-                        ForEach(Array(zip(element.inputs.indices, element.inputs)), id: \.1.name) { index, input in
-                            HStack {
-                                Text(input.name)
-                                TextField(input.name, text: Binding<String>(
-                                    get: {
-                                        guard let method_name = element.name else {
-                                            return ""
+                        if element.inputs.count == 0 {
+                            Spacer()
+                                .frame(height: 1)
+                        } else {
+                            ForEach(Array(zip(element.inputs.indices, element.inputs)), id: \.1.name) { index, input in
+                                HStack {
+                                    Text(input.name)
+                                    TextField(input.name, text: Binding<String>(
+                                        get: {
+                                            return fields[element.signature]![index]
+                                        },
+                                        set: {
+                                            fields[element.signature]![index] = $0
                                         }
-
-                                        if let had_it = fields[method_name] {
-                                            return had_it[index]
-                                        }
-                                        fields[method_name] = [String](repeating: "", count: element.inputs.count)
-                                        return ""
-                                    },
-                                    set: {
-                                        if let n = element.name {
-                                            fields[n]![index] = $0
-                                        }
-                                    }
-                                ))
+                                    ))
+                                }
                             }
                         }
                         HStack {
                             Button {
-                                print(fields)
-//                                let result = element.
-//                                encoded = result.toHexString()
+                                if let result = element.encodeParameters(fields[s]!) {
+                                    encoded = result.toHexString()
+                                }
                             } label: { Text("Encode") }
                             TextField("...", text:$encoded)
                         }
                     }
                 } else {
                     Button {
-                        print(abis.all_methods)
                         present_add_abi_sheet.toggle()
                     } label: { Text("Add ABI") }
                 }
+            }
+        }.sheet(isPresented: $present_add_abi_sheet, content: {
+            VStack {
+                Text("some ABI input thing")
+            }.frame(width: 400, height: 300)
+        })
+        .onAppear {
+            for i in abis.all_methods {
+                fields[i.signature] = [String](repeating: "", count: i.inputs.count)
             }
         }
     }

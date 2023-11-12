@@ -105,6 +105,15 @@ public struct BridgeCmdRunContract: Codable {
     }
 }
 
+public struct BridgeCmdEVMSideRun: Codable {
+    public let UseCurrentState: Bool // otherwise use fresh state from head of DB/in mem?
+    public let CallParams: BridgeCmdRunContract
+    public init(use_current_state: Bool, callparams: BridgeCmdRunContract) {
+        self.UseCurrentState = use_current_state
+        self.CallParams = callparams
+    }
+}
+
 public struct BridgeCmdDeployNewContract: Codable {
     public let CreationCode: String
     public let CreatorAddr: String
@@ -239,6 +248,7 @@ public enum EVMCommand : String, Codable {
     case CMD_STEP_ONE_BY_ONE = "enable_step_by_step"
     case CMD_STATE_LOOKUP = "get_state"
     case CMD_STATE_WRITE = "write_state"
+    case CMD_EVM_SIDE_RUN = "run_one_off_contract"
     
     // keep a space
     case RUN_EVM_OP_EXECED = "ran_one_opcode"

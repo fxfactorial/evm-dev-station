@@ -228,6 +228,16 @@ final class EVM: EVMDriver {
         }
     }
 
+    func evm_side_run(param: BridgeCmdEVMSideRun) {
+        Task {
+            let msg = try! JSONEncoder().encode(
+              EVMBridgeMessage<BridgeCmdEVMSideRun>(c: .CMD_EVM_SIDE_RUN, p:param)
+            )
+            await comm_channel.send(msg)
+        }
+
+    }
+
     func write_contract_state(addr: String, key: String, value: String) {
         Task {
             let msg = try! JSONEncoder().encode(
@@ -306,6 +316,13 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
                 }
             }
         }
+    case .CMD_EVM_SIDE_RUN:
+        let call_result = decoded.Payload!.value as! Dictionary<String, AnyDecodable>
+        let return_value = call_result["return_value"]?.value as! String
+        print("SWIFT GOT ANSWER SIDE RUN!")
+          DispatchQueue.main.async {
+            SideEVMResult.shared.call_result = return_value
+        }
 
     case .CMD_NEW_EVM:
         print("loaded new evm")
@@ -350,6 +367,7 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
         DispatchQueue.main.async {
             ExecutedOperations.shared.state_records.append(record)
         }
+
     case .CMD_RUN_CONTRACT:
         let call_result = decoded.Payload!.value as! Dictionary<String, AnyDecodable>
         let tree = call_result["CallTreeJSON"]?.value as! CallEvaled

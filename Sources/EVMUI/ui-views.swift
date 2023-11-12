@@ -297,6 +297,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                                     .background()
                                     .tabItem { Text("EVM Config")}.tag(2)
+                                    CommonABIs().tabItem { Text("Common ABIs") }.tag(3)
                                 }
                             }
                             Spacer()
@@ -1117,6 +1118,7 @@ struct BreakpointView: View {
                         // TableColumn("Value", value:\.Value)
                     }
                 }.tabItem{ Text("Storage") }.tag(2)
+                SideEVM(d:d).tabItem { Text("Quick Side EVM") }.tag(3)
             })
         }
     }
@@ -1124,8 +1126,118 @@ struct BreakpointView: View {
 
 
 
+struct SideEVM : View {
+    let d : EVMDriver
+    @State private var use_current_state = true
+    @State private var target_addr = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+    @ObservedObject private var side_evm_model = SideEVMResult.shared
+
+    var body: some View {
+        VStack {
+            Toggle(isOn: $use_current_state) {
+                Text("use current state")
+            }
+            HStack {
+                Text("Target addr (USDC) example")
+                TextField("", text: $target_addr)
+            }
+            HStack {
+                Text("call input")
+                TextField("..input", text: $side_evm_model.call_input)
+            }
+            HStack {
+                Text("Call result")
+                TextField("..result", text: $side_evm_model.call_result, axis: .vertical)
+                    .lineLimit(3, reservesSpace: true)
+                    .disabled(false)
+                    .textSelection(.enabled)
+            }
+            Button {
+                d.evm_side_run(param: BridgeCmdEVMSideRun(
+                    use_current_state: true,
+                    callparams: BridgeCmdRunContract(
+                        calldata: side_evm_model.call_input,
+                        caller_addr: EMPTY_ADDR,
+                        target_addr: target_addr, 
+                        msg_value: "0",
+                        gas_price: "1",
+                        gas_limit: 900_000)))
+            } label: { Text("Run side EVM") }
+        }
+    }
+}
+
+#Preview("side evm") {
+    SideEVM(d: StubEVMDriver()).frame(width: 600, height: 400)
+}
+
 #Preview("breakpoint view") {
     BreakpointView(d : StubEVMDriver())
+}
+
+#Preview("Common ABIs") {
+    CommonABIs().frame(width: 600, height: 400)
+}
+
+struct CommonABIs : View {
+    @ObservedObject private var abis = CommonABIsModel.shared
+    @State private var selected : String?
+    @State private var present_add_abi_sheet = false
+    @State private var fields : [String: [String]] = [:]
+    @State private var encoded = ""
+    
+    var body: some View {
+        HStack {
+            List(Array(abis.abis.keys), id: \.self, selection: $selected) {item in
+                Text(item.description)
+            }.frame(maxWidth: 325)
+            Spacer()
+            VStack {
+                // TODO This doesn't work right yet
+                if let s = selected,
+                   let element = abis.all_methods.first(where: {$0.signature == s}) {
+                    VStack {
+                        ForEach(Array(zip(element.inputs.indices, element.inputs)), id: \.1.name) { index, input in
+                            HStack {
+                                Text(input.name)
+                                TextField(input.name, text: Binding<String>(
+                                    get: {
+                                        guard let method_name = element.name else {
+                                            return ""
+                                        }
+
+                                        if let had_it = fields[method_name] {
+                                            return had_it[index]
+                                        }
+                                        fields[method_name] = [String](repeating: "", count: element.inputs.count)
+                                        return ""
+                                    },
+                                    set: {
+                                        if let n = element.name {
+                                            fields[n]![index] = $0
+                                        }
+                                    }
+                                ))
+                            }
+                        }
+                        HStack {
+                            Button {
+                                print(fields)
+//                                let result = element.
+//                                encoded = result.toHexString()
+                            } label: { Text("Encode") }
+                            TextField("...", text:$encoded)
+                        }
+                    }
+                } else {
+                    Button {
+                        print(abis.all_methods)
+                        present_add_abi_sheet.toggle()
+                    } label: { Text("Add ABI") }
+                }
+            }
+        }
+    }
 }
 
 struct LoadExistingDB : View {
@@ -1489,8 +1601,8 @@ struct EditState<Driver: EVMDriver> : View {
                                     TextField("..",
                                               text: .constant(st.original_value),
                                               axis: .vertical)
-                                      .disabled(true)
                                       .textSelection(.enabled)
+                                      .disabled(true)
                                       .lineLimit(2, reservesSpace: true)
                                 }
                                 HStack {

@@ -563,3 +563,13 @@ extension ABIDecoder {
         return returnArray
     }
 }
+
+extension ABI.Record : Hashable, Equatable {
+    static public func == (lhs: ABI.Record, rhs: ABI.Record) -> Bool {
+        return lhs.name == rhs.name
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(self)
+    }
+}

@@ -108,7 +108,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     @State private var present_eips_sheet = false
     @State private var present_load_db_sheet = false
     @State private var current_contract_detail_tab = 0
-
+    
     @AppStorage("show_first_load_help") private var show_first_load_help = true
     
     // NOTE Use observedobject on singletons
@@ -126,200 +126,185 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     }
     
     @State var eips_used : [EIP] = []
-    @State private var top_row_open = true
     @State private var current_tab_runtime_eval = 0
     
     public var body: some View {
         VStack {
             VSplitView {
-                DisclosureGroup(
-                    isExpanded: $top_row_open,
-                    content: {
+                HStack {
+                    NavigationStack {
                         VStack {
-                            HStack {
-                                NavigationStack {
-                                    VStack {
-                                        Text("Contracts")
-                                            .font(.title2)
-                                            .help("interact with contracts loaded")
-                                        List(contracts.contracts, id:\.self,
-                                             selection: $contracts.current_selection) { item in
-                                            Text(item.name)
-                                        }
-                                             .frame(maxWidth: 150)
-                                             .padding([.trailing, .leading])
-                                        Button {
-                                            bytecode_add.toggle()
-                                        } label: {
-                                            Text("Add New Contract").frame(maxWidth: 150)
-                                        }
-                                        Button {
-                                            present_load_contract_sheet.toggle()
-                                        } label: {
-                                            Text("Load from chain").frame(maxWidth: 150)
-                                        }
-                                        .disabled(!chaindb.is_chain_loaded)
-                                        .help("must first load an existing blockchain database")
-                                    }
-                                }
-                                TabView(selection: $current_contract_detail_tab) {
-                                    VStack {
-                                        if let c = contracts.current_selection {
-                                            VStack {
-                                                HStack {
-                                                    Text("Creator Address").frame(width: 100, alignment: .leading)
-                                                    TextField(c.deployer_address, text: Binding<String>(
-                                                        get: { c.deployer_address },
-                                                        set: { c.deployer_address = $0 }
-                                                    ))
-                                                }
-                                                HStack {
-                                                    Text("Gas limit").frame(width: 100, alignment: .leading)
-                                                    TextField(c.gas_limit_deployment, text: Binding<String>(
-                                                        get: { c.gas_limit_deployment },
-                                                        set: { c.gas_limit_deployment = $0 }
-                                                    ))
-                                                }
-                                                HStack {
-                                                    Text("Eth Balance").frame(width: 100, alignment: .leading)
-                                                    TextField(c.eth_balance, text: Binding<String>(
-                                                        get: { c.eth_balance },
-                                                        set: { c.eth_balance = $0 }
-                                                    ))
-                                                }
-                                                HStack {
-                                                    Text("Deployed Address").frame(width: 100, alignment: .leading)
-                                                    TextField(c.address, text: Binding<String>(
-                                                        get: { c.address },
-                                                        set: { _ = $0 }
-                                                    )).disabled(true)
-                                                }
-                                                HStack {
-                                                    Text("Deployed Gas Cost").frame(width: 100, alignment: .leading)
-                                                    TextField("\(Int(c.gas_limit_deployment)! - c.deployment_gas_cost)", text: Binding<String>(
-                                                        get: { "\(Int(c.gas_limit_deployment)! - c.deployment_gas_cost)" },
-                                                        set: { _ = $0 }
-                                                    )).disabled(true)
-                                                }
-                                                Button {
-                                                    d.create_new_contract(
-                                                        code: c.bytecode,
-                                                        creator_addr: c.deployer_address,
-                                                        contract_nickname: c.name,
-                                                        gas_amount: c.gas_limit_deployment,
-                                                        initial_gas: c.eth_balance
-                                                    )
-                                                } label: {
-                                                    Text("Deploy contract to state")
-                                                }
-                                            }
-                                        } else {
-                                            Text("select a contract from sidebar ")
-                                        }
-                                        
-                                    }
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                    .padding()
-                                    .background()
-                                    .tabItem{ Text("Deployment") }.tag(0)
-                                    VStack {
-                                        Text("TODO Show state of contract (eth balance, nonce, blah) ")
-                                    }
-                                    .padding()
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                    .background()
-                                    .tabItem{ Text("Contract State") }.tag(1)
-                                    VStack {
-                                        if let contract = contracts.current_selection {
-                                            VStack {
-                                                ScrollView {
-                                                    Text(contract.bytecode)
-                                                        .lineLimit(nil)
-                                                        .frame(maxWidth:.infinity, maxHeight:.infinity)
-                                                        .background()
-                                                }
-                                            }
-                                        } else {
-                                            Text("select a contract from sidebar")
-                                        }
-                                    }.tabItem { Text("Raw Bytecode") }.tag(2)
-                                    VStack {
-                                        if let c = contracts.current_selection {
-                                            EditState(driver: d, 
-                                                      c: Binding<LoadedContract>(get: {c}, set: { _ in ()}),
-                                                      overrides: c.state_overrides
-                                            )
-                                        } else {
-                                            Text("select a contract from sidebar")
-                                        }
-                                    }
-                                    .padding()
-                                    .tabItem{ Text("Edit State") }.tag(3)
-                                }
-                                TabView {
-                                    VStack {
-                                        BlockContext()
-                                            .frame(maxWidth: .infinity)
-                                        Button {
-                                            present_load_db_sheet.toggle()
-                                        } label: {
-                                            Text("Load Chaindata")
-                                        }.disabled(chaindb.is_chain_loaded)
-                                        if chaindb.show_loading_db {
-                                            RotatingDotAnimation(param: .init(
-                                                inner_circle_width: 12,
-                                                inner_circle_height: 12,
-                                                inner_circle_offset: -9,
-                                                outer_circle_width: 35,
-                                                outer_circle_height: 35)
-                                            )
-                                        }
-                                    }
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                    .background()
-                                    .tabItem {
-                                        Text("Load Blockchain")
-                                    }.tag(0)
-                                    StateDBDetails()
-                                        .environmentObject(current_block_header)
-                                        .environmentObject(chaindb)
-                                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                        .padding()
-                                        .background()
-                                        .tabItem { Text("StateDB Details") }.tag(1)
-                                    VStack {
-                                        Button {
-                                            present_eips_sheet.toggle()
-                                        } label: {
-                                            Text("EIPS enabled")
-                                        }
-                                    }
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                    .background()
-                                    .tabItem { Text("EVM Config")}.tag(2)
-                                    CommonABIs().tabItem { Text("Common ABIs") }.tag(3)
-                                }
+                            Text("Contracts")
+                                .font(.title2)
+                                .help("interact with contracts loaded")
+                            List(contracts.contracts, id:\.self,
+                                 selection: $contracts.current_selection) { item in
+                                Text(item.name)
                             }
-                            Spacer()
-                        }.frame(idealHeight: 300)
-                    },
-                    label: {
-                        Button {
-                            withAnimation(.easeInOut) {
-                                top_row_open.toggle()
+                                 .frame(maxWidth: 150)
+                                 .padding([.trailing, .leading])
+                            Button {
+                                bytecode_add.toggle()
+                            } label: {
+                                Text("Add New Contract").frame(maxWidth: 150)
                             }
-                        } label: {
-                            Text(top_row_open ? "Collapse Contract, DB" : "Expand Contract, DB")
+                            Button {
+                                present_load_contract_sheet.toggle()
+                            } label: {
+                                Text("Load from chain").frame(maxWidth: 150)
+                            }
+                            .disabled(!chaindb.is_chain_loaded)
+                            .help("must first load an existing blockchain database")
                         }
                     }
-                )
+                    HSplitView {
+                        TabView(selection: $current_contract_detail_tab) {
+                            VStack {
+                                if let c = contracts.current_selection {
+                                    VStack {
+                                        HStack {
+                                            Text("Creator Address").frame(width: 100, alignment: .leading)
+                                            TextField(c.deployer_address, text: Binding<String>(
+                                                get: { c.deployer_address },
+                                                set: { c.deployer_address = $0 }
+                                            ))
+                                        }
+                                        HStack {
+                                            Text("Gas limit").frame(width: 100, alignment: .leading)
+                                            TextField(c.gas_limit_deployment, text: Binding<String>(
+                                                get: { c.gas_limit_deployment },
+                                                set: { c.gas_limit_deployment = $0 }
+                                            ))
+                                        }
+                                        HStack {
+                                            Text("Eth Balance").frame(width: 100, alignment: .leading)
+                                            TextField(c.eth_balance, text: Binding<String>(
+                                                get: { c.eth_balance },
+                                                set: { c.eth_balance = $0 }
+                                            ))
+                                        }
+                                        HStack {
+                                            Text("Deployed Address").frame(width: 100, alignment: .leading)
+                                            TextField(c.address, text: Binding<String>(
+                                                get: { c.address },
+                                                set: { _ = $0 }
+                                            )).disabled(true)
+                                        }
+                                        HStack {
+                                            Text("Deployed Gas Cost").frame(width: 100, alignment: .leading)
+                                            TextField("\(Int(c.gas_limit_deployment)! - c.deployment_gas_cost)", text: Binding<String>(
+                                                get: { "\(Int(c.gas_limit_deployment)! - c.deployment_gas_cost)" },
+                                                set: { _ = $0 }
+                                            )).disabled(true)
+                                        }
+                                        Button {
+                                            d.create_new_contract(
+                                                code: c.bytecode,
+                                                creator_addr: c.deployer_address,
+                                                contract_nickname: c.name,
+                                                gas_amount: c.gas_limit_deployment,
+                                                initial_gas: c.eth_balance
+                                            )
+                                        } label: {
+                                            Text("Deploy contract to state")
+                                        }
+                                    }
+                                } else {
+                                    Text("select a contract from sidebar ")
+                                }
+                                
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .padding()
+                            .background()
+                            .tabItem{ Text("Deployment") }.tag(0)
+                            VStack {
+                                Text("TODO Show state of contract (eth balance, nonce, blah) ")
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .background()
+                            .tabItem{ Text("Contract State") }.tag(1)
+                            VStack {
+                                if let contract = contracts.current_selection {
+                                    VStack {
+                                        ScrollView {
+                                            Text(contract.bytecode)
+                                                .lineLimit(nil)
+                                                .frame(maxWidth:.infinity, maxHeight:.infinity)
+                                                .background()
+                                        }
+                                    }
+                                } else {
+                                    Text("select a contract from sidebar")
+                                }
+                            }.tabItem { Text("Raw Bytecode") }.tag(2)
+                            VStack {
+                                if let c = contracts.current_selection {
+                                    EditState(driver: d,
+                                              c: Binding<LoadedContract>(get: {c}, set: { _ in ()}),
+                                              overrides: c.state_overrides
+                                    )
+                                } else {
+                                    Text("select a contract from sidebar")
+                                }
+                            }
+                            .padding()
+                            .tabItem{ Text("Edit State") }.tag(3)
+                        }
+                        TabView {
+                            VStack {
+                                BlockContext()
+                                    .frame(maxWidth: .infinity)
+                                Button {
+                                    present_load_db_sheet.toggle()
+                                } label: {
+                                    Text("Load Chaindata")
+                                }.disabled(chaindb.is_chain_loaded)
+                                if chaindb.show_loading_db {
+                                    RotatingDotAnimation(param: .init(
+                                        inner_circle_width: 12,
+                                        inner_circle_height: 12,
+                                        inner_circle_offset: -9,
+                                        outer_circle_width: 35,
+                                        outer_circle_height: 35)
+                                    )
+                                }
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .background()
+                            .tabItem {
+                                Text("Load Blockchain")
+                            }.tag(0)
+                            StateDBDetails()
+                                .environmentObject(current_block_header)
+                                .environmentObject(chaindb)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .padding()
+                                .background()
+                                .tabItem { Text("StateDB Details") }.tag(1)
+                            VStack {
+                                Button {
+                                    present_eips_sheet.toggle()
+                                } label: {
+                                    Text("EIPS enabled")
+                                }
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .background()
+                            .tabItem { Text("EVM Config")}.tag(2)
+                            CommonABIs().tabItem { Text("Common ABIs") }.tag(3)
+                        }
+                    }
+                }.frame(minHeight: 125, maxHeight: 450)
+                
                 HSplitView {
                     TabView(selection: $current_tab_runtime_eval) {
                         VStack {
                             ScrollViewReader { (proxy: ScrollViewProxy) in
                                 HStack {
                                     Text("\(execed_ops.execed_operations.count) Executed Operations")
-                                      .font(.title2)
+                                        .font(.title2)
                                 }.padding([.leading, .trailing], 10)
                                 Table(execed_ops.execed_operations) {
                                     TableColumn("PC", value: \.pc)
@@ -332,19 +317,19 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                            perform: { item in
                                     let id = item.last
                                     proxy.scrollTo(id)
-                                           })
+                                })
                                 HStack {
                                     Text("\(execed_ops.total_gas_cost_so_far) total gas cost")
-                                      .font(.title2)
+                                        .font(.title2)
                                     Spacer()
                                     Text("\(execed_ops.total_static_gas_cost_so_far) static gas")
-                                      .font(.title2)
+                                        .font(.title2)
                                     Spacer()
                                     Text("\(execed_ops.total_dynamic_gas_cost_so_far) dynamic gas")
-                                      .font(.title2)
+                                        .font(.title2)
                                 }
-                                  .padding([.leading, .trailing], 10)
-                                  .frame(maxWidth: .infinity)
+                                .padding([.leading, .trailing], 10)
+                                .frame(maxWidth: .infinity)
                             }
                             
                         }.tabItem { Text("Execution Table") }.tag(0)
@@ -364,7 +349,6 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             Text("JUMP tree")
                         }.tag(3)
                     }
-                    Spacer().frame(width: 20)
                     BreakpointView(d: d).frame(maxWidth: .infinity)
                 }.padding(10).frame(maxHeight: .infinity)
                 RunningEVM(d: d, target_addr: Binding<String>(
@@ -399,7 +383,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                         }
                         d.load_contract(addr: addr, nickname: name, abi_json: abi_json)
                     })
-                   })
+            })
             .sheet(isPresented: $show_first_load_help) {
                 VStack {
                     Text("welcome to evm-dev-station")
@@ -413,17 +397,17 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
             }
             .sheet(isPresented: $present_load_db_sheet,
                    onDismiss: {
-                if !chaindb.is_chain_loaded && 
+                if !chaindb.is_chain_loaded &&
                     !chaindb.chaindata_directory.isEmpty {
                     withAnimation {
                         chaindb.show_loading_db = true
                     }
-
+                    
                     d.load_chaindata(
-                      chaindb_pathdir: chaindb.chaindata_directory,
-                      db_kind: chaindb.db_kind.rawValue,
-                      ancientdb_pathdir: chaindb.ancientdb_dir,
-                      at_block: Int(chaindb.at_block_number)
+                        chaindb_pathdir: chaindb.chaindata_directory,
+                        db_kind: chaindb.db_kind.rawValue,
+                        ancientdb_pathdir: chaindb.ancientdb_dir,
+                        at_block: Int(chaindb.at_block_number)
                     )
                 }
             }, content: {
@@ -459,24 +443,24 @@ struct JumpTree: View {
 }
 
 struct File: Identifiable { // identifiable ✓
-  let id = UUID()
-  let name: String
-  var children: [File]? // optional array of type File ✓
-
-  var icon: String { // makes things prettier
-    if children == nil {
-       return "doc"
-    } else if children?.isEmpty == true {
-       return "folder"
-    } else {
-       return "folder.fill"
+    let id = UUID()
+    let name: String
+    var children: [File]? // optional array of type File ✓
+    
+    var icon: String { // makes things prettier
+        if children == nil {
+            return "doc"
+        } else if children?.isEmpty == true {
+            return "folder"
+        } else {
+            return "folder.fill"
+        }
     }
-  }
 }
 
 struct CallTree : View {
     @ObservedObject private var evm_execed = ExecutedOperations.shared
-
+    
     var body: some View {
         HStack {
             List(evm_execed.call_tree, children: \.Children) { item in
@@ -592,7 +576,7 @@ struct NewContractFromInput: View {
                         RuntimeError.shared.show_error = true
                         return
                     }
-
+                    
                     LoadedContracts.shared.contracts.append(sample_contract)
                     LoadedContracts.shared.current_selection = LoadedContracts.shared.contracts.last
                     dismiss()
@@ -657,9 +641,9 @@ struct KnownEIPs: View {
                             return d.enabled
                         },
                         set: {
-                        if let index = evm_run_state.eips_used.firstIndex(where: { $0.id == d.id }) {
-                            evm_run_state.eips_used[index].enabled = $0
-                        }
+                            if let index = evm_run_state.eips_used.firstIndex(where: { $0.id == d.id }) {
+                                evm_run_state.eips_used[index].enabled = $0
+                            }
                         }
                     ))
                 }
@@ -902,8 +886,8 @@ struct BreakpointView: View {
         VStack {
             TabView(selection: $current_tab,
                     content: {
-                        VStack {
-                            VStack {
+                VStack {
+                    VStack {
                         HStack {
                             Text("caller").frame(width: 75)
                             TextField("", text: $callbackmodel.current_caller)
@@ -989,10 +973,10 @@ struct BreakpointView: View {
                             }
                             Button {
                                 d.continue_evm_exec_break_on_call(
-                                  yes_no: use_modified_values,
-                                  caller: callbackmodel.current_caller,
-                                  callee: callbackmodel.current_callee,
-                                  payload:callbackmodel.current_args
+                                    yes_no: use_modified_values,
+                                    caller: callbackmodel.current_caller,
+                                    callee: callbackmodel.current_callee,
+                                    payload:callbackmodel.current_args
                                 )
                                 
                                 DispatchQueue.main.async {
@@ -1049,9 +1033,9 @@ struct BreakpointView: View {
                             Toggle("use modified values", isOn: $callbackmodel.use_modified_values)
                             Button {
                                 d.continue_evm_exec_break_on_opcode(
-                                  yes_no: callbackmodel.use_modified_values,
-                                  stack: callbackmodel.current_stack,
-                                  mem: callbackmodel.current_memory
+                                    yes_no: callbackmodel.use_modified_values,
+                                    stack: callbackmodel.current_stack,
+                                    mem: callbackmodel.current_memory
                                 )
                                 callbackmodel.selected_stack_item = nil
                             } label: {
@@ -1076,7 +1060,7 @@ struct BreakpointView: View {
                                             return
                                         }
                                         openURL(link)
-                                    } label : { 
+                                    } label : {
                                         Text(st.Address)
                                     }
                                 }.frame(alignment: .leading)
@@ -1132,7 +1116,7 @@ struct SideEVM : View {
     @State private var use_current_state = true
     @State private var target_addr = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
     @ObservedObject private var side_evm_model = SideEVMResult.shared
-
+    
     var body: some View {
         VStack {
             Toggle(isOn: $use_current_state) {
@@ -1159,7 +1143,7 @@ struct SideEVM : View {
                     callparams: BridgeCmdRunContract(
                         calldata: side_evm_model.call_input,
                         caller_addr: EMPTY_ADDR,
-                        target_addr: target_addr, 
+                        target_addr: target_addr,
                         msg_value: "0",
                         gas_price: "1",
                         gas_limit: 900_000)))
@@ -1262,8 +1246,8 @@ struct LoadExistingDB : View {
                     Text(option).tag(option)
                 }
             }
-            .tint(.black)
-            .pickerStyle(.segmented)
+                   .tint(.black)
+                   .pickerStyle(.segmented)
             HStack {
                 Button {
                     present_fileimporter.toggle()
@@ -1271,7 +1255,7 @@ struct LoadExistingDB : View {
                     Text("Chaindata").frame(width: 84, alignment: .center)
                 }
                 .fileImporter(isPresented: $present_fileimporter,
-                               allowedContentTypes: [.directory]) { result in
+                              allowedContentTypes: [.directory]) { result in
                     switch result {
                     case .success(let directory):
                         chain.chaindata_directory = directory.path()
@@ -1290,7 +1274,7 @@ struct LoadExistingDB : View {
                     Text("AncientDB").frame(width: 84, alignment: .center)
                 }
                 .fileImporter(isPresented: $present_fileimporter,
-                               allowedContentTypes: [.directory]) { result in
+                              allowedContentTypes: [.directory]) { result in
                     switch result {
                     case .success(let directory):
                         chain.ancientdb_dir = directory.path()
@@ -1350,10 +1334,10 @@ struct BreakOnOpcodes: View {
                             return d.enabled
                         },
                         set: {
-                        if let index = evm_run_state.opcodes_used.firstIndex(where: { $0.id == d.id }) {
-                            evm_run_state.opcodes_used[index].enabled = $0
-                            self.d.enable_breakpoint_on_opcode(yes_no:$0,
-                                                               opcode_name:evm_run_state.opcodes_used[index].name)
+                            if let index = evm_run_state.opcodes_used.firstIndex(where: { $0.id == d.id }) {
+                                evm_run_state.opcodes_used[index].enabled = $0
+                                self.d.enable_breakpoint_on_opcode(yes_no:$0,
+                                                                   opcode_name:evm_run_state.opcodes_used[index].name)
                             }
                         }
                     ))
@@ -1524,17 +1508,17 @@ struct RunningEVM<Driver: EVMDriver>: View {
             .padding()
             .background()
         }
-          .sheet(isPresented: $present_opcode_select_sheet,
-                onDismiss: {
-                    for c in evm_run_controls.opcodes_used {
-                        if c.enabled {
-                            d.enable_breakpoint_on_opcode(yes_no:true, opcode_name: c.name)
-                        }
-                    }
-                }, content: {
-                       BreakOnOpcodes(d: d)
-                   }
-          )
+        .sheet(isPresented: $present_opcode_select_sheet,
+               onDismiss: {
+            for c in evm_run_controls.opcodes_used {
+                if c.enabled {
+                    d.enable_breakpoint_on_opcode(yes_no:true, opcode_name: c.name)
+                }
+            }
+        }, content: {
+            BreakOnOpcodes(d: d)
+        }
+        )
     }
 }
 
@@ -1549,13 +1533,13 @@ struct RunningEVM<Driver: EVMDriver>: View {
             ]
             ExecutedOperations.shared.execed_operations.append(contentsOf: dummy_items)
             LoadedContracts.shared.contracts = [sample_contract]
-
+            
         }
 }
 
 #Preview("load existing db") {
     LoadExistingDB(d: StubEVMDriver())
-    .frame(width: 480, height: 380)
+        .frame(width: 480, height: 380)
 }
 
 
@@ -1581,7 +1565,7 @@ struct EditState<Driver: EVMDriver> : View {
     @State private var select: StateChange?
     @State private var new_item_lookup_name = ""
     @ObservedObject var overrides: StateChanges
-
+    
     var body: some View {
         VStack {
             HStack {
@@ -1606,9 +1590,9 @@ struct EditState<Driver: EVMDriver> : View {
                                     TextField("..",
                                               text: .constant(st.original_value),
                                               axis: .vertical)
-                                      .textSelection(.enabled)
-                                      .disabled(true)
-                                      .lineLimit(2, reservesSpace: true)
+                                    .textSelection(.enabled)
+                                    .disabled(true)
+                                    .lineLimit(2, reservesSpace: true)
                                 }
                                 HStack {
                                     Text("Modified Value").frame(width: 120, alignment: .leading)
@@ -1636,7 +1620,7 @@ struct EditState<Driver: EVMDriver> : View {
                                 } label: { Text("Do State Lookup") }
                                     .frame(width: 120, alignment: .leading)
                                 TextField("state key", text: $c.state_overrides.temp_key, axis: .vertical)
-                                  .lineLimit(2, reservesSpace: true)
+                                    .lineLimit(2, reservesSpace: true)
                             }
                             HStack {
                                 Text("Value")
@@ -1646,7 +1630,7 @@ struct EditState<Driver: EVMDriver> : View {
                                             get: { c.state_overrides.temp_value },
                                             set: { c.state_overrides.temp_value = $0 }
                                           ), axis: .vertical)
-                                  .lineLimit(2, reservesSpace: true)
+                                .lineLimit(2, reservesSpace: true)
                             }
                             HStack {
                                 Button {
@@ -1659,7 +1643,7 @@ struct EditState<Driver: EVMDriver> : View {
                                         original_value: c.state_overrides.temp_value,
                                         new_value: ""
                                     )
-                                    c.state_overrides.overrides.append(new_record)	
+                                    c.state_overrides.overrides.append(new_record)
                                     c.state_overrides.temp_key = ""
                                     c.state_overrides.temp_value = ""
                                     new_item_lookup_name = ""
@@ -1677,7 +1661,7 @@ struct EditState<Driver: EVMDriver> : View {
 
 
 #Preview("Edit State") {
-    EditState(driver: StubEVMDriver(), 
+    EditState(driver: StubEVMDriver(),
               c: .constant(sample_contract),
               overrides: sample_contract.state_overrides)
     .frame(width: 600, height: 300)

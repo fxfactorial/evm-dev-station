@@ -167,6 +167,7 @@ let db_kind_leveldb = "leveldb"
 var pathdir_pebble = "/Users/edgararoutiounian/repos/mainnet-chaindata/"
 pathdir_pebble = "/Users/edgararoutiounian/repos/mainnet-chaindata-11-11-23/geth/chaindata"
 let pathdir_leveldb = "/Volumes/photos-media-backup/eth-mainnet-backup-11-07-23/chaindata"
+let ancient_dir = "/Volumes/photos-media-backup/eth-mainnet-backups/pebble-based-backup/nov-12-2023-ancientdb/ancientdb"
 
 let db_kind = db_kind_pebble
 let pathdir = pathdir_pebble
@@ -176,6 +177,7 @@ let msg2 = try! JSONEncoder().encode(
   EVMBridgeMessage(c: .CMD_LOAD_CHAIN,
                    p: BridgeCmdLoadChain(kind: db_kind,
                                          directory: pathdir,
+                                         ancientdb_directory: ancient_dir,
                                          at_block_num: at_block)
   )
 )
@@ -205,7 +207,7 @@ let msg3 = try! JSONEncoder().encode(
   )
 )
 
-// await comm_channel.send(msg3)
+await comm_channel.send(msg3)
 
 try await Task.sleep(for: .seconds(40))
 

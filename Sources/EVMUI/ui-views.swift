@@ -437,10 +437,14 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
             .sheet(isPresented: $error_model.show_error,
                    content: {
                 VStack {
+                    TextField(error_model.error_reason, text: $error_model.error_reason)
+                        .textSelection(.enabled)
+                        .disabled(true)
+                        .lineLimit(5, reservesSpace: true)
                     Button {
                         error_model.show_error.toggle()
                     } label: {
-                        Text(error_model.error_reason)
+                        Text("dismiss")
                     }
                 }.frame(width: 400, height: 300)
             })
@@ -1271,6 +1275,7 @@ struct LoadExistingDB : View {
     @State private var options = ["pebble", "leveldb"]
     @State private var selected_option = "pebble"
     @State private var present_fileimporter = false
+    @State private var present_fileimporter_ancient = false
     @State private var at_block_number = ""
     @ObservedObject private var chain = LoadChainModel.shared
     
@@ -1298,18 +1303,19 @@ struct LoadExistingDB : View {
                         // gain access to the directory
                     case .failure(let error):
                         // how would this even happen?
-                        print(error)
+                        RuntimeError.shared.error_reason = error.localizedDescription
+                        RuntimeError.shared.show_error = true
                     }
                 }
                 TextField("directory", text: $chain.chaindata_directory)
             }
             HStack {
                 Button {
-                    present_fileimporter.toggle()
+                    present_fileimporter_ancient.toggle()
                 } label: {
                     Text("AncientDB").frame(width: 84, alignment: .center)
                 }
-                .fileImporter(isPresented: $present_fileimporter,
+                .fileImporter(isPresented: $present_fileimporter_ancient,
                               allowedContentTypes: [.directory]) { result in
                     switch result {
                     case .success(let directory):
@@ -1317,7 +1323,8 @@ struct LoadExistingDB : View {
                         // gain access to the directory
                     case .failure(let error):
                         // how would this even happen?
-                        print(error)
+                        RuntimeError.shared.error_reason = error.localizedDescription
+                        RuntimeError.shared.show_error = true
                     }
                 }
                 TextField("optional directory but might need it", text: $chain.ancientdb_dir)

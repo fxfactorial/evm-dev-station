@@ -30,7 +30,7 @@ struct BlockContext : View {
                 HStack {
                     let num = "\(current_head.block_number)"
                     Text("Number").frame(width: 80, alignment: .leading)
-                    TextField("block number", 
+                    TextField("block number",
                               text: Binding<String>(
                                 get: {current_head.block_number == 0 ? "" : num},
                                 set: {_ = $0})
@@ -1427,67 +1427,76 @@ struct RunningEVM<Driver: EVMDriver>: View {
     @Environment(\.dismiss) var dismiss
     @State private var keccak_input = ""
     @State private var keccak_output = ""
+    private let text_width : CGFloat = 75
     
     var body: some View {
         VStack {
             HStack {
-                VStack {
+                TabView {
                     HStack {
-                        Text("Input")
-                            .frame(width: 120, alignment: .leading)
-                        TextField("calldata", text: $call_params.calldata)
-                    }
-                    HStack {
-                        Text("Value")
-                            .frame(width: 120, alignment: .leading)
-                        TextField("0", text: $call_params.msg_value)
-                    }
-                    HStack {
-                        Text("Target Addr")
-                            .frame(width: 120, alignment: .leading)
-                        TextField("target addr", text: $target_addr)
-                    }
-                    HStack {
-                        Text("Gas Price").frame(width: 120, alignment: .leading)
-                        TextField("gas price", text: $call_params.gas_price)
-                    }
-                    HStack {
-                        Text("Gas limit").frame(width: 120, alignment: .leading)
-                        TextField("900000", text: $call_params.gas_limit)
-                    }
+                        VStack {
+                            HStack {
+                                Text("Input")
+                                    .frame(width: text_width, alignment: .leading)
+                                TextField("calldata", text: $call_params.calldata)
+                            }
+                            HStack {
+                                Text("Value")
+                                    .frame(width: text_width, alignment: .leading)
+                                TextField("0", text: $call_params.msg_value)
+                            }
+                            HStack {
+                                Text("Target Addr")
+                                    .frame(width: text_width, alignment: .leading)
+                                TextField("target addr", text: $target_addr)
+                            }
+                            HStack {
+                                Text("Gas Price").frame(width: text_width, alignment: .leading)
+                                TextField("gas price", text: $call_params.gas_price)
+                            }
+                            HStack {
+                                Text("Gas limit").frame(width: text_width, alignment: .leading)
+                                TextField("900000", text: $call_params.gas_limit)
+                            }
+                        }
+                        VStack {
+                            HStack {
+                                Button {
+                                    keccak_output = d.keccak256(input: $keccak_input.wrappedValue)
+                                } label: { Text("Keccak256") }
+                                TextField("input...", text: $keccak_input)
+                                TextField("output..", text: $keccak_output)
+                            }
+                            HStack {
+                                Text("Sender Addr")
+                                    .frame(width: 120, alignment: .leading)
+                                TextField("msg.sender", text: $call_params.caller_addr)
+                            }
+                            HStack {
+                                Text("Sender eth balance")
+                                    .frame(width: 120, alignment: .leading)
+                                TextField("eth balance", text: $call_params.caller_eth_bal)
+                            }
+                            HStack {
+                                Text("Return value")
+                                    .frame(width: 120, alignment: .leading)
+                                TextField(evm_run_controls.call_return_value,
+                                          text: $evm_run_controls.call_return_value)
+                                .disabled(false)
+                                .textSelection(.enabled)
+                            }
+                            HStack {
+                                Text("EVM Error")
+                                    .frame(width: 120, alignment: .leading)
+                                TextField("last failure message", text: $evm_run_controls.evm_error)
+                            }
+                        }
+
+                    }.tabItem { Text("Fresh run") }.tag(0)
+                    VStack { Text("something")}.tabItem { Text("History") }.tag(1)
                 }
-                VStack {
-                    HStack {
-                        Button {
-                            keccak_output = d.keccak256(input: $keccak_input.wrappedValue)
-                        } label: { Text("Keccak256") }
-                        TextField("input...", text: $keccak_input)
-                        TextField("output..", text: $keccak_output)
-                    }
-                    HStack {
-                        Text("Sender Addr")
-                            .frame(width: 120, alignment: .leading)
-                        TextField("msg.sender", text: $call_params.caller_addr)
-                    }
-                    HStack {
-                        Text("Sender eth balance")
-                            .frame(width: 120, alignment: .leading)
-                        TextField("eth balance", text: $call_params.caller_eth_bal)
-                    }
-                    HStack {
-                        Text("Return value")
-                            .frame(width: 120, alignment: .leading)
-                        TextField(evm_run_controls.call_return_value,
-                                  text: $evm_run_controls.call_return_value)
-                        .disabled(false)
-                        .textSelection(.enabled)
-                    }
-                    HStack {
-                        Text("EVM Error")
-                            .frame(width: 120, alignment: .leading)
-                        TextField("last failure message", text: $evm_run_controls.evm_error)
-                    }
-                }
+                .padding([.leading, .trailing], 5)
+                .frame(height: 200)
                 VStack {
                     HStack {
                         Button {

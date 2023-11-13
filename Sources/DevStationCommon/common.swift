@@ -287,6 +287,17 @@ public class StateChange: ObservableObject, Identifiable, Hashable {
 
 }
 
+public struct RunHistory {
+    public let input : CallParams
+    public let error_result: String
+    public let success_result: String
+}
+
+public class RunHistoryModel : ObservableObject {
+    static public let shared = RunHistoryModel()
+    @Published public var history : [RunHistory] = []
+}
+
 public class StateChanges: ObservableObject {
     @Published public var overrides : [StateChange] = []
     @Published public var temp_key = ""

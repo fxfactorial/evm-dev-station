@@ -11,35 +11,44 @@ import DevStationCommon
 struct BlockContext : View {
     @ObservedObject private var model = BlockContextModel.shared
     @EnvironmentObject var current_head : CurrentBlockHeader
+    let offset : CGFloat = 80
 
     var body : some View {
-        VStack {
-            VStack {
-                HStack {
-                    Text("Coinbase").frame(width: 80, alignment: .leading)
-                    TextField("0x..", text: $model.coinbase)
+        TabView {
+            ScrollView {
+                VStack {
+                    HStack {
+                        Text("Coinbase").frame(width: offset, alignment: .leading)
+                        TextField("0x..", text: $model.coinbase)
+                    }
+                    HStack {
+                        Text("Time").frame(width: offset, alignment: .leading)
+                        TextField("time", text: $model.time)
+                    }
+                    HStack {
+                        Text("Number").frame(width: offset, alignment: .leading)
+                        TextField("block number", text: $current_head.block_number)
+                    }
+                    HStack {
+                        Text("Base Gas Price").frame(width: offset, alignment: .leading)
+                        TextField("base gas", text: $model.base_gas)
+                    }
+                    HStack {
+                        Text("Gas Used").frame(width: offset, alignment: .leading)
+                        TextField("actual gas used", text: $model.gas_used)
+                    }
+                    HStack {
+                        Text("Gas Limit").frame(width: offset, alignment: .leading)
+                        TextField("block limit", text: $model.gas_limit)
+                    }
                 }
-                HStack {
-                    Text("Base Gas Price").frame(width: 80, alignment: .leading)
-                    TextField("base gas", text: $model.base_gas)
-                }
-                HStack {
-                    Text("Time").frame(width: 80, alignment: .leading)
-                    TextField("time", text: $model.time)
-                }
-                HStack {
-                    let num = "\(current_head.block_number)"
-                    Text("Number").frame(width: 80, alignment: .leading)
-                    TextField("block number",
-                              text: Binding<String>(
-                                get: {current_head.block_number == 0 ? "" : num},
-                                set: {_ = $0})
-                    )
-                }
-            }
-            .padding()
-            .background()
+            }.tabItem { Text("HEAD Block") }.tag(0)
+            ScrollView { VStack {
+                Text("custom something")
+            }}.tabItem { Text("Prior Block") }.tag(1)
         }
+        .padding()
+        .background()
     }
 }
 
@@ -273,21 +282,24 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                     } label: {
                                         Text("Load Database")
                                     }.disabled(chaindb.is_chain_loaded)
+                                    if chaindb.show_loading_db {
+                                        RotatingDotAnimation(param: .init(
+                                            inner_circle_width: 12,
+                                            inner_circle_height: 12,
+                                            inner_circle_offset: -9,
+                                            outer_circle_width: 35,
+                                            outer_circle_height: 35)
+                                        ).frame(width: 35, height: 35)
+                                    } else {
+                                        Spacer().frame(width: 35, height: 35)
+                                    }
                                     Button {
                                         d.close_chaindata()
+                                        BlockContextModel.shared.reset()
                                     } label: {
                                         Text("Close Database")
                                     }.disabled(!chaindb.is_chain_loaded)
-                                }
-                                if chaindb.show_loading_db {
-                                    RotatingDotAnimation(param: .init(
-                                        inner_circle_width: 12,
-                                        inner_circle_height: 12,
-                                        inner_circle_offset: -9,
-                                        outer_circle_width: 35,
-                                        outer_circle_height: 35)
-                                    )
-                                }
+                                }.padding([.bottom], 10)
                             }
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .background()
@@ -423,8 +435,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                     d.load_chaindata(
                         chaindb_pathdir: chaindb.chaindata_directory,
                         db_kind: chaindb.db_kind.rawValue,
-                        ancientdb_pathdir: chaindb.ancientdb_dir,
-                        at_block: Int(chaindb.at_block_number)
+                        ancientdb_pathdir: chaindb.ancientdb_dir
                     )
                 }
             }, content: {
@@ -1184,7 +1195,6 @@ struct CommonABIs : View {
             }.frame(maxWidth: 325)
             TabView {
                 VStack {
-                    // TODO This doesn't work right yet
                     if let s = selected,
                        let element = abis.all_methods.first(where: {$0.signature == s}) {
                         VStack {
@@ -1482,7 +1492,8 @@ struct RunningEVM<Driver: EVMDriver>: View {
                         }
 
                     }.tabItem { Text("Fresh run") }.tag(0)
-                    VStack { Text("something")}.tabItem { Text("History") }.tag(1)
+                    VStack { Text("something")}.tabItem { Text("Run History") }.tag(1)
+                    VStack { Text("Replay") }.tabItem { Text("Replay the Chain") }.tag(2)
                 }
                 .padding([.leading, .trailing], 5)
                 .frame(height: 200)
@@ -1589,10 +1600,10 @@ struct RunningEVM<Driver: EVMDriver>: View {
         }
 }
 
-#Preview("load existing db") {
-    LoadExistingDB(d: StubEVMDriver())
-        .frame(width: 480, height: 380)
-}
+//#Preview("load existing db") {
+//    LoadExistingDB(d: StubEVMDriver())
+//        .frame(width: 480, height: 380)
+//}
 
 
 
@@ -1712,12 +1723,12 @@ struct EditState<Driver: EVMDriver> : View {
 }
 
 
-#Preview("Edit State") {
-    EditState(driver: StubEVMDriver(),
-              c: .constant(sample_contract),
-              overrides: sample_contract.state_overrides)
-    .frame(width: 600, height: 300)
-}
+//#Preview("Edit State") {
+//    EditState(driver: StubEVMDriver(),
+//              c: .constant(sample_contract),
+//              overrides: sample_contract.state_overrides)
+//    .frame(width: 600, height: 300)
+//}
 
 //#Preview("enabled EIPs") {
 //    KnownEIPs(known_eips: .constant([
@@ -1735,6 +1746,7 @@ struct EditState<Driver: EVMDriver> : View {
 //    )
 //}
 
-//#Preview("BlockContext") {
-//    BlockContext()
-//}
+#Preview("BlockContext") {
+    BlockContext()
+        .environmentObject(CurrentBlockHeader())
+}

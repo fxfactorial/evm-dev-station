@@ -6,7 +6,7 @@ public protocol EVMDriver {
     // done ported to the channel way
     func start_handling_bridge()
     func new_evm_singleton()
-    func load_chaindata(chaindb_pathdir: String, db_kind: String, ancientdb_pathdir: String?, at_block: Int?)
+    func load_chaindata(chaindb_pathdir: String, db_kind: String, ancientdb_pathdir: String?)
     func load_chainhead()
     func load_contract(addr: String, nickname: String, abi_json: String)
     func call(calldata: String,
@@ -72,8 +72,7 @@ public final class StubEVMDriver: EVMDriver {
     public func load_chaindata(
       chaindb_pathdir: String,
       db_kind: String,
-      ancientdb_pathdir: String?,
-      at_block: Int?) {}
+      ancientdb_pathdir: String?) {}
     public func load_chainhead()  {}
     public func load_contract(addr: String, nickname: String, abi_json: String) {}
 }

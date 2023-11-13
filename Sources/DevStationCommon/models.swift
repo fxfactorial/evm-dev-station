@@ -143,7 +143,9 @@ public class BlockContextModel : ObservableObject {
     @Published public var base_gas = ""
     @Published public var base_gas_tip = ""
     @Published public var time = ""
-
+    @Published public var gas_limit = ""
+    @Published public var gas_used = ""
+    
     public func reset() {
         coinbase = ""
         base_gas = ""
@@ -234,12 +236,11 @@ public enum DBKind : String {
 public class CurrentBlockHeader: ObservableObject {
     public static let shared = CurrentBlockHeader()
 
-    // although they are strings - its up to consuming
-    // caller to format them as properly as needed
     @Published public var block_time : String = ""
-    @Published public var block_number: UInt32 = 0
+    @Published public var block_number: String = ""
     @Published public var state_root : String = ""
     @Published public var parent_hash: String = ""
+    @Published public var raw_block_header: BlockHeader?
     public init() {}
     
 }
@@ -426,7 +427,8 @@ public class JSONNull: Codable, Hashable {
     public required init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         if !container.decodeNil() {
-            throw DecodingError.typeMismatch(JSONNull.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Wrong type for JSONNull"))
+            throw DecodingError.typeMismatch(JSONNull.self,
+                                             DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Wrong type for JSONNull"))
         }
     }
     

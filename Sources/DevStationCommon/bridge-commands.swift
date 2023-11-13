@@ -42,6 +42,8 @@ public struct AnyDecodable : Codable {
             self.init(state)
         } else if let call_evaled = try? container.decode(CallEvaled.self) {
             self.init(call_evaled)
+        } else if let header = try? container.decode(BlockHeader.self) {
+            self.init(header)
         } else if let kv = try? container.decode([String:String].self) {
             self.init(kv)
         } else if let kv = try? container.decode([String:String?].self) {
@@ -61,15 +63,12 @@ public struct BridgeCmdLoadChain : Codable {
     public let DBKind:     String 
     public let Directory:  String
     public let AncientDBDirectory : String
-    public let AtSpecificNumber : Int?
     public init(kind: String,
                 directory: String,
-                ancientdb_directory: String = "",
-                at_block_num: Int? = nil) {
+                ancientdb_directory: String = "") {
         self.DBKind = kind
         self.Directory = directory
         self.AncientDBDirectory = ancientdb_directory
-        self.AtSpecificNumber = at_block_num
     }
 }
 

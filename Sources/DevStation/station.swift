@@ -139,15 +139,15 @@ final class EVM: EVMDriver {
         }
     }
 
-    func load_chaindata(chaindb_pathdir: String, db_kind: String, ancientdb_pathdir: String?, at_block: Int?) {
+    func load_chaindata(chaindb_pathdir: String, db_kind: String, ancientdb_pathdir: String?) {
         Task {
             let msg = try! JSONEncoder().encode(
               EVMBridgeMessage(c: .CMD_LOAD_CHAIN,
                                p: BridgeCmdLoadChain(kind: db_kind,
                                                      directory: chaindb_pathdir,
-                                                     ancientdb_directory: ancientdb_pathdir == nil ? "" : ancientdb_pathdir!,
-                                                     at_block_num: at_block
-                                                    ))
+                                                     ancientdb_directory: ancientdb_pathdir == nil ? "" : ancientdb_pathdir!
+                                                    )
+                              )
             )
             await comm_channel.send(msg)
         }
@@ -415,20 +415,27 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
 
 
     case .CMD_REPORT_CHAIN_HEAD:
-        let blk_header = decoded.Payload!.value as! Dictionary<String, String?>
-        let head_number = UInt32(blk_header["number"]!!.dropFirst(2), radix: 16)!
-        let state_root = blk_header["stateRoot"]!!
-        let ts_int = UInt(blk_header["timestamp"]!![2...], radix: 16)!
+        let blk_header = decoded.Payload!.value as! BlockHeader
+        let head_number = UInt32(blk_header.number.dropFirst(2), radix: 16)!
+        let gas_limit = UInt64(blk_header.gasLimit.dropFirst(2), radix: 16)!
+        let gas_used = UInt64(blk_header.gasUsed.dropFirst(2), radix: 16)!
+        let state_root = blk_header.stateRoot
+        let ts_int = UInt(blk_header.timestamp[2...], radix: 16)!
         let ts = Date(timeIntervalSince1970: TimeInterval(ts_int))
-        
+        let base_gas = UInt64(blk_header.baseFeePerGas.dropFirst(2), radix: 16)!
+
         DispatchQueue.main.async {
             withAnimation {
                 LoadChainModel.shared.is_chain_loaded = true
                 LoadChainModel.shared.show_loading_db = false
-                BlockContextModel.shared.coinbase = blk_header["miner"]!!
+                BlockContextModel.shared.coinbase = blk_header.miner
                 BlockContextModel.shared.time = ts.ISO8601Format()
-                CurrentBlockHeader.shared.block_number = head_number
+                BlockContextModel.shared.base_gas = base_gas.formatted(.number)
+                BlockContextModel.shared.gas_limit = gas_limit.formatted(.number)
+                BlockContextModel.shared.gas_used = gas_used.formatted(.number)
+                CurrentBlockHeader.shared.block_number = head_number.formatted(.number)
                 CurrentBlockHeader.shared.state_root = state_root
+                CurrentBlockHeader.shared.raw_block_header = blk_header
                 // TODO come back to this one
                 // chaindb.db_kind = if db_kind == "pebble" { .GethDBPebble} else { .GethDBLevelDB }
             }

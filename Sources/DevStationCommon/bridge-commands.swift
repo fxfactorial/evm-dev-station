@@ -252,6 +252,7 @@ public enum EVMCommand : String, Codable {
     case CMD_STATE_LOOKUP = "get_state"
     case CMD_STATE_WRITE = "write_state"
     case CMD_EVM_SIDE_RUN = "run_one_off_contract"
+    case CMD_CLOSE_CHAIN = "close_chaindb"
     
     // keep a space
     case RUN_EVM_OP_EXECED = "ran_one_opcode"

@@ -8,15 +8,12 @@ public class LoadChainModel: ObservableObject {
     @Published public var db_kind : DBKind = .InMemory
     @Published public var ancientdb_dir = ""
     @Published public var at_block_number = ""
-//    public init(chaindata_directory: String = "",
-//                is_chain_loaded: Bool = false,
-//                show_loading_db: Bool = false,
-//                db_kind: DBKind = .InMemory) {
-//        self.chaindata_directory = chaindata_directory
-//        self.is_chain_loaded = is_chain_loaded
-//        self.show_loading_db = show_loading_db
-//        self.db_kind = db_kind
-//    }
+    public func reset() {
+        chaindata_directory = ""
+        is_chain_loaded = false
+        ancientdb_dir = ""
+        at_block_number = ""
+    }
 }
 
 public class ErrorFeedbackModel: ObservableObject {

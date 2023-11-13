@@ -249,6 +249,15 @@ final class EVM: EVMDriver {
         }
     }
 
+    func close_chaindata() {
+        Task {
+            let msg = try! JSONEncoder().encode(
+              EVMBridgeMessage<Int>(c: .CMD_CLOSE_CHAIN, p: 0)
+            )
+            await comm_channel.send(msg)
+        }
+    }
+
 }
 
 struct Rootview : View {
@@ -335,6 +344,10 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
             for c in eips {
                 EVMRunStateControls.shared.eips_used.append(.init(num: c))
             }
+        }
+    case .CMD_CLOSE_CHAIN:
+        DispatchQueue.main.async {
+            LoadChainModel.shared.reset()
         }
 
     case .CMD_ALL_KNOWN_OPCODES:

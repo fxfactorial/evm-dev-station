@@ -274,7 +274,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                         Text("Load Database")
                                     }.disabled(chaindb.is_chain_loaded)
                                     Button {
-                                        // close db
+                                        d.close_chaindata()
                                     } label: {
                                         Text("Close Database")
                                     }.disabled(!chaindb.is_chain_loaded)
@@ -456,22 +456,6 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
 struct JumpTree: View {
     var body: some View {
         Text("temp")
-    }
-}
-
-struct File: Identifiable { // identifiable ✓
-    let id = UUID()
-    let name: String
-    var children: [File]? // optional array of type File ✓
-    
-    var icon: String { // makes things prettier
-        if children == nil {
-            return "doc"
-        } else if children?.isEmpty == true {
-            return "folder"
-        } else {
-            return "folder.fill"
-        }
     }
 }
 
@@ -708,8 +692,7 @@ struct ABIEncode: View {
                         Text(item)
                     }
                     Button {
-                        if selected == "quoteExactInputSingle" {
-                            
+                        if selected == "quoteExactInputSingle(address,address,uint24,uint256,uint160)" {
                             fields[selected] = [
                                 // weth
                                 "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
@@ -722,11 +705,12 @@ struct ABIEncode: View {
                                 // sqrt thing
                                 "0"
                             ]
-                            
+                        } else {
+                            print(selected)
                         }
                     } label: {
                         Text("dev quick fill in params")
-                    }.disabled(selected != "quoteExactInputSingle")
+                    }.disabled(selected != "quoteExactInputSingle(address,address,uint24,uint256,uint160)")
                 }
             }
             VStack {

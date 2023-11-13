@@ -40,7 +40,7 @@ public protocol EVMDriver {
 public final class StubEVMDriver: EVMDriver {
     public init() { }
     public func evm_side_run(param: BridgeCmdEVMSideRun) {}
-    public func close_chaindata()
+    public func close_chaindata() { }
 
     public func read_contract_state(addr: String, key: String) {}
     public func write_contract_state(addr: String, key: String, value: String) {}

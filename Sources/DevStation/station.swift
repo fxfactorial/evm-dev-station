@@ -258,6 +258,14 @@ final class EVM: EVMDriver {
         }
     }
 
+    func lookup_tx_by_hash(hsh: String) {
+        Task {
+            let msg = try! JSONEncoder().encode(
+              EVMBridgeMessage<BridgeCmdLookupTx>(c: .CMD_LOOKUP_TX_BY_HASH, p: BridgeCmdLookupTx(hsh: hsh))
+            )
+            await comm_channel.send(msg)
+        }
+    }
 }
 
 struct Rootview : View {
@@ -349,6 +357,9 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
         DispatchQueue.main.async {
             LoadChainModel.shared.reset()
         }
+    case .CMD_LOOKUP_TX_BY_HASH:
+        let reply = decoded.Payload!.value as! Dictionary<String, AnyDecodable>
+        print("got tx hash back", reply)
 
     case .CMD_ALL_KNOWN_OPCODES:
         var opcodes = decoded.Payload!.value as! [String]

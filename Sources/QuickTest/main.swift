@@ -167,7 +167,9 @@ let db_kind_leveldb = "leveldb"
 var pathdir_pebble = "/Users/edgararoutiounian/repos/mainnet-chaindata/"
 pathdir_pebble = "/Users/edgararoutiounian/repos/mainnet-chaindata-11-11-23/geth/chaindata"
 let pathdir_leveldb = "/Volumes/photos-media-backup/eth-mainnet-backup-11-07-23/chaindata"
-let ancient_dir = "/Volumes/photos-media-backup/eth-mainnet-backups/pebble-based-backup/nov-12-2023-ancientdb/ancientdb"
+var ancient_dir = "/Volumes/photos-media-backup/eth-mainnet-backups/pebble-based-backup/nov-12-2023-ancientdb/ancientdb"
+
+ancient_dir = ""
 
 let db_kind = db_kind_pebble
 let pathdir = pathdir_pebble
@@ -177,11 +179,18 @@ let msg2 = try! JSONEncoder().encode(
   EVMBridgeMessage(c: .CMD_LOAD_CHAIN,
                    p: BridgeCmdLoadChain(kind: db_kind,
                                          directory: pathdir,
-                                         ancientdb_directory: ancient_dir,
-                                         at_block_num: at_block)
+                                         ancientdb_directory: ancient_dir)
+
   )
 )
 await comm_channel.send(msg2)
+
+
+let msg3 = try! JSONEncoder().encode(
+  EVMBridgeMessage<Int>(c: .CMD_REPORT_MOST_FAR_BACK_STATE_AVAIL, p: 0)
+)
+
+await comm_channel.send(msg3)
 
 // quoter
 // let target_addr = "0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6"
@@ -193,21 +202,21 @@ let target_addr = "0xeaDF72Fd4733665854C76926F4473389FF1B78B1"
 let calldata = "20a9341f0000000000000000000000000000000000000000000005c57f1b50d2377c0000"
 let gas_limit = 5_000_000 
 
-let msg3 = try! JSONEncoder().encode(
-  EVMBridgeMessage(
-    c: .CMD_RUN_CONTRACT,
-    p: BridgeCmdRunContract(
-      calldata: calldata,
-      caller_addr: caller_addr,
-      target_addr: target_addr,
-      msg_value: "0",
-      gas_price: "0",
-      gas_limit: gas_limit
-    )
-  )
-)
+// let msg3 = try! JSONEncoder().encode(
+//   EVMBridgeMessage(
+//     c: .CMD_RUN_CONTRACT,
+//     p: BridgeCmdRunContract(
+//       calldata: calldata,
+//       caller_addr: caller_addr,
+//       target_addr: target_addr,
+//       msg_value: "0",
+//       gas_price: "0",
+//       gas_limit: gas_limit
+//     )
+//   )
+// )
 
-await comm_channel.send(msg3)
+// await comm_channel.send(msg3)
 
 try await Task.sleep(for: .seconds(40))
 

@@ -232,6 +232,15 @@ public struct BridgeCmdStateWrite : Codable {
     }
 }
 
+public struct BridgeCmdLookupTx : Codable {
+    public let Hash: String
+    public init(hsh : String) {
+        self.Hash = hsh
+    }
+    
+}
+
+
 public enum EVMCommand : String, Codable {
     case CMD_REPORT_ERROR = "error"
     case CMD_NEW_EVM = "new_evm"
@@ -252,6 +261,8 @@ public enum EVMCommand : String, Codable {
     case CMD_STATE_WRITE = "write_state"
     case CMD_EVM_SIDE_RUN = "run_one_off_contract"
     case CMD_CLOSE_CHAIN = "close_chaindb"
+    case CMD_REPORT_MOST_FAR_BACK_STATE_AVAIL = "most_far_back_block_state_have"
+    case CMD_LOOKUP_TX_BY_HASH = "lookup_tx_by_hash"
     
     // keep a space
     case RUN_EVM_OP_EXECED = "ran_one_opcode"

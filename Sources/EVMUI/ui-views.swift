@@ -324,6 +324,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             .background()
                             .tabItem { Text("EVM Config")}.tag(2)
                             CommonABIs().tabItem { Text("Common ABIs") }.tag(3)
+                            LookupTx(d: d).tabItem { Text("Lookup Tx") }.tag(4)
                         }
                     }
                 }.frame(minHeight: 125, maxHeight: 275)
@@ -1179,6 +1180,39 @@ struct SideEVM : View {
     CommonABIs().frame(width: 600, height: 400)
 }
 
+struct LookupTx: View {
+    let d : EVMDriver
+    @State private var tx_hash = ""
+    @ObservedObject private var chaindb = LoadChainModel.shared
+    @ObservedObject private var tx_lookup = TransactionLookupModel.shared
+    
+    var body: some View {
+        VStack {
+            if chaindb.is_chain_loaded {
+                HStack {
+                    Text("Transaction Hash").frame(width: 120, alignment: .leading)
+                    TextField("hash", text: $tx_hash)
+                }
+                Spacer()
+                
+                Button {
+                    d.lookup_tx_by_hash(hsh: tx_hash)
+                } label : {
+                    Text("lookup")
+                }.frame(alignment: .bottomTrailing)
+            } else {
+                Text("must load blockchain database first")
+            }
+        }
+        .padding()
+        .frame(maxHeight:.infinity)
+    }
+}
+
+#Preview("Lookup Txs") {
+    LookupTx(d: StubEVMDriver()).frame(width: 400, height: 300)
+}
+
 struct CommonABIs : View {
     @ObservedObject private var abis = CommonABIsModel.shared
     @State private var selected : String?
@@ -1426,6 +1460,9 @@ struct RunningEVM<Driver: EVMDriver>: View {
     @Environment(\.dismiss) var dismiss
     @State private var keccak_input = ""
     @State private var keccak_output = ""
+    @State private var use_head_state = true
+    @State private var specific_state = ""
+
     private let text_width : CGFloat = 75
     
     var body: some View {
@@ -1518,7 +1555,7 @@ struct RunningEVM<Driver: EVMDriver>: View {
                             )
                         } label: {
                             HStack {
-                                Text("Run contract").frame(width: evm_run_controls.contract_currently_running ? 110 : 140, height: 25)
+                                Text("Run Contract").frame(width: evm_run_controls.contract_currently_running ? 110 : 140, height: 25)
                                 if evm_run_controls.contract_currently_running {
                                     RotatingDotAnimation(param: .init(
                                         inner_circle_width: 5,
@@ -1555,8 +1592,8 @@ struct RunningEVM<Driver: EVMDriver>: View {
                             evm_run_controls.breakpoint_on_call = $0
                         }
                     ), label: {
-                        Text("Break on CALL")
-                    })
+                        Text("Break on CALL").frame(maxWidth: .infinity, alignment: .leading)
+                    }).frame(alignment: .leading)
                     Toggle(isOn: Binding<Bool>(
                         get: { evm_run_controls.step_each_op },
                         set: {
@@ -1564,9 +1601,16 @@ struct RunningEVM<Driver: EVMDriver>: View {
                             evm_run_controls.step_each_op = $0
                         }
                     ), label: {
-                        Text("Step OPCODE one by one")
+                        Text("Step each OPCODE").frame(maxWidth: .infinity, alignment: .leading)
                     })
-                }
+                    Toggle(isOn: $use_head_state) {
+                        HStack {
+                            Text("Latest State")
+                            TextField("custom block", text: $specific_state)
+                                .disabled(use_head_state)
+                        }
+                    }
+                }.frame(maxWidth: 155)
             }
             .padding()
             .background()

@@ -136,6 +136,11 @@ public class EVMRunStateControls: ObservableObject {
 
 }
 
+public class TransactionLookupModel: ObservableObject {
+    public static let shared = TransactionLookupModel()
+//    @Published public var current_lookup
+}
+
 public class BlockContextModel : ObservableObject {
     public static let shared = BlockContextModel()
 

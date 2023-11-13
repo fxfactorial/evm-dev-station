@@ -314,8 +314,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             CommonABIs().tabItem { Text("Common ABIs") }.tag(3)
                         }
                     }
-                }.frame(minHeight: 125, maxHeight: 450)
-                
+                }.frame(minHeight: 125, maxHeight: 275)
                 HSplitView {
                     TabView(selection: $current_tab_runtime_eval) {
                         VStack {
@@ -699,7 +698,10 @@ struct ABIEncode: View {
                 Text("Method names")
                 if let contract = loaded_contract,
                    let c = contract.contract {
-                    let names = Array(c.methods.keys).filter { !$0.hasPrefix("0x") }.sorted()
+                    let names = Array(c.methods.keys)
+                        .filter { !$0.hasPrefix("0x") }
+                        .filter { $0.hasSuffix(")") }
+                        .sorted()
                     
                     List(names, id: \.self,
                          selection: $selected) { item in
@@ -735,17 +737,14 @@ struct ABIEncode: View {
                                 if !selected.isEmpty {
                                     if let contract = loaded_contract,
                                        let c = contract.contract,
-                                       let element = c.allMethods.first(where: { $0.name == selected }) {
+                                       let element = c.allMethods.first(where: { $0.signature == selected }) {
                                         // TODO This is wrong because if inputs is 0, then the ForEach never goes off
                                         ForEach(Array(zip(element.inputs.indices, element.inputs)), id: \.1.name) {index, input in
                                             HStack {
                                                 Text(input.name)
                                                 TextField(input.name, text: Binding<String>(
                                                     get: {
-                                                        guard let method_name = element.name else {
-                                                            return ""
-                                                        }
-                                                        
+                                                        let method_name = element.signature
                                                         if let had_it = fields[method_name] {
                                                             return had_it[index]
                                                         }
@@ -754,9 +753,8 @@ struct ABIEncode: View {
                                                         return ""
                                                     },
                                                     set: {
-                                                        if let n = element.name {
-                                                            fields[n]![index] = $0
-                                                        }
+                                                        let n = element.signature
+                                                        fields[n]![index] = $0
                                                     }
                                                 ))
                                             }

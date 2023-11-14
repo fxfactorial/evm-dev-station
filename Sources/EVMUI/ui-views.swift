@@ -442,70 +442,85 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     }
 }
 
-struct OPCodeFreq {
-    let name : String
-    let count: Int
-    let invokers : [String:Int] // their addrs + times they called
-}
 
 struct OPCodeChart: View {
-    let data_set : [OPCodeFreq] = [
-        .init(name: "PUSH1", count: 100, invokers: ["0x01":100]),
-        .init(name: "CALL", count: 20, invokers: ["0x01":10, "0x02":10]),
-        .init(name: "ADDRESS", count: 30, invokers: ["0x01":20, "0x03":10])
-    ]
+//    let opcode_freq : [OPCodeFreq] = [
+//        .init(name: "PUSH1", count: 100, invokers: ["0x01":100]),
+//        .init(name: "CALL", count: 20, invokers: ["0x01":10, "0x02":10]),
+//        .init(name: "ADDRESS", count: 30, invokers: ["0x01":20, "0x03":10])
+//    ]
     @State private var selected_opcode : String?
-
+    @ObservedObject private var s = ExecutedOperations.shared
+    
     var body: some View {
         VStack(alignment: .leading, content: {
-            Text("OPCode analysis").font(.headline)
-            Chart {
-                ForEach(data_set, id: \.name) { opcode_usage in
-                    BarMark(
-                        x: .value("opcode", opcode_usage.name),
-                        y: .value("count", opcode_usage.count)
-                    )
-                    .position(by: .value("opcode", opcode_usage.name))
-                    .foregroundStyle(by: .value("opcode", opcode_usage.name))
-                }
-                if let selected_opcode,
-                   let opcode_index_num = data_set.firstIndex(where: { $0.name == selected_opcode }) {
-                      RectangleMark(x: .value("opcode", selected_opcode))
-                          .foregroundStyle(.primary.opacity(0.2))
-                          .annotation(
-                            position: opcode_index_num < data_set.count / 2 ? .trailing : .leading,
-                            alignment: .center, spacing: 0
-                          ) {
-                              VStack(alignment: .leading) {
-                                  Text("callers").font(.headline)
-                                  Divider()
-                                  ForEach(Array(data_set[opcode_index_num].invokers.enumerated()), id: \.0.self) { caller in
-                                      HStack {
-                                          Text(caller.element.key)
-                                          Text("\(caller.element.value) times")
-                                      }
-                                  }
-                              }
-                              .padding()
-                              .background(Color.annotationBackground)
-                          }
-                          .accessibilityHidden(true)
-                }
+            HStack {
+                Text("OPCode analysis").font(.headline)
+                Spacer()
+                Text("Pick by top 5/10/20").font(.headline)
             }
-            .chartOverlay { (chartProxy: ChartProxy) in
-                Color.clear
-                    .onContinuousHover { hoverPhase in
-                        switch hoverPhase {
-                        case .active(let hoverLocation):
-                            selected_opcode = chartProxy.value(
-                                atX: hoverLocation.x, as: String.self
-                            )
-                        case .ended:
-                            selected_opcode = nil
-                        }
+            ScrollView(.horizontal) {
+                Chart {
+                    ForEach(Array(s.opcode_freq.enumerated()).sorted(by: { a, b in
+                        a.element.value.count > b.element.value.count
+                    }),
+                            id: \.0.self) { opcode_usage in
+                        BarMark(
+                            x: .value("opcode", opcode_usage.element.key),
+                            y: .value("count", opcode_usage.element.value.count),
+                            width: 20
+                            // width: s.opcode_freq.count < 30 ? 50 : 20
+                            // width: min(20, s.opcode_freq.count < 30 ? 50 : 20)
+                        )
+                        .position(by: .value("opcode", opcode_usage.element.key))
+                        .foregroundStyle(by: .value("opcode", opcode_usage.element.key))
                     }
+                    if let selected_opcode,
+                       let opcode_index_num = Array(s.opcode_freq.enumerated())
+                        .sorted(by: {a, b in a.element.value.count > b.element.value.count})
+                        .firstIndex(where: {$0.element.key == selected_opcode}),
+                       let record = s.opcode_freq[selected_opcode] {
+                        RectangleMark(x: .value("opcode", selected_opcode))
+                            .foregroundStyle(.primary.opacity(0.2))
+                            .annotation(
+                                position: opcode_index_num < s.opcode_freq.count / 2 ? .trailing : .leading,
+                                alignment: .center, spacing: 0
+                            ) {
+                                VStack(alignment: .leading) {
+                                    Text("callers").font(.headline)
+                                    Divider()
+                                    ForEach(Array(record.invokers.enumerated()), id: \.0.self) { caller in
+                                        HStack {
+                                            Text(caller.element.key)
+                                            Text("\(caller.element.value) times")
+                                        }
+                                    }
+                                }
+                                .padding()
+                                .background(Color.annotationBackground)
+                            }
+                            .accessibilityHidden(true)
+                    }
+                }.frame(
+                    minWidth: s.opcode_freq.count < 30 ? CGFloat(175 * s.opcode_freq.count) : CGFloat(80 * s.opcode_freq.count),
+                    maxWidth: .infinity, alignment: .center)
+//                .frame(maxWidth: .infinity, maxHeight: .infinity)
+//                .chartXVisibleDomain(length: 200)
+                .chartOverlay { (chartProxy: ChartProxy) in
+                    Color.clear
+                        .onContinuousHover { hoverPhase in
+                            switch hoverPhase {
+                            case .active(let hoverLocation):
+                                selected_opcode = chartProxy.value(
+                                    atX: hoverLocation.x, as: String.self
+                                )
+                            case .ended:
+                                selected_opcode = nil
+                            }
+                        }
+                }
             }
-        }).padding()
+        }).padding(3)
     }
 }
 

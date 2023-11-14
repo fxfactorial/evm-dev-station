@@ -61,6 +61,18 @@ public struct ExecutedEVMCode: Identifiable, Hashable{
 
 }
 
+public struct OPCodeFreq {
+    public let name : String
+    public var count: Int
+    public var invokers : [String:Int] // their addrs + times they called
+    public init(name: String, count: Int, invokers: [String : Int]) {
+        self.name = name
+        self.count = count
+        self.invokers = invokers
+    }
+}
+
+
 // REMEMBER When you want to have this be observed as a source of data
 // for like a list or table, then have the View have a property wrapper of
 // @ObservedObject private var thing = ExecutedOperation.shared
@@ -74,7 +86,13 @@ public class ExecutedOperations : ObservableObject {
     @Published public var total_gas_cost_so_far = 0
     @Published public var call_tree : [CallEvaled] = []
     @Published public var state_records : [StateRecord] = []
-
+    @Published public var opcode_freq : [String: OPCodeFreq] = [:]
+        // :
+//        "PUSH1":   .init(name: "PUSH1", count: 100, invokers: ["0x01":100]),
+//        "CALL":    .init(name: "CALL", count: 20, invokers: ["0x01":10, "0x02":10]),
+//        "ADDRESS": .init(name: "ADDRESS", count: 30, invokers: ["0x01":20, "0x03":10])
+//    ]
+    
     public func reset() {
         execed_operations = []
         state_records = []
@@ -82,6 +100,7 @@ public class ExecutedOperations : ObservableObject {
         total_static_gas_cost_so_far = 0
         total_dynamic_gas_cost_so_far = 0
         total_gas_cost_so_far = 0
+        opcode_freq = [:]
     }
 }
 

@@ -302,11 +302,24 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
         let gas_cost_total = execed_op["gas_cost_total"]?.value as! Int
         let opcode_name = execed_op["opcode_name"]?.value as! String
         let opcode_num = execed_op["opcode_hex"]?.value as! String
+        let caller = execed_op["caller"]?.value as! String
         
+
         DispatchQueue.main.async {
-            ExecutedOperations.shared.total_static_gas_cost_so_far += gas_cost_static
-            ExecutedOperations.shared.total_dynamic_gas_cost_so_far += gas_cost_dynamic
-            ExecutedOperations.shared.total_gas_cost_so_far += gas_cost_total
+            withAnimation {
+                if var had = ExecutedOperations.shared.opcode_freq[opcode_name] {
+                    had.invokers[caller, default: 0] += 1
+                    had.count += 1
+                    ExecutedOperations.shared.opcode_freq.updateValue(had, forKey: opcode_name)
+                } else {
+                    ExecutedOperations.shared.opcode_freq[opcode_name] = OPCodeFreq(name: opcode_name, count: 1, invokers: [caller : 1])
+                }
+            }
+
+            // TODO these values are wrong
+            ExecutedOperations.shared.total_static_gas_cost_so_far = gas_cost_static
+            ExecutedOperations.shared.total_dynamic_gas_cost_so_far = gas_cost_dynamic
+            ExecutedOperations.shared.total_gas_cost_so_far = gas_cost_total
 
             ExecutedOperations.shared.execed_operations.append(
               ExecutedEVMCode(pc: "\(num)",

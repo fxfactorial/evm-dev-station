@@ -7,6 +7,7 @@
 
 import SwiftUI
 import DevStationCommon
+import Charts
 
 struct BlockContext : View {
     @ObservedObject private var model = BlockContextModel.shared
@@ -121,7 +122,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     }
     
     @State var eips_used : [EIP] = []
-    @State private var current_tab_runtime_eval = 0
+    @State private var current_tab_runtime_eval = 3
     
     public var body: some View {
         VStack {
@@ -348,12 +349,8 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                 Text("no contract selected")
                             }
                         }.tabItem { Text("ABI")}.tag(1)
-                        CallTree().tabItem {
-                            Text("CALL tree")
-                        }.tag(2)
-                        JumpTree().tabItem {
-                            Text("JUMP tree")
-                        }.tag(3)
+                        CallTree().tabItem { Text("CALL tree") }.tag(2)
+                        OPCodeChart().tabItem { Text("Chart Analysis") }.tag(3)
                     }
                     BreakpointView(d: d).frame(maxWidth: .infinity)
                 }.padding(10).frame(maxHeight: .infinity)
@@ -445,9 +442,80 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     }
 }
 
-struct JumpTree: View {
+struct OPCodeFreq {
+    let name : String
+    let count: Int
+    let invokers : [String:Int] // their addrs + times they called
+}
+
+struct OPCodeChart: View {
+    let data_set : [OPCodeFreq] = [
+        .init(name: "PUSH1", count: 100, invokers: ["0x01":100]),
+        .init(name: "CALL", count: 20, invokers: ["0x01":10, "0x02":10]),
+        .init(name: "ADDRESS", count: 30, invokers: ["0x01":20, "0x03":10])
+    ]
+    @State private var selected_opcode : String?
+
     var body: some View {
-        Text("temp")
+        VStack(alignment: .leading, content: {
+            Text("OPCode analysis").font(.headline)
+            Chart {
+                ForEach(data_set, id: \.name) { opcode_usage in
+                    BarMark(
+                        x: .value("opcode", opcode_usage.name),
+                        y: .value("count", opcode_usage.count)
+                    )
+                    .position(by: .value("opcode", opcode_usage.name))
+                    .foregroundStyle(by: .value("opcode", opcode_usage.name))
+                }
+                if let selected_opcode,
+                   let opcode_index_num = data_set.firstIndex(where: { $0.name == selected_opcode }) {
+                      RectangleMark(x: .value("opcode", selected_opcode))
+                          .foregroundStyle(.primary.opacity(0.2))
+                          .annotation(
+                            position: opcode_index_num < data_set.count / 2 ? .trailing : .leading,
+                            alignment: .center, spacing: 0
+                          ) {
+                              VStack(alignment: .leading) {
+                                  Text("callers").font(.headline)
+                                  Divider()
+                                  ForEach(Array(data_set[opcode_index_num].invokers.enumerated()), id: \.0.self) { caller in
+                                      HStack {
+                                          Text(caller.element.key)
+                                          Text("\(caller.element.value) times")
+                                      }
+                                  }
+                              }
+                              .padding()
+                              .background(Color.annotationBackground)
+                          }
+                          .accessibilityHidden(true)
+                }
+            }
+            .chartOverlay { (chartProxy: ChartProxy) in
+                Color.clear
+                    .onContinuousHover { hoverPhase in
+                        switch hoverPhase {
+                        case .active(let hoverLocation):
+                            selected_opcode = chartProxy.value(
+                                atX: hoverLocation.x, as: String.self
+                            )
+                        case .ended:
+                            selected_opcode = nil
+                        }
+                    }
+            }
+        }).padding()
+    }
+}
+
+extension Color {
+    static var annotationBackground: Color {
+        #if os(macOS)
+        return Color(nsColor: .controlBackgroundColor)
+        #else
+        return Color(uiColor: .secondarySystemBackground)
+        #endif
     }
 }
 

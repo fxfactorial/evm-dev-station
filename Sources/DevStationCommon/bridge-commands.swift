@@ -263,6 +263,7 @@ public enum EVMCommand : String, Codable {
     case CMD_CLOSE_CHAIN = "close_chaindb"
     case CMD_REPORT_MOST_FAR_BACK_STATE_AVAIL = "most_far_back_block_state_have"
     case CMD_LOOKUP_TX_BY_HASH = "lookup_tx_by_hash"
+    case CMD_CANCEL_EVM_RUN = "cancel_evm_exec"
     
     // keep a space
     case RUN_EVM_OP_EXECED = "ran_one_opcode"

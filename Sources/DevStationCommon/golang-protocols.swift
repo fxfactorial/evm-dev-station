@@ -33,7 +33,7 @@ public protocol EVMDriver {
     func evm_side_run(param: BridgeCmdEVMSideRun)
     func close_chaindata()
     func lookup_tx_by_hash(hsh: String)
-
+    func cancel_running_evm()
     // still open issues, that is not properly ported
     func reset_evm(enableOpCodeCallback: Bool, enableCallback: Bool, useStateInMemory:  Bool)
 }
@@ -42,6 +42,7 @@ public protocol EVMDriver {
 public final class StubEVMDriver: EVMDriver {
     public init() { }
     public func lookup_tx_by_hash(hsh: String) { }
+    public func cancel_running_evm(){}
 
     public func evm_side_run(param: BridgeCmdEVMSideRun) {}
     public func close_chaindata() { }

@@ -51,6 +51,14 @@ final class EVM: EVMDriver {
 
     }
 
+    func cancel_running_evm() {
+        Task {
+            let msg = try! JSONEncoder().encode(EVMBridgeMessage<Int>(c: .CMD_CANCEL_EVM_RUN, p: 0))
+            await comm_channel.send(msg)
+        }
+    }
+
+
     func reset_evm(enableOpCodeCallback: Bool,
                    enableCallback: Bool,
                    useStateInMemory: Bool) {
@@ -350,6 +358,11 @@ func do_work(rpy: String) {
               )
             )
         }
+    case .CMD_CANCEL_EVM_RUN:
+        DispatchQueue.main.async {
+            EVMRunStateControls.shared.contract_currently_running = false
+        }
+
     case .CMD_STATE_LOOKUP:
         let loaded = decoded.Payload!.value as! Dictionary<String, String>
         let addr = loaded["addr"]!

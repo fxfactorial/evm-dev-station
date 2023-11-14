@@ -1661,7 +1661,8 @@ struct RunningEVM<Driver: EVMDriver>: View {
                             )
                         } label: {
                             HStack {
-                                Text("Run Contract").frame(width: evm_run_controls.contract_currently_running ? 110 : 140, height: 25)
+                                Text("Run Contract")
+                                  .frame(width: evm_run_controls.contract_currently_running ? 110 : 140, height: 25)
                                 if evm_run_controls.contract_currently_running {
                                     RotatingDotAnimation(param: .init(
                                         inner_circle_width: 5,
@@ -1675,6 +1676,9 @@ struct RunningEVM<Driver: EVMDriver>: View {
                         }.disabled(evm_run_controls.contract_currently_running)
                             .frame(width: evm_run_controls.contract_currently_running ? 110 : 160)
                     }
+                    Button { d.cancel_running_evm() } label: { Text("Cancel EVM").frame(width: 140) }
+                      .disabled(!evm_run_controls.contract_currently_running)
+                      .frame(width: 160)
                     Button { d.step_forward_one() } label: { Text("Step").frame(width: 140) }
                         .disabled(!evm_run_controls.step_each_op)
                         .frame(width: 160)
@@ -1718,7 +1722,7 @@ struct RunningEVM<Driver: EVMDriver>: View {
                                 .disabled(use_head_state)
                         }
                     }
-                }.frame(maxWidth: 155)
+                }.frame(maxWidth: 185)
             }
             .padding()
             .background()

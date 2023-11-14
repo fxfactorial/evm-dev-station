@@ -95,30 +95,6 @@ struct RotatingDotAnimation: View {
     }
 }
 
-struct CustomDisclosureGroupStyle<Label: View>: DisclosureGroupStyle {
-    let button: Label
-    func makeBody(configuration: Configuration) -> some View {
-        HStack {
-            configuration.label
-            Spacer()
-            button
-                .rotationEffect(.degrees(configuration.isExpanded ? 90 : 0))
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            withAnimation {
-                configuration.isExpanded.toggle()
-            }
-        }
-        if configuration.isExpanded {
-            configuration.content
-                .padding(.leading, 30)
-                .disclosureGroupStyle(self)
-        }
-    }
-}
-
-
 public struct EVMDevCenter<Driver: EVMDriver> : View {
     let d : Driver
     
@@ -327,7 +303,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             LookupTx(d: d).tabItem { Text("Lookup Tx") }.tag(4)
                         }
                     }
-                }.frame(minHeight: 125, maxHeight: 275)
+                }.frame(minHeight: 150, maxHeight: 275)
                 HSplitView {
                     TabView(selection: $current_tab_runtime_eval) {
                         VStack {
@@ -477,7 +453,8 @@ struct JumpTree: View {
 
 struct CallTree : View {
     @ObservedObject private var evm_execed = ExecutedOperations.shared
-    
+    @Environment(\.openURL) var openURL
+
     var body: some View {
         HStack {
             List(evm_execed.call_tree, children: \.Children) { item in
@@ -486,11 +463,27 @@ struct CallTree : View {
                     Text(item.Kind)
                     HStack {
                         Text("FROM")
-                        Text(item.Caller)
+                        Button {
+                            let s = "https://etherscan.com/address/\(item.Caller)"
+                            guard let link = URL(string: s) else {
+                                return
+                            }
+                            openURL(link)
+                        } label: {
+                            Text(item.Caller)
+                        }
                     }
                     HStack {
                         Text("TO")
-                        Text(item.Target)
+                        Button {
+                            let s = "https://etherscan.com/address/\(item.Target)"
+                            guard let link = URL(string: s) else {
+                                return
+                            }
+                            openURL(link)
+                        } label: {
+                            Text(item.Target)
+                        }
                     }
                 }
             }
@@ -1185,31 +1178,45 @@ struct LookupTx: View {
     @State private var tx_hash = ""
     @ObservedObject private var chaindb = LoadChainModel.shared
     @ObservedObject private var tx_lookup = TransactionLookupModel.shared
-    
+    func dev_mode () {
+        tx_lookup.from_addr = "0x6f93428716dbc41bda6069fcca98ec105cb98168"
+        tx_lookup.to_addr = "0x000000000dfde7deaf24138722987c9a6991e2d4"
+        tx_hash = "0x8c520512305891b8164a3b6f326edfbb1152573a8487cb4845521f9b83136b87"
+        tx_lookup.input_calldata = "0xc18a84bc0000000000000000000000006117fa34dcf2ee19af49cfca95e7e39bce136dde000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000001243f3e37e4000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000553d694de05094000000000000000000000000000000000000000000000000000143dbde76ce5c12c0000000000000000000000000000000000000000000000000000000000000005000000000000000000000000a0246c9032bc3a600820415ae600c6388619a14d0000000000000000000000004ba657a5086dfa3698884d82a94564629885b7d60000000000000000000000001f573d6fb3f13d689ff844b4ce37794d79a7ff1c000000000000000000000000b1cd6e4153b2a390cf00a6556b0fc1458c4a5533000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000"
+    }
+
     var body: some View {
         VStack {
             if chaindb.is_chain_loaded {
+                ScrollView {
+                    HStack {
+                        Text("Transaction Hash").frame(width: 120, alignment: .leading)
+                        TextField("hash", text: $tx_hash)
+                    }
+                    HStack {
+                        Text("From Address").frame(width: 120, alignment: .leading)
+                        TextField("", text: $tx_lookup.from_addr)
+                    }
+                    HStack {
+                        Text("To Address").frame(width: 120, alignment: .leading)
+                        TextField("", text: $tx_lookup.to_addr)
+                    }
+                    HStack {
+                        Text("Calldata").frame(width: 120, alignment: .leading)
+                        TextField("", text: $tx_lookup.input_calldata, axis: .vertical)
+                            .lineLimit(8, reservesSpace: true)
+                    }
+                }.frame(maxHeight: 250)
                 HStack {
-                    Text("Transaction Hash").frame(width: 120, alignment: .leading)
-                    TextField("hash", text: $tx_hash)
+                    Button {
+                        d.lookup_tx_by_hash(hsh: tx_hash)
+                    } label : {
+                        Text("Lookup Transaction")
+                    }.frame(alignment: .bottomTrailing)
+                    Button {
+                        dev_mode()
+                    } label: { Text("Dev mode some MEV bot") }
                 }
-                HStack {
-                    Text("From Address").frame(width: 120, alignment: .leading)
-                    TextField("", text: $tx_lookup.from_addr)
-                }
-                HStack {
-                    Text("To Address").frame(width: 120, alignment: .leading)
-                    TextField("", text: $tx_lookup.to_addr)
-                }
-                HStack {
-                    Text("calldata").frame(width: 120, alignment: .leading)
-                    TextField("", text: $tx_lookup.input_calldata)
-                }
-                Button {
-                    d.lookup_tx_by_hash(hsh: tx_hash)
-                } label : {
-                    Text("lookup")
-                }.frame(alignment: .bottomTrailing)
             } else {
                 Text("must load blockchain database first")
             }
@@ -1220,7 +1227,7 @@ struct LookupTx: View {
 }
 
 #Preview("Lookup Txs") {
-    LookupTx(d: StubEVMDriver()).frame(width: 400, height: 300)
+    LookupTx(d: StubEVMDriver()).frame(width: 600, height: 300)
 }
 
 struct CommonABIs : View {

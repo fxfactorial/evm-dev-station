@@ -261,7 +261,8 @@ final class EVM: EVMDriver {
     func lookup_tx_by_hash(hsh: String) {
         Task {
             let msg = try! JSONEncoder().encode(
-              EVMBridgeMessage<BridgeCmdLookupTx>(c: .CMD_LOOKUP_TX_BY_HASH, p: BridgeCmdLookupTx(hsh: hsh))
+              EVMBridgeMessage<BridgeCmdLookupTx>(c: .CMD_LOOKUP_TX_BY_HASH,
+                                                  p: BridgeCmdLookupTx(hsh: hsh))
             )
             await comm_channel.send(msg)
         }
@@ -359,7 +360,17 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
         }
     case .CMD_LOOKUP_TX_BY_HASH:
         let reply = decoded.Payload!.value as! Dictionary<String, AnyDecodable>
-        print("got tx hash back", reply)
+        let tx = reply["tx"]!.value as! Dictionary<String, AnyDecodable>
+        let to = tx["to"]?.value as! String
+        let input = tx["input"]?.value as! String
+        let from = reply["from"]?.value as! String
+        
+//        print("got tx hash back", reply)
+        DispatchQueue.main.async {
+            TransactionLookupModel.shared.to_addr = to
+            TransactionLookupModel.shared.from_addr = from
+            TransactionLookupModel.shared.input_calldata = input
+        }
 
     case .CMD_ALL_KNOWN_OPCODES:
         var opcodes = decoded.Payload!.value as! [String]

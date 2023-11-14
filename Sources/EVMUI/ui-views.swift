@@ -1193,8 +1193,18 @@ struct LookupTx: View {
                     Text("Transaction Hash").frame(width: 120, alignment: .leading)
                     TextField("hash", text: $tx_hash)
                 }
-                Spacer()
-                
+                HStack {
+                    Text("From Address").frame(width: 120, alignment: .leading)
+                    TextField("", text: $tx_lookup.from_addr)
+                }
+                HStack {
+                    Text("To Address").frame(width: 120, alignment: .leading)
+                    TextField("", text: $tx_lookup.to_addr)
+                }
+                HStack {
+                    Text("calldata").frame(width: 120, alignment: .leading)
+                    TextField("", text: $tx_lookup.input_calldata)
+                }
                 Button {
                     d.lookup_tx_by_hash(hsh: tx_hash)
                 } label : {

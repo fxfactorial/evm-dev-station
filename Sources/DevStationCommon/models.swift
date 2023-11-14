@@ -138,6 +138,9 @@ public class EVMRunStateControls: ObservableObject {
 
 public class TransactionLookupModel: ObservableObject {
     public static let shared = TransactionLookupModel()
+    @Published public var to_addr = ""
+    @Published public var from_addr = ""
+    @Published public var input_calldata = ""
 //    @Published public var current_lookup
 }
 

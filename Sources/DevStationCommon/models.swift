@@ -132,6 +132,8 @@ public class EVMRunStateControls: ObservableObject {
         call_return_value = ""
         breakpoint_on_call = false
         opcode_breakpoints_enabled = false
+        contract_currently_running = false
+        step_each_op = false
     }
 
 }

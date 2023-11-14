@@ -1206,7 +1206,7 @@ struct LookupTx: View {
                         TextField("", text: $tx_lookup.input_calldata, axis: .vertical)
                             .lineLimit(8, reservesSpace: true)
                     }
-                }.frame(maxHeight: 250)
+                 }.frame(maxHeight: 250)
                 HStack {
                     Button {
                         d.lookup_tx_by_hash(hsh: tx_hash)
@@ -1599,6 +1599,8 @@ struct RunningEVM<Driver: EVMDriver>: View {
                         EVMRunStateControls.shared.reset()
                         OpcodeCallbackModel.shared.reset()
                         RuntimeError.shared.reset()
+                        d.enable_opcode_call_callback(yes_no: false)
+                        d.enable_step_each_op(yes_no: false)
                     } label : {
                         Text("Reset").frame(width: 140)
                     }.frame(width: 160)

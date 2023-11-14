@@ -457,7 +457,13 @@ struct OPCodeChart: View {
             HStack {
                 Text("OPCode analysis").font(.headline)
                 Spacer()
-                Text("Pick by top 5/10/20").font(.headline)
+                Button {
+                    withAnimation {
+                        ExecutedOperations.shared.opcode_freq = ExecutedOperations.shared.opcode_freq_temp
+                    }
+                } label: {
+                    Text("Refresh").font(.headline)
+                }
             }
             ScrollView(.horizontal) {
                 Chart {

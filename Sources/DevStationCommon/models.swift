@@ -87,6 +87,7 @@ public class ExecutedOperations : ObservableObject {
     @Published public var call_tree : [CallEvaled] = []
     @Published public var state_records : [StateRecord] = []
     @Published public var opcode_freq : [String: OPCodeFreq] = [:]
+    public var opcode_freq_temp : [String: OPCodeFreq] = [:]
         // :
 //        "PUSH1":   .init(name: "PUSH1", count: 100, invokers: ["0x01":100]),
 //        "CALL":    .init(name: "CALL", count: 20, invokers: ["0x01":10, "0x02":10]),
@@ -101,6 +102,7 @@ public class ExecutedOperations : ObservableObject {
         total_dynamic_gas_cost_so_far = 0
         total_gas_cost_so_far = 0
         opcode_freq = [:]
+        opcode_freq_temp = [:]
     }
 }
 

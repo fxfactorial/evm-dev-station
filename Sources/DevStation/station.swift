@@ -23,6 +23,7 @@ final class EVM: EVMDriver {
     
     static let shared = EVM()
     let comm_channel = AsyncChannel<Data>()
+    let ui_work_queue = DispatchQueue(label: "com.hyegar.evm-dev")
 
     func start_handling_bridge() {
         Task.detached {
@@ -37,7 +38,6 @@ final class EVM: EVMDriver {
                 }
             }
         }
-
     }
     
     func enable_breakpoint_on_opcode(yes_no: Bool, opcode_name: String) {
@@ -281,17 +281,28 @@ struct Rootview : View {
 public func send_error_back(reply: UnsafeMutablePointer<CChar>) {
     let rpy = String(cString: reply)
     free(reply)
-    RuntimeError.shared.show_error = true
-    RuntimeError.shared.error_reason = rpy
+    DispatchQueue.main.async {
+        RuntimeError.shared.show_error = true
+        RuntimeError.shared.error_reason = rpy
+    }
 }
 
-@_cdecl("send_cmd_back")
-public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
-    let rpy = String(cString: reply)
-    free(reply)
+ @_cdecl("send_cmd_back")
+ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
+     let rpy = String(cString: reply)
+     free(reply)
+     EVM.shared.ui_work_queue.async {
+         do_work(rpy: rpy)
+//         EVM.shared.ui_work_channel.send(rpy)
+     }
+ }
+
+
+func do_work(rpy: String) {
+
     let decoded = try! JSONDecoder().decode(EVMBridgeMessage<AnyDecodable>.self, from: rpy.data(using: .utf8)!)
 
-    print("SWIFT RECEIVED", decoded)
+//    print("SWIFT RECEIVED", decoded)
 
     switch decoded.Cmd  {
     case .RUN_EVM_OP_EXECED:
@@ -303,18 +314,25 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
         let opcode_name = execed_op["opcode_name"]?.value as! String
         let opcode_num = execed_op["opcode_hex"]?.value as! String
         let caller = execed_op["caller"]?.value as! String
-        
+        if var had = ExecutedOperations.shared.opcode_freq_temp[opcode_name] {
+            had.invokers[caller, default: 0] += 1
+            had.count += 1
+            ExecutedOperations.shared.opcode_freq_temp.updateValue(had, forKey: opcode_name)
+        } else {
+            ExecutedOperations.shared.opcode_freq_temp[opcode_name] = OPCodeFreq(name: opcode_name, count: 1, invokers: [caller : 1])
+        }
 
+        
         DispatchQueue.main.async {
-            withAnimation {
-                if var had = ExecutedOperations.shared.opcode_freq[opcode_name] {
-                    had.invokers[caller, default: 0] += 1
-                    had.count += 1
-                    ExecutedOperations.shared.opcode_freq.updateValue(had, forKey: opcode_name)
-                } else {
-                    ExecutedOperations.shared.opcode_freq[opcode_name] = OPCodeFreq(name: opcode_name, count: 1, invokers: [caller : 1])
-                }
-            }
+    //            withAnimation {
+    //                if var had = ExecutedOperations.shared.opcode_freq[opcode_name] {
+    //                    had.invokers[caller, default: 0] += 1
+    //                    had.count += 1
+    //                    ExecutedOperations.shared.opcode_freq.updateValue(had, forKey: opcode_name)
+    //                } else {
+    //                    ExecutedOperations.shared.opcode_freq[opcode_name] = OPCodeFreq(name: opcode_name, count: 1, invokers: [caller : 1])
+    //                }
+    //            }
 
             // TODO these values are wrong
             ExecutedOperations.shared.total_static_gas_cost_so_far = gas_cost_static
@@ -421,6 +439,10 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
         let tree = call_result["CallTreeJSON"]?.value as! CallEvaled
 
         DispatchQueue.main.async {
+            withAnimation {
+                ExecutedOperations.shared.opcode_freq = ExecutedOperations.shared.opcode_freq_temp
+            }
+
             OpcodeCallbackModel.shared.hit_breakpoint = false
             EVMRunStateControls.shared.contract_currently_running = false
             EVMRunStateControls.shared.call_return_value = call_result["ReturnValue"]?.value as! String
@@ -485,6 +507,9 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
           .map({ (idx, name) in StackItem(name: name, index: idx, pretty: stack_pretty[idx] )})
 
         DispatchQueue.main.async {
+//            withAnimation {
+//                ExecutedOperations.shared.opcode_freq = ExecutedOperations.shared.opcode_freq_temp
+//            }
             OpcodeCallbackModel.shared.current_stack = stack_rep
             OpcodeCallbackModel.shared.current_memory = memory_hex
             OpcodeCallbackModel.shared.current_opcode_hit = opcode
@@ -498,6 +523,10 @@ public func send_cmd_back(reply: UnsafeMutablePointer<CChar>) {
         let value = reply["value"]?.value as! String
         
         DispatchQueue.main.async {
+//            withAnimation {
+//                ExecutedOperations.shared.opcode_freq = ExecutedOperations.shared.opcode_freq_temp
+//            }
+
             OpcodeCallbackModel.shared.current_args = args
             OpcodeCallbackModel.shared.current_callee = callee
             OpcodeCallbackModel.shared.current_caller = caller

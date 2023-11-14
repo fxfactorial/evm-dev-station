@@ -122,7 +122,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     }
     
     @State var eips_used : [EIP] = []
-    @State private var current_tab_runtime_eval = 3
+    @State private var current_tab_runtime_eval = 0
     
     public var body: some View {
         VStack {
@@ -444,11 +444,6 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
 
 
 struct OPCodeChart: View {
-//    let opcode_freq : [OPCodeFreq] = [
-//        .init(name: "PUSH1", count: 100, invokers: ["0x01":100]),
-//        .init(name: "CALL", count: 20, invokers: ["0x01":10, "0x02":10]),
-//        .init(name: "ADDRESS", count: 30, invokers: ["0x01":20, "0x03":10])
-//    ]
     @State private var selected_opcode : String?
     @ObservedObject private var s = ExecutedOperations.shared
     

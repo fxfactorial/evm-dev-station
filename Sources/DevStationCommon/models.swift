@@ -72,6 +72,70 @@ public struct OPCodeFreq {
     }
 }
 
+// solc --combined-json bin,abi --no-cbor-metadata test-contracts/simple.sol
+public class SolidityCompileHelper : ObservableObject {
+    public static let shared = SolidityCompileHelper()
+    private var monitor : FolderMonitor?
+    @Published public var watch_source : URL?
+    @Published public var solc_path = URL(fileURLWithPath: "/usr/local/bin/solc")
+    @Published public var jq_path = URL(fileURLWithPath: "/usr/local/bin/jq")
+    @Published public var do_compile = false
+    @Published public var contract_name = ""
+
+    public func start_folder_monitor() {
+        if let p = watch_source {
+            if monitor == nil {
+                // only need one of them derp derp
+                monitor = FolderMonitor(url: p)
+                monitor?.folderDidChange = {
+                    let outputPipe = Pipe()
+                    let errorPipe = Pipe()
+                    let solc_task = Process()
+                    solc_task.standardOutput = outputPipe
+                    solc_task.standardError = errorPipe
+                    solc_task.executableURL = self.solc_path
+                    solc_task.arguments = [
+                        "--combined-json", "bin,abi",
+                        "--no-cbor-metadata",
+                        p.absoluteString
+                    ]
+                    try? solc_task.run()
+                    let outputData = try? outputPipe.fileHandleForReading.readToEnd()!
+                    let errorData = try? errorPipe.fileHandleForReading.readToEnd()!
+                    let output = String(decoding: outputData!, as: UTF8.self)
+                    let error = String(decoding: errorData!, as: UTF8.self)
+                    // TODO do something with it
+                    _ = error
+                    let decoded = try! JSONDecoder().decode(AnyDecodable.self, from: outputData!)
+                    let contracts = decoded.value as! Dictionary<String, AnyDecodable>
+                    let comps = p.pathComponents
+                    let dynamic_key = "\(comps[comps.count - 2])/\(comps.last!):\(self.contract_name)"
+                    let handle = contracts["contracts"]!.value as! Dictionary<String, AnyDecodable>
+                    let ours = handle[dynamic_key]!.value as! Dictionary<String, AnyDecodable>
+                    let bin = ours["bin"]!.value as! String
+                    let jq_input = Pipe()
+                    let jq_output = Pipe()
+                    let jq_task = Process()
+                    let query = ".contracts[\"\(dynamic_key)\"].abi"
+                    try! jq_input.fileHandleForWriting.write(contentsOf: outputData!)
+                    jq_task.standardInput = jq_input
+                    jq_task.standardOutput = jq_output
+                    jq_task.executableURL = self.jq_path
+                    jq_task.arguments = [query]
+                    print(query)
+                    try! jq_task.run()
+                    print("after jq ran, now close file")
+                    jq_input.fileHandleForWriting.closeFile()
+                    let jq_output_collected = try? jq_output.fileHandleForReading.readToEnd()!
+                    let jq_output_str = String(decoding: jq_output_collected!, as: UTF8.self)
+                    print("yes it changed, did a compile", bin, query, jq_output_str)
+
+                }
+                monitor?.startMonitoring()
+            }
+        }
+    }
+}
 
 // REMEMBER When you want to have this be observed as a source of data
 // for like a list or table, then have the View have a property wrapper of

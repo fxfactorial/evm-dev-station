@@ -9,6 +9,72 @@ import SwiftUI
 import DevStationCommon
 import Charts
 
+
+struct WatchCompileDeploy: View {
+    @ObservedObject private var compiler = SolidityCompileHelper.shared
+    @Environment(\.dismiss) var dismiss
+    @State private var present_fileimporter = false
+
+    var body: some View {
+        Form {
+            Toggle(isOn: $compiler.do_compile, label: {
+                Text("Watch for changes, compile, deploy")
+            })
+            HStack {
+                Button {
+                    present_fileimporter.toggle()
+                } label : {
+                    Text("Solidity Contract")
+                }
+                .fileImporter(isPresented: $present_fileimporter,
+                              allowedContentTypes: [.init(filenameExtension: "sol")!]) { result in
+                    switch result {
+                    case .success(let file_path):
+                        compiler.watch_source = file_path
+                        // gain access to the directory
+                    case .failure(let error):
+                        // how would this even happen?
+                        RuntimeError.shared.error_reason = error.localizedDescription
+                        RuntimeError.shared.show_error = true
+                    }
+                }
+
+                TextField("", text: Binding<String>(
+                    get : { compiler.watch_source?.path() ?? "" },
+                    set: { compiler.watch_source = URL(string: $0) }
+                ))
+            }
+            HStack {
+                Text("Solidity Compiler")
+                TextField("", text: Binding<String>(
+                    get: { compiler.solc_path.path() },
+                    set: { compiler.solc_path = URL(fileURLWithPath: $0) }
+                ))
+            }
+            HStack {
+                Text("jq utility")
+                TextField("", text: Binding<String>(
+                    get: { compiler.jq_path.path() },
+                    set: { compiler.jq_path = URL(fileURLWithPath: $0 )}
+                ))
+            }
+            HStack {
+                Text("Contract name")
+                TextField("", text: $compiler.contract_name)
+            }
+            Button {
+                dismiss()
+            } label: {
+                Text("ok")
+            }
+        }.padding(10)
+    }
+}
+
+#Preview("Watch compile deploy") {
+    WatchCompileDeploy().frame(width: 500, height: 300)
+}
+
 struct BlockContext : View {
     @ObservedObject private var model = BlockContextModel.shared
     @EnvironmentObject var current_head : CurrentBlockHeader
@@ -116,6 +182,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     @ObservedObject private var error_model = RuntimeError.shared
     
     @State private var present_load_contract_sheet = false
+    @State private var present_watch_compile_deploy_solidity_sheet = false
     
     public init(driver : Driver) {
         d = driver
@@ -142,7 +209,12 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             Button {
                                 bytecode_add.toggle()
                             } label: {
-                                Text("Add New Contract").frame(maxWidth: 150)
+                                Text("Add Directly").frame(maxWidth: 150)
+                            }
+                            Button {
+                                present_watch_compile_deploy_solidity_sheet.toggle()
+                            } label: {
+                                Text("Watch, compile, deploy").frame(width: 150)
                             }
                             Button {
                                 present_load_contract_sheet.toggle()
@@ -304,7 +376,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             LookupTx(d: d).tabItem { Text("Lookup Tx") }.tag(4)
                         }
                     }
-                }.frame(minHeight: 150, maxHeight: 275)
+                }.frame(minHeight: 150, maxHeight: 275).padding([.bottom], 10)
                 HSplitView {
                     TabView(selection: $current_tab_runtime_eval) {
                         VStack {
@@ -414,6 +486,14 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                 }
             }, content: {
                 LoadExistingDB(d:d)
+            })
+            .sheet(isPresented: $present_watch_compile_deploy_solidity_sheet, onDismiss: {
+                if SolidityCompileHelper.shared.do_compile {
+                    SolidityCompileHelper.shared.start_folder_monitor()
+                }
+            }, content: {
+                WatchCompileDeploy()
+                    .frame(width: 400, height: 300)
             })
             .sheet(isPresented: $present_eips_sheet,
                    onDismiss: {

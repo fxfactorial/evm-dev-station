@@ -38,6 +38,27 @@ about what you'd like to be able to do, see, how it ought to interact, font chan
 see https://twitter.com/EdgarArout/status/1720939792098107443 for an example of how to change the
 value of `SLOAD`
 
+# talking to myself
+
+OMG AppStorage super annoying to test AppStorage again
+
+```
+$ rm -rf ~/Library/Preferences/evm-dev-station-x86.plist
+$ killall -u $(whoami) cfprefsd
+```
+
+# infoplist stuff
+
+```
+      linkerSettings: [
+        .unsafeFlags( ["-Xlinker", "-sectcreate",
+                       "-Xlinker", "__TEXT",
+                       "-Xlinker", "__info_plist",
+                       "-Xlinker", "Resources/Info.plist"] )
+      ]),
+
+```
+
 # architecture
 
 golang compiled into a C static library, statically linked into native swift binary.

@@ -10,7 +10,7 @@ import DevStationCommon
 import Charts
 
 struct WatchCompileDeploy: View {
-    @State private var compiler = SolidityCompileHelper.shared
+    @Bindable private var compiler = SolidityCompileHelper.shared
     @Environment(\.dismiss) var dismiss
     @State private var present_fileimporter = false
 
@@ -75,8 +75,8 @@ struct WatchCompileDeploy: View {
 }
 
 struct BlockContext : View {
-    @State private var model = BlockContextModel.shared
-    @State var current_head : CurrentBlockHeader
+    @Bindable private var model = BlockContextModel.shared
+    @Bindable var current_head : CurrentBlockHeader
     let offset : CGFloat = 80
 
     var body : some View {
@@ -166,23 +166,21 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     @Environment(\.modelContext) private var context
     @State private var bytecode_add = false
     @State private var current_code_running = ""
-    @State private var present_eips_sheet = false
-    @State private var present_load_db_sheet = false
     @State private var current_contract_detail_tab = 0
     
     @AppStorage("show_first_load_help") private var show_first_load_help = true
-    
-    // NOTE Use observedobject on singletons
-    @State private var chaindb = LoadChainModel.shared
-    @State private var evm_run_controls = EVMRunStateControls.shared
-    @State private var execed_ops = ExecutedOperations.shared
-    @State private var current_block_header = CurrentBlockHeader.shared
-    @State private var contracts = LoadedContracts.shared
-    @State private var error_model = RuntimeError.shared
+    private var chaindb = LoadChainModel.shared
+    private var evm_run_controls = EVMRunStateControls.shared
+    private var execed_ops = ExecutedOperations.shared
+    private var current_block_header = CurrentBlockHeader.shared
+    @Bindable private var contracts = LoadedContracts.shared
+    @Bindable private var error_model = RuntimeError.shared
     
     @State private var present_load_contract_sheet = false
     @State private var present_watch_compile_deploy_solidity_sheet = false
-    
+    @State private var present_eips_sheet = false
+    @State private var present_load_db_sheet = false
+
     public init(driver : Driver) {
         d = driver
     }
@@ -514,7 +512,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
 
 struct OPCodeChart: View {
     @State private var selected_opcode : String?
-    @ObservedObject private var s = ExecutedOperations.shared
+    private var s = ExecutedOperations.shared
     
     var body: some View {
         VStack(alignment: .leading, content: {
@@ -605,7 +603,7 @@ extension Color {
 }
 
 struct CallTree : View {
-    @ObservedObject private var evm_execed = ExecutedOperations.shared
+    private var evm_execed = ExecutedOperations.shared
     @Environment(\.openURL) var openURL
 
     var body: some View {
@@ -653,6 +651,7 @@ struct StateAccount : Hashable,  Identifiable {
     }
 }
 
+// TODO this isn't used atm
 struct StateInspector: View {
     let d : EVMDriver
     @State private var loaded_accounts : [StateAccount] = [.init(addr: "0x0123", code_hash: "0x213123")]
@@ -686,8 +685,8 @@ struct StateInspector: View {
 }
 
 struct StateDBDetails: View {
-    @State var current_head : CurrentBlockHeader
-    @State var db_backing  = LoadChainModel.shared
+    var current_head : CurrentBlockHeader
+    var db_backing  = LoadChainModel.shared
     
     var body: some View {
         VStack {
@@ -767,7 +766,7 @@ struct KnownEIPs: View {
     @State var enable_all = false
     @Environment(\.dismiss) var dismiss
     @Environment(\.openURL) var openURL
-    @State private var evm_run_state = EVMRunStateControls.shared
+    private var evm_run_state = EVMRunStateControls.shared
     
     let base_url = "https://eips.ethereum.org/EIPS"
     
@@ -1035,8 +1034,8 @@ struct LoadContractFromChain : View {
 
 
 struct BreakpointView: View {
-    @State private var callbackmodel: OpcodeCallbackModel = OpcodeCallbackModel.shared
-    @State private var execed = ExecutedOperations.shared
+    @Bindable private var callbackmodel: OpcodeCallbackModel = OpcodeCallbackModel.shared
+    @Bindable private var execed = ExecutedOperations.shared
     @State private var use_modified_values = false
     @State private var possible_signature_names : [String] = []
     @State private var selected : String?
@@ -1274,13 +1273,11 @@ struct BreakpointView: View {
     }
 }
 
-
-
 struct SideEVM : View {
     let d : EVMDriver
     @State private var use_current_state = true
     @State private var target_addr = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
-    @State private var side_evm_model = SideEVMResult.shared
+    @Bindable private var side_evm_model = SideEVMResult.shared
     
     var body: some View {
         VStack {
@@ -1332,8 +1329,8 @@ struct SideEVM : View {
 struct LookupTx: View {
     let d : EVMDriver
     @State private var tx_hash = ""
-    @State private var chaindb = LoadChainModel.shared
-    @State private var tx_lookup = TransactionLookupModel.shared
+    var chaindb = LoadChainModel.shared
+    @Bindable private var tx_lookup = TransactionLookupModel.shared
     func dev_mode () {
         tx_lookup.from_addr = "0x6f93428716dbc41bda6069fcca98ec105cb98168"
         tx_lookup.to_addr = "0x000000000dfde7deaf24138722987c9a6991e2d4"
@@ -1387,7 +1384,7 @@ struct LookupTx: View {
 }
 
 struct CommonABIs : View {
-    @State private var abis = CommonABIsModel.shared
+    private var abis = CommonABIsModel.shared
     @State private var selected : String?
     @State private var present_add_abi_sheet = false
     @State private var fields : [String: [String]] = [:]
@@ -1494,7 +1491,7 @@ struct LoadExistingDB : View {
     @State private var present_fileimporter = false
     @State private var present_fileimporter_ancient = false
     @State private var at_block_number = ""
-    @State private var chain = LoadChainModel.shared
+    @Bindable private var chain = LoadChainModel.shared
     
     var body: some View {
         VStack {
@@ -1570,12 +1567,10 @@ struct LoadExistingDB : View {
 }
 
 struct BreakOnOpcodes: View {
-    @State var evm_run_state = EVMRunStateControls.shared
+    var evm_run_state = EVMRunStateControls.shared
     @State var break_on_all = false
     @Environment(\.dismiss) var dismiss
     let d : EVMDriver
-    
-    @State private var controls = EVMRunStateControls.shared
     
     var body: some View {
         VStack {
@@ -1626,9 +1621,9 @@ struct InitialHelpView : View {
 struct RunningEVM<Driver: EVMDriver>: View {
     let d : Driver
     @Binding var target_addr : String
-    @State private var evm_run_controls = EVMRunStateControls.shared
-    @ObservedObject private var call_params = EVMRunStateControls.shared.current_call_params
-    @State private var load_chain_model = LoadChainModel.shared
+    @Bindable private var evm_run_controls = EVMRunStateControls.shared
+    @Bindable private var call_params = EVMRunStateControls.shared.current_call_params
+    var load_chain_model = LoadChainModel.shared
     @State private var present_opcode_select_sheet = false
     @Environment(\.dismiss) var dismiss
     @State private var keccak_input = ""

@@ -136,9 +136,8 @@ public struct OPCodeFreq {
 // for like a list or table, then have the View have a property wrapper of
 // @ObservedObject private var thing = ExecutedOperation.shared
 // and then use thing.execed_operations, then you can have it be used properly
-@Observable public class ExecutedOperations : ObservableObject {
-    @ObservationIgnored
-    public static let shared = ExecutedOperations()
+@Observable public class ExecutedOperations {
+    @ObservationIgnored public static let shared = ExecutedOperations()
     
     public var execed_operations: [ExecutedEVMCode] = []
     public var total_static_gas_cost_so_far = 0
@@ -179,7 +178,7 @@ public struct EIP : Identifiable {
     }
 }
 
-public class CallParams : ObservableObject {
+@Observable public class CallParams {
     public var calldata : String = ""
     public var caller_addr: String = ""
     public var caller_eth_bal = ""

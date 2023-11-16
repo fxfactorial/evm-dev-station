@@ -8,6 +8,7 @@
 import SwiftUI
 import DevStationCommon
 import Charts
+import SwiftData
 
 struct WatchCompileDeploy: View {
     @Bindable private var compiler = SolidityCompileHelper.shared
@@ -868,10 +869,8 @@ struct ABIEncode: View {
                                     if let contract = loaded_contract,
                                        let c = contract.contract,
                                        let element = c.allMethods.first(where: { $0.signature == selected }) {
-                                        // TODO This is wrong because if inputs is 0, then the ForEach never goes off
-                                        ForEach(Array(zip(element.inputs.indices, element.inputs)), id: \.1.name) {index, input in
-                                            HStack {
-                                                Text(input.name)
+                                        Form {
+                                            ForEach(Array(zip(element.inputs.indices, element.inputs)), id: \.1.name) {index, input in
                                                 TextField(input.name, text: Binding<String>(
                                                     get: {
                                                         let method_name = element.signature
@@ -886,7 +885,7 @@ struct ABIEncode: View {
                                                         let n = element.signature
                                                         fields[n]![index] = $0
                                                     }
-                                                ))
+                                                )).help(input.type.abiRepresentation)
                                             }
                                         }
                                     }
@@ -963,9 +962,13 @@ struct ABIEncode: View {
 }
 
 #Preview("ABI encode table") {
-    ABIEncode(
-        loaded_contract: sample_contract
-    ).frame(width: 700, height: 300)
+    
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try! ModelContainer(for: LoadedContract.self, configurations: config)
+
+    return ABIEncode(loaded_contract: sample_contract)
+        .frame(width: 700, height: 300)
+        .modelContainer(container)
 }
 
 struct LoadContractFromChain : View {
@@ -1388,8 +1391,7 @@ struct CommonABIs : View {
                        let element = abis.all_methods.first(where: {$0.signature == s}) {
                         VStack {
                             if element.inputs.count == 0 {
-                                Spacer()
-                                    .frame(height: 1)
+                                Spacer().frame(height: 1)
                             } else {
                                 ForEach(Array(zip(element.inputs.indices, element.inputs)), id: \.1.name) { index, input in
                                     HStack {

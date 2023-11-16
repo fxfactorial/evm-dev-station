@@ -3,6 +3,7 @@ pragma solidity >=0.4.0 <0.9.0;
 contract EntryPoint {
   uint256 simple_storage_one = 10;
   uint256 simple_storage_two = 12;
+  mapping(address => uint256) items;
 
   function entry_point(
     address sender,
@@ -24,5 +25,30 @@ contract EntryPoint {
   function internal_work(uint256 more_work) internal pure returns (uint256) {
     uint256 force_it = more_work + 10;
     return force_it + 10;
+  }
+
+  function do_work_no_parameters()
+    external
+    view
+    returns (uint256, uint256, uint256)
+  {
+    uint256 copy_1 = simple_storage_one;
+    uint256 copy_2 = simple_storage_two;
+    return (copy_1 + copy_2, copy_1, copy_2);
+  }
+
+  function simple_handler(address has) external returns (uint256) {
+    items[has] = 123;
+
+    uint256 added = 123;
+    return 456;
+  }
+
+  function check_require() external view {
+    require(10 > 2, "ooops");
+  }
+
+  function more_Deploy() external view {
+    //
   }
 }

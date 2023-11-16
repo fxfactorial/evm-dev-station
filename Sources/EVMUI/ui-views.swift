@@ -11,7 +11,7 @@ import Charts
 
 
 struct WatchCompileDeploy: View {
-    @ObservedObject private var compiler = SolidityCompileHelper.shared
+    @State private var compiler = SolidityCompileHelper.shared
     @Environment(\.dismiss) var dismiss
     @State private var present_fileimporter = false
 
@@ -379,6 +379,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                 HSplitView {
                     TabView(selection: $current_tab_runtime_eval) {
                         VStack {
+                            // TODO not working
                             ScrollViewReader { (proxy: ScrollViewProxy) in
                                 HStack {
                                     Text("\(execed_ops.execed_operations.count) Executed Operations")
@@ -391,11 +392,6 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                     TableColumn("GAS", value: \.gas_cost)
                                 }
                                 .frame(maxHeight: .infinity)
-                                .onReceive(execed_ops.$execed_operations,
-                                           perform: { item in
-                                    let id = item.last
-                                    proxy.scrollTo(id)
-                                })
                                 HStack {
                                     Text("\(execed_ops.total_gas_cost_so_far) total gas cost")
                                         .font(.title2)

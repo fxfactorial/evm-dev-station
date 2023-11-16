@@ -17,14 +17,6 @@ import SwiftData
     }
 }
 
-public class ErrorFeedbackModel: ObservableObject {
-    public static let hsared = ErrorFeedbackModel()
-    // issues from when running the EVM
-    @Published public var EVMError = ""
-    // issues from 
-    @Published public var UIInputError = ""
-}
-
 public struct EVMCall : Identifiable {
     public let id = UUID()
     public let address_name : String
@@ -32,8 +24,7 @@ public struct EVMCall : Identifiable {
     public var children: [EVMCall]?
 }
 
-
-public struct ExecutedEVMCode: Identifiable, Hashable{
+public struct ExecutedEVMCode: Identifiable, Hashable {
     public let id = UUID()
     // easiest when they are all strings
     public let pc: String
@@ -74,14 +65,17 @@ public struct OPCodeFreq {
 }
 
 // solc --combined-json bin,abi --no-cbor-metadata test-contracts/simple.sol
-public class SolidityCompileHelper : ObservableObject {
+@Observable public class SolidityCompileHelper {
+    @ObservationIgnored
     public static let shared = SolidityCompileHelper()
+    @ObservationIgnored
     private var monitor : FolderMonitor?
-    @Published public var watch_source : URL?
-    @Published public var solc_path = URL(fileURLWithPath: "/usr/local/bin/solc")
-    @Published public var jq_path = URL(fileURLWithPath: "/usr/local/bin/jq")
-    @Published public var do_compile = false
-    @Published public var contract_name = ""
+
+    public var watch_source : URL?
+    public var solc_path = URL(fileURLWithPath: "/usr/local/bin/solc")
+    public var jq_path = URL(fileURLWithPath: "/usr/local/bin/jq")
+    public var do_compile = false
+    public var contract_name = ""
 
     public func start_folder_monitor() {
         if let p = watch_source {
@@ -142,22 +136,18 @@ public class SolidityCompileHelper : ObservableObject {
 // for like a list or table, then have the View have a property wrapper of
 // @ObservedObject private var thing = ExecutedOperation.shared
 // and then use thing.execed_operations, then you can have it be used properly
-public class ExecutedOperations : ObservableObject {
+@Observable public class ExecutedOperations : ObservableObject {
+    @ObservationIgnored
     public static let shared = ExecutedOperations()
     
-    @Published public var execed_operations: [ExecutedEVMCode] = []
-    @Published public var total_static_gas_cost_so_far = 0
-    @Published public var total_dynamic_gas_cost_so_far = 0
-    @Published public var total_gas_cost_so_far = 0
-    @Published public var call_tree : [CallEvaled] = []
-    @Published public var state_records : [StateRecord] = []
-    @Published public var opcode_freq : [String: OPCodeFreq] = [:]
-    public var opcode_freq_temp : [String: OPCodeFreq] = [:]
-        // :
-//        "PUSH1":   .init(name: "PUSH1", count: 100, invokers: ["0x01":100]),
-//        "CALL":    .init(name: "CALL", count: 20, invokers: ["0x01":10, "0x02":10]),
-//        "ADDRESS": .init(name: "ADDRESS", count: 30, invokers: ["0x01":20, "0x03":10])
-//    ]
+    public var execed_operations: [ExecutedEVMCode] = []
+    public var total_static_gas_cost_so_far = 0
+    public var total_dynamic_gas_cost_so_far = 0
+    public var total_gas_cost_so_far = 0
+    public var call_tree : [CallEvaled] = []
+    public var state_records : [StateRecord] = []
+    public var opcode_freq : [String: OPCodeFreq] = [:]
+    @ObservationIgnored public var opcode_freq_temp : [String: OPCodeFreq] = [:]
     
     public func reset() {
         execed_operations = []

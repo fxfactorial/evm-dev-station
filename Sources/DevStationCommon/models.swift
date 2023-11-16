@@ -1,14 +1,14 @@
 import SwiftUI
 import SwiftData
 
-public class LoadChainModel: ObservableObject {
+@Observable public class LoadChainModel {
     public static let shared = LoadChainModel()
-    @Published public var chaindata_directory = ""
-    @Published public var is_chain_loaded = false
-    @Published public var show_loading_db = false
-    @Published public var db_kind : DBKind = .InMemory
-    @Published public var ancientdb_dir = ""
-    @Published public var at_block_number = ""
+    public var chaindata_directory = ""
+    public var is_chain_loaded = false
+    public var show_loading_db = false
+    public var db_kind : DBKind = .InMemory
+    public var ancientdb_dir = ""
+    public var at_block_number = ""
     public func reset() {
         chaindata_directory = ""
         is_chain_loaded = false

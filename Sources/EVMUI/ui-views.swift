@@ -174,7 +174,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     @AppStorage("show_first_load_help") private var show_first_load_help = true
     
     // NOTE Use observedobject on singletons
-    @ObservedObject private var chaindb = LoadChainModel.shared
+    @State private var chaindb = LoadChainModel.shared
     @ObservedObject private var evm_run_controls = EVMRunStateControls.shared
     @ObservedObject private var execed_ops = ExecutedOperations.shared
     @ObservedObject private var current_block_header = CurrentBlockHeader.shared
@@ -357,7 +357,6 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             }.tag(0)
                             StateDBDetails()
                                 .environmentObject(current_block_header)
-                                .environmentObject(chaindb)
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                                 .padding()
                                 .background()
@@ -698,7 +697,7 @@ struct StateInspector: View {
 
 struct StateDBDetails: View {
     @EnvironmentObject var current_head : CurrentBlockHeader
-    @EnvironmentObject var db_backing : LoadChainModel
+    @State var db_backing  = LoadChainModel.shared
     
     var body: some View {
         VStack {
@@ -1340,7 +1339,7 @@ struct SideEVM : View {
 struct LookupTx: View {
     let d : EVMDriver
     @State private var tx_hash = ""
-    @ObservedObject private var chaindb = LoadChainModel.shared
+    @State private var chaindb = LoadChainModel.shared
     @ObservedObject private var tx_lookup = TransactionLookupModel.shared
     func dev_mode () {
         tx_lookup.from_addr = "0x6f93428716dbc41bda6069fcca98ec105cb98168"
@@ -1502,7 +1501,7 @@ struct LoadExistingDB : View {
     @State private var present_fileimporter = false
     @State private var present_fileimporter_ancient = false
     @State private var at_block_number = ""
-    @ObservedObject private var chain = LoadChainModel.shared
+    @State private var chain = LoadChainModel.shared
     
     var body: some View {
         VStack {
@@ -1636,7 +1635,7 @@ struct RunningEVM<Driver: EVMDriver>: View {
     @Binding var target_addr : String
     @ObservedObject private var evm_run_controls = EVMRunStateControls.shared
     @ObservedObject private var call_params = EVMRunStateControls.shared.current_call_params
-    @ObservedObject private var load_chain_model = LoadChainModel.shared
+    @State private var load_chain_model = LoadChainModel.shared
     @State private var present_opcode_select_sheet = false
     @Environment(\.dismiss) var dismiss
     @State private var keccak_input = ""

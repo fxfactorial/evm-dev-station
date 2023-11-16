@@ -76,7 +76,7 @@ struct WatchCompileDeploy: View {
 }
 
 struct BlockContext : View {
-    @ObservedObject private var model = BlockContextModel.shared
+    @State private var model = BlockContextModel.shared
     @EnvironmentObject var current_head : CurrentBlockHeader
     let offset : CGFloat = 80
 
@@ -175,7 +175,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     
     // NOTE Use observedobject on singletons
     @State private var chaindb = LoadChainModel.shared
-    @ObservedObject private var evm_run_controls = EVMRunStateControls.shared
+    @State private var evm_run_controls = EVMRunStateControls.shared
     @ObservedObject private var execed_ops = ExecutedOperations.shared
     @ObservedObject private var current_block_header = CurrentBlockHeader.shared
     @ObservedObject private var contracts = LoadedContracts.shared
@@ -435,7 +435,6 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                         }
                     }
                 ))
-                .environmentObject(evm_run_controls)
             }
             .frame(maxWidth: .infinity)
             .sheet(isPresented: $present_load_contract_sheet,
@@ -773,7 +772,7 @@ struct KnownEIPs: View {
     @State var enable_all = false
     @Environment(\.dismiss) var dismiss
     @Environment(\.openURL) var openURL
-    @ObservedObject private var evm_run_state = EVMRunStateControls.shared
+    @State private var evm_run_state = EVMRunStateControls.shared
     
     let base_url = "https://eips.ethereum.org/EIPS"
     
@@ -824,7 +823,7 @@ struct KnownEIPs: View {
 }
 
 struct StackListRowView: View {
-    @ObservedObject var item: StackItem
+    @State var item: StackItem
     
     var body: some View {
         HStack {
@@ -1158,11 +1157,13 @@ struct BreakpointView: View {
                         }
                     }
                     .padding()
-                }.onReceive(EVMRunStateControls.shared.$contract_currently_running, perform: { current_running in
-                    if !current_running {
-                        possible_signature_names = []
-                    }
-                })
+                }
+                // TODO Not sure about this since moving to @Observable
+//                .onReceive(EVMRunStateControls.shared.$contract_currently_running, perform: { current_running in
+//                    if !current_running {
+//                        possible_signature_names = []
+//                    }
+//                })
                 .tabItem { Text("CALL").help("contract calls") }.tag(0)
                 //                          .frame(height: 280)
                 HStack {
@@ -1336,7 +1337,7 @@ struct LookupTx: View {
     let d : EVMDriver
     @State private var tx_hash = ""
     @State private var chaindb = LoadChainModel.shared
-    @ObservedObject private var tx_lookup = TransactionLookupModel.shared
+    @State private var tx_lookup = TransactionLookupModel.shared
     func dev_mode () {
         tx_lookup.from_addr = "0x6f93428716dbc41bda6069fcca98ec105cb98168"
         tx_lookup.to_addr = "0x000000000dfde7deaf24138722987c9a6991e2d4"
@@ -1573,12 +1574,12 @@ struct LoadExistingDB : View {
 }
 
 struct BreakOnOpcodes: View {
-    @ObservedObject var evm_run_state = EVMRunStateControls.shared
+    @State var evm_run_state = EVMRunStateControls.shared
     @State var break_on_all = false
     @Environment(\.dismiss) var dismiss
     let d : EVMDriver
     
-    @ObservedObject private var controls = EVMRunStateControls.shared
+    @State private var controls = EVMRunStateControls.shared
     
     var body: some View {
         VStack {
@@ -1629,7 +1630,7 @@ struct InitialHelpView : View {
 struct RunningEVM<Driver: EVMDriver>: View {
     let d : Driver
     @Binding var target_addr : String
-    @ObservedObject private var evm_run_controls = EVMRunStateControls.shared
+    @State private var evm_run_controls = EVMRunStateControls.shared
     @ObservedObject private var call_params = EVMRunStateControls.shared.current_call_params
     @State private var load_chain_model = LoadChainModel.shared
     @State private var present_opcode_select_sheet = false

@@ -189,19 +189,19 @@ public class CallParams : ObservableObject {
     public var msg_value : String = "0"
 }
 
-public class EVMRunStateControls: ObservableObject {
-    public static let shared = EVMRunStateControls()
+@Observable public class EVMRunStateControls {
+    @ObservationIgnored public static let shared = EVMRunStateControls()
 
-    @Published public var breakpoint_on_call = false
-    @Published public var step_each_op = false
-    @Published public var opcode_breakpoints_enabled = false
-    @Published public var contract_currently_running = false
-    @Published public var record_storage_keys = false
-    @Published public var call_return_value = ""
-    @Published public var evm_error = ""
-    @Published public var opcodes_used :[OPCodeEnable] = []
-    @Published public var eips_used :[EIP] = []
-    @Published public var current_call_params = CallParams()
+    public var breakpoint_on_call = false
+    public var step_each_op = false
+    public var opcode_breakpoints_enabled = false
+    public var contract_currently_running = false
+    public var record_storage_keys = false
+    public var call_return_value = ""
+    public var evm_error = ""
+    public var opcodes_used :[OPCodeEnable] = []
+    public var eips_used :[EIP] = []
+    public var current_call_params = CallParams()
 
     public func reset() {
         evm_error = ""
@@ -214,23 +214,23 @@ public class EVMRunStateControls: ObservableObject {
 
 }
 
-public class TransactionLookupModel: ObservableObject {
-    public static let shared = TransactionLookupModel()
-    @Published public var to_addr = ""
-    @Published public var from_addr = ""
-    @Published public var input_calldata = ""
+@Observable public class TransactionLookupModel {
+    @ObservationIgnored public static let shared = TransactionLookupModel()
+    public var to_addr = ""
+    public var from_addr = ""
+    public var input_calldata = ""
 //    @Published public var current_lookup
 }
 
-public class BlockContextModel : ObservableObject {
-    public static let shared = BlockContextModel()
+@Observable public class BlockContextModel {
+    @ObservationIgnored public static let shared = BlockContextModel()
 
-    @Published public var coinbase = ""
-    @Published public var base_gas = ""
-    @Published public var base_gas_tip = ""
-    @Published public var time = ""
-    @Published public var gas_limit = ""
-    @Published public var gas_used = ""
+    public var coinbase = ""
+    public var base_gas = ""
+    public var base_gas_tip = ""
+    public var time = ""
+    public var gas_limit = ""
+    public var gas_used = ""
     
     public func reset() {
         coinbase = ""
@@ -241,10 +241,10 @@ public class BlockContextModel : ObservableObject {
 }
 
 
-public class Item: ObservableObject {
-    public let id = UUID()
-    public let index : Int
-    @Published public var name: String = ""
+@Observable public class Item {
+    @ObservationIgnored public let id = UUID()
+    @ObservationIgnored public let index : Int
+    public var name: String = ""
     public init(name: String, index: Int) {
         self.name = name
         self.index = index
@@ -261,11 +261,12 @@ extension Item: Hashable {
     }
 }
 
-public class StackItem: ObservableObject, Hashable {
-    public let id = UUID()
-    public let index : Int
-    @Published public var name: String = ""
-    @Published public var pretty: String = ""
+
+@Observable public class StackItem: Hashable {
+    @ObservationIgnored public let id = UUID()
+    @ObservationIgnored public let index : Int
+    public var name: String = ""
+    public var pretty: String = ""
 
     public init(name: String, index: Int, pretty: String) {
         self.name = name

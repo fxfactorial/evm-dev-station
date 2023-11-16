@@ -9,7 +9,6 @@ import SwiftUI
 import DevStationCommon
 import Charts
 
-
 struct WatchCompileDeploy: View {
     @State private var compiler = SolidityCompileHelper.shared
     @Environment(\.dismiss) var dismiss
@@ -77,7 +76,7 @@ struct WatchCompileDeploy: View {
 
 struct BlockContext : View {
     @State private var model = BlockContextModel.shared
-    @EnvironmentObject var current_head : CurrentBlockHeader
+    @State var current_head : CurrentBlockHeader
     let offset : CGFloat = 80
 
     var body : some View {
@@ -176,10 +175,10 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     // NOTE Use observedobject on singletons
     @State private var chaindb = LoadChainModel.shared
     @State private var evm_run_controls = EVMRunStateControls.shared
-    @ObservedObject private var execed_ops = ExecutedOperations.shared
-    @ObservedObject private var current_block_header = CurrentBlockHeader.shared
-    @ObservedObject private var contracts = LoadedContracts.shared
-    @ObservedObject private var error_model = RuntimeError.shared
+    @State private var execed_ops = ExecutedOperations.shared
+    @State private var current_block_header = CurrentBlockHeader.shared
+    @State private var contracts = LoadedContracts.shared
+    @State private var error_model = RuntimeError.shared
     
     @State private var present_load_contract_sheet = false
     @State private var present_watch_compile_deploy_solidity_sheet = false
@@ -322,8 +321,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                         }
                         TabView {
                             VStack {
-                                BlockContext()
-                                    .environmentObject(current_block_header)
+                                BlockContext(current_head: current_block_header)
                                     .frame(maxWidth: .infinity)
                                 HStack {
                                     Button {
@@ -352,11 +350,8 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             }
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .background()
-                            .tabItem {
-                                Text("Load Blockchain")
-                            }.tag(0)
-                            StateDBDetails()
-                                .environmentObject(current_block_header)
+                            .tabItem { Text("Load Blockchain") }.tag(0)
+                            StateDBDetails(current_head: current_block_header)
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                                 .padding()
                                 .background()
@@ -691,7 +686,7 @@ struct StateInspector: View {
 }
 
 struct StateDBDetails: View {
-    @EnvironmentObject var current_head : CurrentBlockHeader
+    @State var current_head : CurrentBlockHeader
     @State var db_backing  = LoadChainModel.shared
     
     var body: some View {
@@ -1040,13 +1035,14 @@ struct LoadContractFromChain : View {
 
 
 struct BreakpointView: View {
-    @ObservedObject private var callbackmodel: OpcodeCallbackModel = OpcodeCallbackModel.shared
-    @ObservedObject private var execed = ExecutedOperations.shared
+    @State private var callbackmodel: OpcodeCallbackModel = OpcodeCallbackModel.shared
+    @State private var execed = ExecutedOperations.shared
     @State private var use_modified_values = false
-    @Environment(\.openURL) var openURL
     @State private var possible_signature_names : [String] = []
     @State private var selected : String?
     @State private var current_tab = 1
+    @Environment(\.openURL) var openURL
+
     let d : EVMDriver
     
     var body: some View {
@@ -1284,7 +1280,7 @@ struct SideEVM : View {
     let d : EVMDriver
     @State private var use_current_state = true
     @State private var target_addr = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
-    @ObservedObject private var side_evm_model = SideEVMResult.shared
+    @State private var side_evm_model = SideEVMResult.shared
     
     var body: some View {
         VStack {
@@ -1391,7 +1387,7 @@ struct LookupTx: View {
 }
 
 struct CommonABIs : View {
-    @ObservedObject private var abis = CommonABIsModel.shared
+    @State private var abis = CommonABIsModel.shared
     @State private var selected : String?
     @State private var present_add_abi_sheet = false
     @State private var fields : [String: [String]] = [:]
@@ -1854,7 +1850,7 @@ struct EditState<Driver: EVMDriver> : View {
     @Binding var c : LoadedContract
     @State private var select: StateChange?
     @State private var new_item_lookup_name = ""
-    @ObservedObject var overrides: StateChanges
+    @State var overrides: StateChanges
     
     var body: some View {
         VStack {
@@ -1974,6 +1970,6 @@ struct EditState<Driver: EVMDriver> : View {
 //}
 
 #Preview("BlockContext") {
-    BlockContext()
-        .environmentObject(CurrentBlockHeader())
+    BlockContext(current_head: CurrentBlockHeader())
+//        .environmentObject(CurrentBlockHeader())
 }

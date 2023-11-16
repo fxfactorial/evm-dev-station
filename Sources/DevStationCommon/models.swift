@@ -262,7 +262,7 @@ extension Item: Hashable {
 }
 
 
-@Observable public class StackItem: Hashable {
+@Observable public class StackItem: Hashable, Identifiable {
     @ObservationIgnored public let id = UUID()
     @ObservationIgnored public let index : Int
     public var name: String = ""
@@ -283,23 +283,23 @@ extension Item: Hashable {
     }
 }
 
-public class OpcodeCallbackModel: ObservableObject {
-    public static let shared = OpcodeCallbackModel()
+@Observable public class OpcodeCallbackModel {
+    @ObservationIgnored public static let shared = OpcodeCallbackModel()
     
-    @Published public var hit_breakpoint = false
-    @Published public var current_caller = ""
-    @Published public var current_callee = ""
-    @Published public var current_args = ""
+    public var hit_breakpoint = false
+    public var current_caller = ""
+    public var current_callee = ""
+    public var current_args = ""
     // how to update these effectively
-    @Published public var current_stack : [StackItem] = [
-//        Item(name: "0x01", index: 0),
-//        Item(name: "0x02", index: 1),
-//        Item(name: "0x03", index: 2)
+    public var current_stack : [StackItem] = [
+//        StackItem(name: "0x01", index: 0, pretty: "0x01"),
+//        StackItem(name: "0x02", index: 1, pretty: "0x02"),
+//        StackItem(name: "0x03", index: 2, pretty: "0x03")
     ]
-    @Published public var selected_stack_item: Item?
-    @Published public var current_memory = ""
-    @Published public var current_opcode_hit = ""
-    @Published public var use_modified_values = false
+    public var selected_stack_item: StackItem?
+    public var current_memory = ""
+    public var current_opcode_hit = ""
+    public var use_modified_values = false
 
     public func reset() {
         hit_breakpoint = false
@@ -320,41 +320,41 @@ public enum DBKind : String {
     case GethDBLevelDB = "leveldb"
 }
 
-public class CurrentBlockHeader: ObservableObject {
-    public static let shared = CurrentBlockHeader()
+@Observable public class CurrentBlockHeader {
+    @ObservationIgnored public static let shared = CurrentBlockHeader()
 
-    @Published public var block_time : String = ""
-    @Published public var block_number: String = ""
-    @Published public var state_root : String = ""
-    @Published public var parent_hash: String = ""
-    @Published public var raw_block_header: BlockHeader?
+    public var block_time : String = ""
+    public var block_number: String = ""
+    public var state_root : String = ""
+    public var parent_hash: String = ""
+    public var raw_block_header: BlockHeader?
     public init() {}
     
 }
 
-public class LoadedContracts: ObservableObject {
-    public static let shared = LoadedContracts()
-    @Published public var contracts : [LoadedContract] = []
-    @Published public var current_selection: LoadedContract?
+@Observable public class LoadedContracts {
+    @ObservationIgnored public static let shared = LoadedContracts()
+    public var contracts : [LoadedContract] = []
+    public var current_selection: LoadedContract?
     public init() {}
 }
 
-public class RuntimeError: ObservableObject {
-    public static let shared = RuntimeError()
-    @Published public var show_error = false
-    @Published public var error_reason = ""
+@Observable public class RuntimeError {
+    @ObservationIgnored public static let shared = RuntimeError()
+    public var show_error = false
+    public var error_reason = ""
     public func reset() {
         show_error = false
         error_reason = ""
     }
 }
 
-public class StateChange: ObservableObject, Identifiable, Hashable {
-    public let id = UUID()
-    public var nice_name: String
-    @Published public var key: String
-    @Published public var original_value: String
-    @Published public var new_value: String
+@Observable public class StateChange: Identifiable, Hashable {
+    @ObservationIgnored public let id = UUID()
+    @ObservationIgnored public var nice_name: String
+    public var key: String
+    public var original_value: String
+    public var new_value: String
     public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
@@ -378,27 +378,27 @@ public struct RunHistory {
     public let success_result: String
 }
 
-public class RunHistoryModel : ObservableObject {
-    static public let shared = RunHistoryModel()
-    @Published public var history : [RunHistory] = []
+@Observable public class RunHistoryModel {
+    @ObservationIgnored static public let shared = RunHistoryModel()
+    public var history : [RunHistory] = []
 }
 
-public class StateChanges: ObservableObject {
-    @Published public var overrides : [StateChange] = []
-    @Published public var temp_key = ""
-    @Published public var temp_value = ""
+@Observable public class StateChanges {
+    public var overrides : [StateChange] = []
+    public var temp_key = ""
+    public var temp_value = ""
 }
 
-public class SideEVMResult: ObservableObject {
+@Observable public class SideEVMResult {
     static public let shared = SideEVMResult()
-    @Published public var call_input = ""
-    @Published public var call_result = ""
+    public var call_input = ""
+    public var call_result = ""
 }
 
-public class CommonABIsModel: ObservableObject {
-    public static let shared = CommonABIsModel()
-    @Published public var abis : [String: [ABI.Element.Function]] = [:]
-    @Published public var all_methods : [ABI.Element.Function] = []
+@Observable public class CommonABIsModel {
+    @ObservationIgnored public static let shared = CommonABIsModel()
+    public var abis : [String: [ABI.Element.Function]] = [:]
+    public var all_methods : [ABI.Element.Function] = []
 
     init() {
         let jsonData = ERC20_ABI.data(using: .utf8)

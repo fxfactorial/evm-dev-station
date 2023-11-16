@@ -481,7 +481,8 @@ func do_work(rpy: String) {
                     c.deployment_gas_cost = gas_used
                     EVMRunStateControls.shared.contract_currently_running = false
                     // Hack awesome way to force state to update
-                    LoadedContracts.shared.objectWillChange.send()
+                    // TODO what can contemporary way do it? 
+                    // LoadedContracts.shared.objectWillChange.send()
                 }
             }
         }

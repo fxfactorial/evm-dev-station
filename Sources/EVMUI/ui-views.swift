@@ -77,35 +77,20 @@ struct WatchCompileDeploy: View {
 struct BlockContext : View {
     @Bindable private var model = BlockContextModel.shared
     @Bindable var current_head : CurrentBlockHeader
-    let offset : CGFloat = 80
 
     var body : some View {
         TabView {
             ScrollView {
-                VStack {
-                    HStack {
-                        Text("Coinbase").frame(width: offset, alignment: .leading)
-                        TextField("0x..", text: $model.coinbase)
+                Form {
+                    Section("Block info") {
+                        TextField("Coinbase", text: $model.coinbase)
+                        TextField("Creation time", text: $model.time)
+                        TextField("Number", text: $current_head.block_number)
                     }
-                    HStack {
-                        Text("Time").frame(width: offset, alignment: .leading)
-                        TextField("time", text: $model.time)
-                    }
-                    HStack {
-                        Text("Number").frame(width: offset, alignment: .leading)
-                        TextField("block number", text: $current_head.block_number)
-                    }
-                    HStack {
-                        Text("Base Gas Price").frame(width: offset, alignment: .leading)
-                        TextField("base gas", text: $model.base_gas)
-                    }
-                    HStack {
-                        Text("Gas Used").frame(width: offset, alignment: .leading)
-                        TextField("actual gas used", text: $model.gas_used)
-                    }
-                    HStack {
-                        Text("Gas Limit").frame(width: offset, alignment: .leading)
-                        TextField("block limit", text: $model.gas_limit)
+                    Section("Gas Fields") {
+                        TextField("Base Gas", text: $model.base_gas)
+                        TextField("Gas Used", text: $model.gas_used)
+                        TextField("Block Gas Limit", text: $model.gas_limit)
                     }
                 }
             }.tabItem { Text("HEAD Block") }.tag(0)

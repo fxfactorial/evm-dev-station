@@ -56,7 +56,13 @@ let package = Package(
         "DevStationCommon",
         .product(name: "AsyncAlgorithms", package: "swift-async-algorithms")
       ],
-      path: "Sources/DevStation"
+      path: "Sources/DevStation",
+      linkerSettings: [
+        .unsafeFlags(["-Xlinker", "-sectcreate", 
+                      "-Xlinker", "__TEXT",
+                      "-Xlinker", "__info_plist", 
+                      "-Xlinker", "Sources/Resources/Info.plist" 
+                     ])]
     ),
     // remember to define the @_cdecls necessary for linking to work
     .executableTarget(

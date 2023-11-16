@@ -59,6 +59,9 @@ $ killall -u $(whoami) cfprefsd
 
 ```
 
+otool -P .build/debug/evm-dev-station
+will show that plist
+
 # architecture
 
 golang compiled into a C static library, statically linked into native swift binary.

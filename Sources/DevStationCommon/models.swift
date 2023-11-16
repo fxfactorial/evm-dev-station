@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 public class LoadChainModel: ObservableObject {
     public static let shared = LoadChainModel()
@@ -429,29 +430,26 @@ public class CommonABIsModel: ObservableObject {
         }.values.flatMap { $0 }
         all_methods = allMethods
     }
-
 }
 
-public class LoadedContract : ObservableObject, Hashable, Equatable {
+@Model
+public class LoadedContract : Hashable, Equatable {
     static public func == (lhs: LoadedContract, rhs: LoadedContract) -> Bool {
         lhs.id == rhs.id
     }
     
-    @Published public var name : String = ""
-    @Published public var bytecode: String = ""
-    @Published public var deployed_bytecode = ""
-    @Published public var address : String = ""
+    @Attribute(.unique) public var name : String = ""
+    @Attribute(.unique) public var bytecode: String = ""
+    @Attribute(.unique) public var deployed_bytecode = ""
+    @Attribute(.unique) public var address : String = ""
     public let id = UUID() // maybe just the address next time
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
-    }
-    @Published public var contract: EthereumContract?
-    @Published public var is_loaded_against_state = false
-    @Published public var eth_balance = "0"
-    @Published public var deployer_address : String = "0x0000000000000000000000000000000000000000"
-    @Published public var gas_limit_deployment: String = "900000"
-    @Published public var deployment_gas_cost = 0
-    @Published public var state_overrides = StateChanges()
+    @Transient public var contract: EthereumContract?
+    @Transient public var is_loaded_against_state = false
+    @Transient public var eth_balance = "0"
+    @Transient public var deployer_address : String = "0x0000000000000000000000000000000000000000"
+    @Transient public var gas_limit_deployment: String = "900000"
+    @Transient public var deployment_gas_cost = 0
+    @Transient public var state_overrides = StateChanges()
     
     public init(name: String,
                 bytecode: String,
@@ -467,6 +465,10 @@ public class LoadedContract : ObservableObject, Hashable, Equatable {
         self.is_loaded_against_state = is_loaded_against_state
 //        self.state_overrides = state_overrides
     }
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
 }
 
 /*

@@ -4,6 +4,7 @@ import EVMBridge
 import EVMUI
 import DevStationCommon
 import AsyncAlgorithms
+import SwiftData
 
 @main
 struct DevStation : App {
@@ -15,7 +16,7 @@ struct DevStation : App {
         WindowGroup {
             Rootview()
               .preferredColorScheme(prefer_dark ? .dark : .light)
-        }
+        }.modelContainer(for: [LoadedContract.self])
     }
 }
 

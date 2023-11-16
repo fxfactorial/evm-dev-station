@@ -164,7 +164,7 @@ struct RotatingDotAnimation: View {
 
 public struct EVMDevCenter<Driver: EVMDriver> : View {
     let d : Driver
-    
+    @Environment(\.modelContext) private var context
     @State private var bytecode_add = false
     @State private var current_code_running = ""
     @State private var present_eips_sheet = false
@@ -1827,8 +1827,8 @@ struct RunningEVM<Driver: EVMDriver>: View {
             ]
             ExecutedOperations.shared.execed_operations.append(contentsOf: dummy_items)
             LoadedContracts.shared.contracts = [sample_contract]
-            
         }
+        .modelContainer(for: [LoadedContract.self])
 }
 
 //#Preview("load existing db") {

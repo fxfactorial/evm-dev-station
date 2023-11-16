@@ -873,17 +873,10 @@ struct ABIEncode: View {
                                             ForEach(Array(zip(element.inputs.indices, element.inputs)), id: \.1.name) {index, input in
                                                 TextField(input.name, text: Binding<String>(
                                                     get: {
-                                                        let method_name = element.signature
-                                                        if let had_it = fields[method_name] {
-                                                            return had_it[index]
-                                                        }
-                                                        
-                                                        fields[method_name] = [String](repeating: "", count: element.inputs.count)
-                                                        return ""
+                                                        return fields[element.signature]![index]
                                                     },
                                                     set: {
-                                                        let n = element.signature
-                                                        fields[n]![index] = $0
+                                                        fields[element.signature]![index] = $0
                                                     }
                                                 )).help(input.type.abiRepresentation)
                                             }
@@ -938,8 +931,6 @@ struct ABIEncode: View {
                             HStack {
                                 Text("result(s)")
                                 if var have = decoded_output {
-                                    // TODO more elegant answer here
-                                    //                                    have.removeValue(forKey: "_success")
                                     let _ = have.removeValue(forKey: "_success")
                                     let zipped = Array(zip(have.keys, have.values))
                                     List(zipped, id: \.0.self) {item in
@@ -950,10 +941,17 @@ struct ABIEncode: View {
                                         }
                                     }
                                 }
-                                // TextField("", text: )
                             }
                         }.tabItem { Text("Decode") }.tag(0).padding()
                     }.frame(minHeight: 150)
+                }
+            }
+        }
+        .onAppear {
+            if let contract = loaded_contract,
+               let c = contract.contract {
+                for i in c.allMethods {
+                    fields[i.signature] = [String](repeating: "", count: i.inputs.count)
                 }
             }
         }
@@ -1393,9 +1391,8 @@ struct CommonABIs : View {
                             if element.inputs.count == 0 {
                                 Spacer().frame(height: 1)
                             } else {
-                                ForEach(Array(zip(element.inputs.indices, element.inputs)), id: \.1.name) { index, input in
-                                    HStack {
-                                        Text(input.name)
+                                Form {
+                                    ForEach(Array(zip(element.inputs.indices, element.inputs)), id: \.1.name) { index, input in
                                         TextField(input.name, text: Binding<String>(
                                             get: {
                                                 return fields[element.signature]![index]
@@ -1403,9 +1400,9 @@ struct CommonABIs : View {
                                             set: {
                                                 fields[element.signature]![index] = $0
                                             }
-                                        ))
+                                        )).help(input.type.abiRepresentation)
                                     }
-                                }
+                                }.padding(10)
                             }
                             HStack {
                                 Button {

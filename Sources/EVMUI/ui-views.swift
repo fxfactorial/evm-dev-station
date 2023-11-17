@@ -1615,71 +1615,40 @@ struct RunningEVM<Driver: EVMDriver>: View {
     @State private var use_head_state = true
     @State private var specific_state = ""
 
-    private let text_width : CGFloat = 75
-    
     var body: some View {
         VStack {
             HStack {
                 TabView {
                     HStack {
-                        VStack {
-                            HStack {
-                                Text("Input")
-                                    .frame(width: text_width, alignment: .leading)
-                                TextField("calldata", text: $call_params.calldata)
-                            }
-                            HStack {
-                                Text("Value")
-                                    .frame(width: text_width, alignment: .leading)
-                                TextField("0", text: $call_params.msg_value)
-                            }
-                            HStack {
-                                Text("Target Addr")
-                                    .frame(width: text_width, alignment: .leading)
-                                TextField("target addr", text: $target_addr)
-                            }
-                            HStack {
-                                Text("Gas Price").frame(width: text_width, alignment: .leading)
-                                TextField("gas price", text: $call_params.gas_price)
-                            }
-                            HStack {
-                                Text("Gas limit").frame(width: text_width, alignment: .leading)
-                                TextField("900000", text: $call_params.gas_limit)
+                        Form {
+                            Section("Input Parameters") {
+                                TextField("Calldata", text: $call_params.calldata)
+                                TextField("Value", text: $call_params.msg_value)
+                                TextField("To Address", text: $target_addr)
+                                TextField("Gas Price", text: $call_params.gas_price)
+                                TextField("Gas Limit", text: $call_params.gas_limit)
                             }
                         }
-                        VStack {
-                            HStack {
-                                Button {
-                                    keccak_output = d.keccak256(input: $keccak_input.wrappedValue)
-                                } label: { Text("Keccak256") }
-                                TextField("input...", text: $keccak_input)
-                                TextField("output..", text: $keccak_output)
+                        Form {
+//                            HStack {
+//                                Button {
+//                                    keccak_output = d.keccak256(input: $keccak_input.wrappedValue)
+//                                } label: { Text("Keccak256") }
+//                                TextField("input...", text: $keccak_input)
+//                                TextField("output..", text: $keccak_output)
+//                            }
+                            Section("Sender Overrides") {
+                                TextField("Sender Address", text: $call_params.caller_addr)
+                                TextField("Sender ETH balance", text: $call_params.caller_eth_bal)
                             }
-                            HStack {
-                                Text("Sender Addr")
-                                    .frame(width: 120, alignment: .leading)
-                                TextField("msg.sender", text: $call_params.caller_addr)
-                            }
-                            HStack {
-                                Text("Sender eth balance")
-                                    .frame(width: 120, alignment: .leading)
-                                TextField("eth balance", text: $call_params.caller_eth_bal)
-                            }
-                            HStack {
-                                Text("Return value")
-                                    .frame(width: 120, alignment: .leading)
-                                TextField(evm_run_controls.call_return_value,
+                            Section("Call Result") {
+                                TextField("Return Value",
                                           text: $evm_run_controls.call_return_value)
                                 .disabled(false)
                                 .textSelection(.enabled)
-                            }
-                            HStack {
-                                Text("EVM Error")
-                                    .frame(width: 120, alignment: .leading)
-                                TextField("last failure message", text: $evm_run_controls.evm_error)
+                                TextField("EVM Error", text: $evm_run_controls.evm_error)
                             }
                         }
-
                     }.tabItem { Text("Fresh run") }.tag(0)
                     VStack { Text("something")}.tabItem { Text("Run History") }.tag(1)
                     VStack { Text("Replay") }.tabItem { Text("Replay the Chain") }.tag(2)

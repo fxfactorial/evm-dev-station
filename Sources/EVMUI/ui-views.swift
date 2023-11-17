@@ -10,6 +10,22 @@ import DevStationCommon
 import Charts
 import SwiftData
 
+public struct PreferencesView: View {
+    public init() {
+        
+    }
+    public var body: some View {
+        VStack {
+            Text("hi")
+        }
+        .frame(width: 500, height: 400)
+    }
+}
+
+#Preview("Preferences Control") {
+    PreferencesView()
+}
+
 struct WatchCompileDeploy: View {
     @Bindable private var compiler = SolidityCompileHelper.shared
     @Environment(\.dismiss) var dismiss
@@ -1042,7 +1058,6 @@ struct LoadContractFromChain : View {
                         .scaledToFill()
                         .frame(width: 120)
                         .help("could take a second please wait")
-                    
                 }
                 Button {
                     contract_name = "uniswap quoter"

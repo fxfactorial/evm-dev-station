@@ -17,6 +17,9 @@ struct DevStation : App {
             Rootview()
               .preferredColorScheme(prefer_dark ? .dark : .light)
         }.modelContainer(for: [LoadedContract.self])
+        Settings {
+            PreferencesView()
+        }
     }
 }
 

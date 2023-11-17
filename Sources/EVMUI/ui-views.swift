@@ -71,9 +71,9 @@ struct WatchCompileDeploy: View {
     }
 }
 
-#Preview("Watch compile deploy") {
-    WatchCompileDeploy().frame(width: 500, height: 300)
-}
+//#Preview("Watch compile deploy") {
+//    WatchCompileDeploy().frame(width: 500, height: 300)
+//}
 
 struct BlockContext : View {
     @Bindable private var model = BlockContextModel.shared
@@ -212,42 +212,28 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                         TabView(selection: $current_contract_detail_tab) {
                             VStack {
                                 if let c = contracts.current_selection {
-                                    VStack {
-                                        HStack {
-                                            Text("Creator Address").frame(width: 100, alignment: .leading)
-                                            TextField(c.deployer_address, text: Binding<String>(
-                                                get: { c.deployer_address },
-                                                set: { c.deployer_address = $0 }
-                                            ))
-                                        }
-                                        HStack {
-                                            Text("Gas limit").frame(width: 100, alignment: .leading)
-                                            TextField(c.gas_limit_deployment, text: Binding<String>(
-                                                get: { c.gas_limit_deployment },
-                                                set: { c.gas_limit_deployment = $0 }
-                                            ))
-                                        }
-                                        HStack {
-                                            Text("Eth Balance").frame(width: 100, alignment: .leading)
-                                            TextField(c.eth_balance, text: Binding<String>(
-                                                get: { c.eth_balance },
-                                                set: { c.eth_balance = $0 }
-                                            ))
-                                        }
-                                        HStack {
-                                            Text("Deployed Address").frame(width: 100, alignment: .leading)
-                                            TextField(c.address, text: Binding<String>(
-                                                get: { c.address },
-                                                set: { _ = $0 }
-                                            )).disabled(true)
-                                        }
-                                        HStack {
-                                            Text("Deployed Gas Cost").frame(width: 100, alignment: .leading)
-                                            TextField("\(Int(c.gas_limit_deployment)! - c.deployment_gas_cost)", text: Binding<String>(
-                                                get: { "\(Int(c.gas_limit_deployment)! - c.deployment_gas_cost)" },
-                                                set: { _ = $0 }
-                                            )).disabled(true)
-                                        }
+                                    Form {
+                                        TextField("Creator Address", text: Binding<String>(
+                                            get: { c.deployer_address },
+                                            set: { c.deployer_address = $0 }
+                                        ))
+                                        TextField("Gas Limit", text: Binding<String>(
+                                            get: { c.gas_limit_deployment },
+                                            set: { c.gas_limit_deployment = $0 }
+                                        ))
+                                        TextField("Eth Balance", text: Binding<String>(
+                                            get: { c.eth_balance },
+                                            set: { c.eth_balance = $0 }
+                                        ))
+                                        TextField("Deployed Address", text: Binding<String>(
+                                            get: { c.address },
+                                            set: { _ = $0 }
+                                        )).disabled(true)
+                                        TextField("Deployed Gas Cost", text: Binding<String>(
+                                            get: { "\(Int(c.gas_limit_deployment)! - c.deployment_gas_cost)" },
+                                            set: { _ = $0 }
+                                        )).disabled(true)
+                                        
                                         Button {
                                             d.create_new_contract(
                                                 code: c.bytecode,
@@ -970,19 +956,19 @@ struct ABIEncode: View {
     }
 }
 
-#Preview("ABI encode table") {
-    
-    let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(for: LoadedContract.self, configurations: config)
+//#Preview("ABI encode table") {
+//    
+//    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+//    let container = try! ModelContainer(for: LoadedContract.self, configurations: config)
+//
+//    return ABIEncode(loaded_contract: sample_contract)
+//        .frame(width: 700, height: 300)
+//        .modelContainer(container)
+//}
 
-    return ABIEncode(loaded_contract: sample_contract)
-        .frame(width: 700, height: 300)
-        .modelContainer(container)
-}
-
-#Preview("Load Contract from Chain") {
-    LoadContractFromChain(do_load: {_, _, _ in })
-}
+//#Preview("Load Contract from Chain") {
+//    LoadContractFromChain(do_load: {_, _, _ in })
+//}
 
 struct LoadContractFromChain : View {
     let do_load: (String, String, String) -> Void
@@ -1327,17 +1313,17 @@ struct SideEVM : View {
     }
 }
 
-#Preview("side evm") {
-    SideEVM(d: StubEVMDriver()).frame(width: 600, height: 400)
-}
-
-#Preview("breakpoint view") {
-    BreakpointView(d : StubEVMDriver())
-}
-
-#Preview("Common ABIs") {
-    CommonABIs().frame(width: 600, height: 400)
-}
+//#Preview("side evm") {
+//    SideEVM(d: StubEVMDriver()).frame(width: 600, height: 400)
+//}
+//
+//#Preview("breakpoint view") {
+//    BreakpointView(d : StubEVMDriver())
+//}
+//
+//#Preview("Common ABIs") {
+//    CommonABIs().frame(width: 600, height: 400)
+//}
 
 struct LookupTx: View {
     let d : EVMDriver
@@ -1351,43 +1337,47 @@ struct LookupTx: View {
         tx_lookup.input_calldata = "0xc18a84bc0000000000000000000000006117fa34dcf2ee19af49cfca95e7e39bce136dde000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000001243f3e37e4000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000553d694de05094000000000000000000000000000000000000000000000000000143dbde76ce5c12c0000000000000000000000000000000000000000000000000000000000000005000000000000000000000000a0246c9032bc3a600820415ae600c6388619a14d0000000000000000000000004ba657a5086dfa3698884d82a94564629885b7d60000000000000000000000001f573d6fb3f13d689ff844b4ce37794d79a7ff1c000000000000000000000000b1cd6e4153b2a390cf00a6556b0fc1458c4a5533000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000"
     }
 
+    func clear() {
+        tx_lookup.from_addr = ""
+        tx_lookup.to_addr = ""
+        tx_hash = ""
+        tx_lookup.input_calldata = ""
+    }
+
     var body: some View {
         VStack {
             if chaindb.is_chain_loaded {
                 ScrollView {
-                    HStack {
-                        Text("Transaction Hash").frame(width: 120, alignment: .leading)
-                        TextField("hash", text: $tx_hash)
+                    Form {
+                        Section("Transaction") {
+                            TextField("Hash", text: $tx_hash)
+                            Divider()
+                            TextField("From Address", text: $tx_lookup.from_addr)
+                            Divider()
+                            TextField("To Address", text: $tx_lookup.to_addr)
+                            Divider()
+                            TextField("Calldata", text: $tx_lookup.input_calldata, axis: .vertical)
+                                .lineLimit(5, reservesSpace: true)
+                        }
                     }
-                    HStack {
-                        Text("From Address").frame(width: 120, alignment: .leading)
-                        TextField("", text: $tx_lookup.from_addr)
-                    }
-                    HStack {
-                        Text("To Address").frame(width: 120, alignment: .leading)
-                        TextField("", text: $tx_lookup.to_addr)
-                    }
-                    HStack {
-                        Text("Calldata").frame(width: 120, alignment: .leading)
-                        TextField("", text: $tx_lookup.input_calldata, axis: .vertical)
-                            .lineLimit(8, reservesSpace: true)
-                    }
-                 }.frame(maxHeight: 250)
+                }
+                .frame(maxHeight: 250)
                 HStack {
                     Button {
                         d.lookup_tx_by_hash(hsh: tx_hash)
                     } label : {
-                        Text("Lookup Transaction")
+                        Text("Lookup Hash")
                     }.frame(alignment: .bottomTrailing)
+                    Button { clear() } label: { Text("Clear") }
                     Button {
                         dev_mode()
                     } label: { Text("Dev mode some MEV bot") }
                 }
             } else {
-                Text("must load blockchain database first")
+                Text("Please load a blockchain database first")
             }
         }
-        .padding()
+        .padding(5)
         .frame(maxHeight:.infinity)
     }
 }
@@ -1784,7 +1774,7 @@ struct RunningEVM<Driver: EVMDriver>: View {
 }
 
 
-#Preview("dev center") {
+#Preview("Main App") {
     EVMDevCenter(driver: StubEVMDriver())
         .frame(width: 1224, height: 860)
         .onAppear {

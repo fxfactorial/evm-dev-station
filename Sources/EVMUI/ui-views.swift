@@ -980,6 +980,10 @@ struct ABIEncode: View {
         .modelContainer(container)
 }
 
+#Preview("Load Contract from Chain") {
+    LoadContractFromChain(do_load: {_, _, _ in })
+}
+
 struct LoadContractFromChain : View {
     let do_load: (String, String, String) -> Void
     @State private var contract_name = ""
@@ -990,41 +994,53 @@ struct LoadContractFromChain : View {
     
     var body: some View {
         VStack {
-            HStack {
-                Text("Contract Name")
-                    .frame(width: 120)
-                TextField("nickname", text: $contract_name)
-            }
-            HStack {
-                Text("Contract Address")
-                    .frame(width: 120)
-                TextField("0x...", text: $contract_addr)
-            }
-            HStack {
-                Text("Optional ABI")
-                    .frame(width: 120)
-                TextEditor(text: $contract_abi)
-            }
+            Form {
+                Section("Contract") {
+                    TextField("Name", text: $contract_name)
+                }
+                Divider()
+                Section("Address") {
+                    TextField("0x...", text: $contract_addr)
+                }
+                Divider()
+                Section("Optional ABI") {
+                    TextField("JSON", text: $contract_abi, axis: .vertical)
+                        .lineLimit(10, reservesSpace: true)
+                        .scrollDisabled(false)
+                }
+            }.padding(2)
+            Divider()
             HStack {
                 Button {
                     do_load(contract_name, contract_addr, contract_abi)
                     dismiss()
                 } label: {
-                    Text("Load Contract")
+                    Text("Load")
+                        .padding(5)
+                        .scaledToFill()
+                        .frame(width: 120)
                         .help("could take a second please wait")
+                    
                 }
-                Button { dismiss() } label : { Text("Cancel") }
+                Button { dismiss() } label : { Text("Cancel")
+                        .padding(5)
+                        .scaledToFill()
+                        .frame(width: 120)
+                }
                 Button {
                     contract_name = "uniswap quoter"
                     contract_addr = "0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6"
                     contract_abi = UNISWAP_QUOTER_ABI
                 } label: {
-                    Text("dev mode")
+                    Text("uniswap quoter")
+                        .padding(5)
+                        .scaledToFill()
+                        .frame(width: 120)
                 }
             }
         }
         .padding()
-        .frame(width: 490, height: 220)
+        .frame(width: 650, height: 450)
     }
     
 }
@@ -1920,9 +1936,9 @@ struct EditState<Driver: EVMDriver> : View {
 //    )
 //}
 
-#Preview("New Contract") {
-    NewContractFromInput()
-}
+//#Preview("New Contract") {
+//    NewContractFromInput()
+//}
 
 //#Preview("BlockContext") {
 //    BlockContext(current_head: CurrentBlockHeader())

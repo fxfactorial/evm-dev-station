@@ -396,7 +396,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             }
                         }.tabItem { Text("ABI")}.tag(1)
                         CallTree().tabItem { Text("CALL tree") }.tag(2)
-                        OPCodeChart().tabItem { Text("Chart Analysis") }.tag(3)
+                        OPCodeChart().tabItem { Text("OPCode Charts") }.tag(3)
                     }
                     BreakpointView(d: d).frame(maxWidth: .infinity)
                 }.padding(10).frame(maxHeight: .infinity)
@@ -1649,7 +1649,7 @@ struct RunningEVM<Driver: EVMDriver>: View {
                                 TextField("EVM Error", text: $evm_run_controls.evm_error)
                             }
                         }
-                    }.tabItem { Text("Fresh run") }.tag(0)
+                    }.tabItem { Text("Fresh Run") }.tag(0)
                     VStack { Text("something")}.tabItem { Text("Run History") }.tag(1)
                     VStack { Text("Replay") }.tabItem { Text("Replay the Chain") }.tag(2)
                 }

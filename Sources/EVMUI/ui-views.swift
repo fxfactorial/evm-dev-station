@@ -173,6 +173,8 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     
     @State var eips_used : [EIP] = []
     @State private var current_tab_runtime_eval = 0
+    @State private var op_selected : ExecutedEVMCode.ID?
+    @State private var scroller : ScrollViewProxy?
     
     public var body: some View {
         VStack {
@@ -345,16 +347,45 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                     TabView(selection: $current_tab_runtime_eval) {
                         VStack {
                             // TODO not working
+                            HStack {
+                                Text("\(execed_ops.execed_operations.count) Executed Operations")
+                                    .font(.title2)
+//                                Spacer()
+//                                Button {
+//                                    withAnimation {
+//                                        print(scroller, execed_ops.last_record?.id)
+//                                        scroller?.scrollTo(op_selected, anchor: .bottom)
+//                                    }
+//                                } label: { Text("Go To Bottom").padding(10) }
+                            }.padding([.leading, .trailing], 10)
                             ScrollViewReader { (proxy: ScrollViewProxy) in
-                                HStack {
-                                    Text("\(execed_ops.execed_operations.count) Executed Operations")
-                                        .font(.title2)
-                                }.padding([.leading, .trailing], 10)
-                                Table(execed_ops.execed_operations) {
-                                    TableColumn("PC", value: \.pc)
-                                    TableColumn("OPNAME", value: \.op_name)
-                                    TableColumn("OPCODE", value: \.opcode)
-                                    TableColumn("GAS", value: \.gas_cost)
+                                Table(of: ExecutedEVMCode.self,
+                                      selection: $op_selected) {
+                                    TableColumn("PC") { word in
+                                        Text(word.pc).id(word.id)
+                                    }
+                                    TableColumn("OPNAME") {word in
+                                        Text(word.op_name).id(word.id)
+                                    }
+                                    TableColumn("OPCODE") {word in
+                                        Text(word.opcode).id(word.id)
+                                    }
+                                    TableColumn("GAS") { word in
+                                        Text(word.gas_cost).id(word.id)
+                                    }
+                                } rows: {
+                                    ForEach(execed_ops.execed_operations) {op in
+                                        TableRow(op)
+                                    }
+                                }
+                                .onAppear {
+                                    scroller = proxy
+                                }
+                                .onChange(of: execed_ops.execed_operations) {
+                                    print("WHY NOT SCROLLING")
+                                    op_selected = execed_ops.execed_operations.last?.id
+                                    proxy.scrollTo(op_selected, anchor: .bottom)
+//                                    op_selected = execed_ops.last_record?.id
                                 }
                                 .frame(maxHeight: .infinity)
                                 HStack {
@@ -997,6 +1028,11 @@ struct LoadContractFromChain : View {
             }.padding(2)
             Divider()
             HStack {
+                Button { dismiss() } label : { Text("Cancel")
+                        .padding(5)
+                        .scaledToFill()
+                        .frame(width: 120)
+                }
                 Button {
                     do_load(contract_name, contract_addr, contract_abi)
                     dismiss()
@@ -1007,11 +1043,6 @@ struct LoadContractFromChain : View {
                         .frame(width: 120)
                         .help("could take a second please wait")
                     
-                }
-                Button { dismiss() } label : { Text("Cancel")
-                        .padding(5)
-                        .scaledToFill()
-                        .frame(width: 120)
                 }
                 Button {
                     contract_name = "uniswap quoter"
@@ -1788,10 +1819,10 @@ struct RunningEVM<Driver: EVMDriver>: View {
         .modelContainer(for: [LoadedContract.self])
 }
 
-//#Preview("load existing db") {
-//    LoadExistingDB(d: StubEVMDriver())
-//        .frame(width: 480, height: 380)
-//}
+#Preview("load existing db") {
+    LoadExistingDB(d: StubEVMDriver())
+        .frame(width: 480, height: 380)
+}
 
 
 

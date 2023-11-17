@@ -335,31 +335,18 @@ func do_work(rpy: String) {
 
         
         DispatchQueue.main.async {
-    //            withAnimation {
-    //                if var had = ExecutedOperations.shared.opcode_freq[opcode_name] {
-    //                    had.invokers[caller, default: 0] += 1
-    //                    had.count += 1
-    //                    ExecutedOperations.shared.opcode_freq.updateValue(had, forKey: opcode_name)
-    //                } else {
-    //                    ExecutedOperations.shared.opcode_freq[opcode_name] = OPCodeFreq(name: opcode_name, count: 1, invokers: [caller : 1])
-    //                }
-    //            }
-
             // TODO these values are wrong
-            ExecutedOperations.shared.total_static_gas_cost_so_far = gas_cost_static
-            ExecutedOperations.shared.total_dynamic_gas_cost_so_far = gas_cost_dynamic
-            ExecutedOperations.shared.total_gas_cost_so_far = gas_cost_total
-
-            ExecutedOperations.shared.execed_operations.append(
-              ExecutedEVMCode(pc: "\(num)",
-                              op_name: opcode_name,
-                              opcode: opcode_num,
-                              gas: gas_cost_static,
-                              gas_cost: gas_cost_static,
-                              depth: 3,
-                              refund: 0
-              )
-            )
+            ExecutedOperations.shared.total_static_gas_cost_so_far += gas_cost_static
+            ExecutedOperations.shared.total_dynamic_gas_cost_so_far += gas_cost_dynamic
+            ExecutedOperations.shared.total_gas_cost_so_far += gas_cost_total
+            let record = ExecutedEVMCode(pc: "\(num)",
+                                         op_name: opcode_name,
+                                         opcode: opcode_num,
+                                         gas: gas_cost_static,
+                                         gas_cost: gas_cost_static,
+                                         depth: 3,
+                                         refund: 0)
+            ExecutedOperations.shared.execed_operations.append(record)
         }
     case .CMD_CANCEL_EVM_RUN:
         DispatchQueue.main.async {

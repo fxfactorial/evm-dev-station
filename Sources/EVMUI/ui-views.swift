@@ -706,13 +706,20 @@ struct NewContractFromInput: View {
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
-        VStack {
-            TextField("new contract name...", text:$contract_name)
-            HStack {
-                TextField("contract bytecode...", text: $contract_bytecode, axis: .vertical)
-                    .lineLimit(20, reservesSpace: true)
-                TextField("optional contract ABI...", text: $contract_abi, axis: .vertical)
-                    .lineLimit(20, reservesSpace: true)
+        Form {
+            Section ("Contract") {
+                TextField("Name", text:$contract_name)
+                Divider()
+                Section("Contract Bytecode") {
+                    TextField("Hex Encoded", text: $contract_bytecode, axis: .vertical)
+                        .lineLimit(10, reservesSpace: true)
+                }
+                Divider()
+                Section("Optional ABI") {
+                    TextField("JSON", text: $contract_abi, axis: .vertical)
+                        .lineLimit(10, reservesSpace: true)
+                }
+                Divider()
             }
             HStack {
                 Button { dismiss() } label: { Text("Cancel").padding(5).scaledToFit().frame(width: 120) }
@@ -739,11 +746,15 @@ struct NewContractFromInput: View {
                     contract_name = "example local contract"
                     contract_abi = sample_contract_abi
                 } label: {
-                    Text("quick dev add contract")
+                    Text("Sample Contract")
+                        .padding(5)
+                        .scaledToFill()
+                        .frame(width: 120)
                 }
             }
-        }.padding()
-            .frame(width: 500, height: 450)
+        }
+        .padding()
+        .frame(width: 600, height: 550)
     }
 }
 
@@ -1909,15 +1920,10 @@ struct EditState<Driver: EVMDriver> : View {
 //    )
 //}
 
-//#Preview("New Contract bytecode") {
-//    NewContractByteCode(
-//        contract_name: .constant(""),
-//        contract_bytecode: .constant(""),
-//        contract_abi: .constant("")
-//    )
-//}
-
-#Preview("BlockContext") {
-    BlockContext(current_head: CurrentBlockHeader())
-//        .environmentObject(CurrentBlockHeader())
+#Preview("New Contract") {
+    NewContractFromInput()
 }
+
+//#Preview("BlockContext") {
+//    BlockContext(current_head: CurrentBlockHeader())
+//}

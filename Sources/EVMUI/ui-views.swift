@@ -1291,7 +1291,7 @@ struct BreakpointView: View {
 //                        possible_signature_names = []
 //                    }
 //                })
-                .tabItem { Text("CALL").help("contract calls") }.tag(0)
+                .tabItem { Text("􀅮 Call").help("contract calls") }.tag(0)
                 //                          .frame(height: 280)
                 HStack {
                     VStack {
@@ -1340,7 +1340,7 @@ struct BreakpointView: View {
                         }.padding([.bottom], 5)
                     }
                 }
-                .tabItem{ Text("Stack & Memory").help("live stack and memory") }.tag(1)
+                .tabItem{ Text("􀐞 Stack & Memory").help("live stack and memory") }.tag(1)
                 //                          .frame(height: 280)
                 VStack {
                     Text("\(execed.state_records.count) total state loads/stores")
@@ -1398,8 +1398,8 @@ struct BreakpointView: View {
                         // TableColumn("Key", value: \.Key)
                         // TableColumn("Value", value:\.Value)
                     }
-                }.tabItem{ Text("Storage") }.tag(2)
-                SideEVM(d:d).tabItem { Text("Quick Side EVM") }.tag(3)
+                }.tabItem{ Text("􁽇 Storage") }.tag(2)
+                SideEVM(d:d).tabItem { Text("􀍿 Quick Side EVM") }.tag(3)
             })
         }
     }
@@ -1799,7 +1799,9 @@ struct RunningEVM<Driver: EVMDriver>: View {
                                 TextField("EVM Error", text: $evm_run_controls.evm_error)
                             }
                         }
-                    }.tabItem { Text("Fresh Run") }.tag(0)
+                    }
+                    .padding(5)
+                    .tabItem { Text("Fresh Run") }.tag(0)
                     VStack { Text("something")}.tabItem { Text("Run History") }.tag(1)
                     VStack { Text("Replay") }.tabItem { Text("Replay the Chain") }.tag(2)
                 }

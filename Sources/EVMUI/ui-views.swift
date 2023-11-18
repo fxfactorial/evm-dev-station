@@ -573,7 +573,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
             })
             .sheet(isPresented: $bytecode_add) {
             } content: {
-                NewContractFromInput()
+                LoadContractFromInput()
             }
         }
         .padding(10)
@@ -783,11 +783,12 @@ struct StateDBDetails: View {
     }
 }
 
-struct NewContractFromInput: View {
+struct LoadContractFromInput: View {
     @State private var contract_name : String = ""
     @State private var contract_bytecode : String = ""
     @State private var contract_abi: String = ""
     @State private var deploy_to_address: String = ""
+    @State private var picked_common_abi = ""
 
     @Environment(\.dismiss) var dismiss
     
@@ -799,14 +800,25 @@ struct NewContractFromInput: View {
                 TextField("Deploy To Address", text: $deploy_to_address)
                 Section("Contract Bytecode") {
                     TextField("Hex Encoded", text: $contract_bytecode, axis: .vertical)
-                        .lineLimit(10, reservesSpace: true)
+                        .lineLimit(5, reservesSpace: true)
                 }
                 Divider()
-                Section("Optional ABI") {
-                    TextField("JSON", text: $contract_abi, axis: .vertical)
-                        .lineLimit(10, reservesSpace: true)
+                Section {
+                    TextField("Optional JSON ABI",
+                              text: picked_common_abi.isEmpty ? $contract_abi : .constant(CommonABIsModel.shared.abis_raw[picked_common_abi]!),
+                              axis: .vertical)
+                    .lineLimit(5, reservesSpace: true)
+                    .scrollDisabled(false)
+                } header: {
+                    Picker("common ABIs", selection: $picked_common_abi) {
+                        ForEach(Array(CommonABIsModel.shared.abis_raw.keys), id: \.self) {
+                            Text($0)
+                        }
+                    }
+
+                } footer: {
+                    Divider()
                 }
-                Divider()
             }
             HStack {
                 Button { dismiss() } label: { Text("Cancel").padding(5).scaledToFit().frame(width: 120) }
@@ -818,6 +830,10 @@ struct NewContractFromInput: View {
                         dismiss()
                         return
                     }
+                    if !picked_common_abi.isEmpty {
+                        contract_abi = CommonABIsModel.shared.abis_raw[picked_common_abi]!
+                    }
+                    
                     let contract = LoadedContract(
                         name: contract_name,
                         bytecode: contract_bytecode,
@@ -846,7 +862,7 @@ struct NewContractFromInput: View {
             }
         }
         .padding()
-        .frame(width: 600, height: 550)
+        .frame(width: 600, height: 450)
     }
 }
 
@@ -1081,6 +1097,7 @@ struct LoadContractFromChain : View {
     @State private var contract_name = ""
     @State private var contract_addr = ""
     @State private var contract_abi = ""
+    @State private var picked_common_abi = ""
     
     @Environment(\.dismiss) var dismiss
     
@@ -1095,45 +1112,56 @@ struct LoadContractFromChain : View {
                     TextField("0x...", text: $contract_addr)
                 }
                 Divider()
-                Section("Optional ABI") {
-                    TextField("JSON", text: $contract_abi, axis: .vertical)
-                        .lineLimit(10, reservesSpace: true)
-                        .scrollDisabled(false)
+                Section {
+                    TextField("Optional JSON ABI",
+                              text: picked_common_abi.isEmpty ? $contract_abi : .constant(CommonABIsModel.shared.abis_raw[picked_common_abi]!),
+                              axis: .vertical)
+                    .lineLimit(5, reservesSpace: true)
+                    .scrollDisabled(false)
+                } header: {
+                    Picker("common ABIs", selection: $picked_common_abi) {
+                        ForEach(Array(CommonABIsModel.shared.abis_raw.keys), id: \.self) {
+                            Text($0)
+                        }
+                    }
+                } footer: {
+                    Divider()
+                }
+                HStack {
+                    Button { dismiss() } label : { Text("Cancel")
+                            .padding(5)
+                            .scaledToFill()
+                            .frame(width: 120)
+                    }
+                    Button {
+                        if !picked_common_abi.isEmpty {
+                            contract_abi = CommonABIsModel.shared.abis_raw[picked_common_abi]!
+                        }
+                        do_load(contract_name, contract_addr, contract_abi)
+                        dismiss()
+                    } label: {
+                        Text("Load")
+                            .padding(5)
+                            .scaledToFill()
+                            .frame(width: 120)
+                            .help("could take a second please wait")
+                    }
+                    Button {
+                        contract_name = "uniswap quoter"
+                        contract_addr = "0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6"
+                        contract_abi = UNISWAP_QUOTER_ABI
+                    } label: {
+                        Text("uniswap quoter")
+                            .padding(5)
+                            .scaledToFill()
+                            .frame(width: 120)
+                    }
                 }
             }.padding(2)
-            Divider()
-            HStack {
-                Button { dismiss() } label : { Text("Cancel")
-                        .padding(5)
-                        .scaledToFill()
-                        .frame(width: 120)
-                }
-                Button {
-                    do_load(contract_name, contract_addr, contract_abi)
-                    dismiss()
-                } label: {
-                    Text("Load")
-                        .padding(5)
-                        .scaledToFill()
-                        .frame(width: 120)
-                        .help("could take a second please wait")
-                }
-                Button {
-                    contract_name = "uniswap quoter"
-                    contract_addr = "0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6"
-                    contract_abi = UNISWAP_QUOTER_ABI
-                } label: {
-                    Text("uniswap quoter")
-                        .padding(5)
-                        .scaledToFill()
-                        .frame(width: 120)
-                }
-            }
         }
         .padding()
-        .frame(width: 650, height: 450)
+        .frame(width: 600, height: 350)
     }
-    
 }
 
 
@@ -1487,9 +1515,9 @@ struct LookupTx: View {
     }
 }
 
-#Preview("Lookup Txs") {
-    LookupTx(d: StubEVMDriver()).frame(width: 600, height: 300)
-}
+//#Preview("Lookup Txs") {
+//    LookupTx(d: StubEVMDriver()).frame(width: 600, height: 300)
+//}
 
 struct CommonABIs : View {
     private var abis = CommonABIsModel.shared
@@ -2016,9 +2044,9 @@ struct EditState<Driver: EVMDriver> : View {
 //    )
 //}
 
-//#Preview("New Contract") {
-//    NewContractFromInput()
-//}
+#Preview("Load Contract From Input") {
+    LoadContractFromInput()
+}
 
 //#Preview("BlockContext") {
 //    BlockContext(current_head: CurrentBlockHeader())

@@ -423,6 +423,11 @@ public struct RunHistory {
     @ObservationIgnored public static let shared = CommonABIsModel()
     public var abis : [String: [ABI.Element.Function]] = [:]
     public var all_methods : [ABI.Element.Function] = []
+    public var abis_raw : [String: String] = [
+        // Empty one to clear out picker items
+        "": "",
+        "erc20": ERC20_ABI
+    ]
 
     init() {
         let jsonData = ERC20_ABI.data(using: .utf8)

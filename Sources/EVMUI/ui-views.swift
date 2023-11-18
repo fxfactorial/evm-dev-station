@@ -527,7 +527,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
         }, content: {
             LoadExistingDB(d:d)
         })
-        .sheet(isPresented: $present_watch_compile_deploy_solidity_sheet, 
+        .sheet(isPresented: $present_watch_compile_deploy_solidity_sheet,
                onDismiss: {
             let name = SolidityCompileHelper.shared.contract_name
             let already_have = LoadedContracts.shared.contracts.filter({$0.name == name})
@@ -580,7 +580,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
         .sheet(isPresented: $error_model.show_error,
                content: {
             VStack {
-                TextField(error_model.error_reason, 
+                TextField(error_model.error_reason,
                           text: $error_model.error_reason,
                           axis: .vertical)
                 .textSelection(.enabled)
@@ -601,8 +601,28 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
         }
         .padding(10)
         .toolbar {
+            let set = GlobalSettings.shared
+            let msg = switch set.current_color_scheme {
+            case .light:
+                "Change to dark theme"
+            case .dark:
+                "Change to light theme"
+            @unknown default:
+                fatalError("unhandled theme so far")
+            }
             HStack {
-                Text("Something")
+                Button {
+                    switch set.current_color_scheme {
+                    case .light:
+                        GlobalSettings.shared.current_color_scheme = .dark
+                    case .dark:
+                        GlobalSettings.shared.current_color_scheme = .light
+                    @unknown default:
+                        fatalError("unhandled theme so far")
+                    }
+                } label: {
+                    Text(msg)
+                }
             }
         }
     }
@@ -1107,7 +1127,7 @@ struct ABIEncode: View {
 }
 
 //#Preview("ABI encode table") {
-//    
+//
 //    let config = ModelConfiguration(isStoredInMemoryOnly: true)
 //    let container = try! ModelContainer(for: LoadedContract.self, configurations: config)
 //

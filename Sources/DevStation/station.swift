@@ -9,13 +9,12 @@ import SwiftData
 @main
 struct DevStation : App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var app_delegate
-    @AppStorage("prefer_dark_mode") private var prefer_dark = true
-    @AppStorage("enable_full_debug") private var enable_loud_debugging = false
+    let settings_handle = GlobalSettings.shared
 
     var body : some Scene {
         WindowGroup {
             Rootview()
-              .preferredColorScheme(prefer_dark ? .dark : .light)
+                .preferredColorScheme(settings_handle.current_color_scheme)
         }.modelContainer(for: [LoadedContract.self])
         Settings {
             PreferencesView()

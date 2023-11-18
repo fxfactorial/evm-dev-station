@@ -1,6 +1,12 @@
 import SwiftUI
 import SwiftData
 
+@Observable public class GlobalSettings {
+    public static let shared = GlobalSettings()
+    public var current_color_scheme : ColorScheme = .dark
+    public var enable_global_debugging = true
+}
+
 @Observable public class LoadChainModel {
     public static let shared = LoadChainModel()
     public var chaindata_directory = ""

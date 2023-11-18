@@ -552,7 +552,8 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                 let contract = LoadedContract(
                     name: name,
                     bytecode: "",
-                    address: SolidityCompileHelper.shared.deploy_to_addr
+                    address: SolidityCompileHelper.shared.deploy_to_addr,
+                    load_kind: .WatchCompileDeploy
                 )
                 contract.enable_hot_reload = true
                 LoadedContracts.shared.contracts.append(contract)
@@ -905,6 +906,7 @@ struct LoadContractFromInput: View {
                         name: contract_name,
                         bytecode: contract_bytecode,
                         address: deploy_to_address,
+                        load_kind: .DirectFromUser,
                         contract: contract_abi.count > 0 ? try? EthereumContract(contract_abi) : nil
                     )
                     LoadedContracts.shared.contracts.append(contract)

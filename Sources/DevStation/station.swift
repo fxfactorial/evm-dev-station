@@ -423,6 +423,7 @@ func do_work(rpy: String) {
           name: loaded["nickname"]!,
           bytecode: loaded["code"]!,
           address: loaded["address"]!,
+          load_kind: .FromChain,
           contract: try? EthereumContract(loaded["abi_json"]!)
         )
         

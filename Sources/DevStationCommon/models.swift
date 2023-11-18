@@ -1,6 +1,12 @@
 import SwiftUI
 import SwiftData
 
+public enum LoadContractOrigin : Codable, Hashable {
+    case FromChain
+    case DirectFromUser
+    case WatchCompileDeploy
+}
+
 @Observable public class GlobalSettings {
     public static let shared = GlobalSettings()
     public var current_color_scheme : ColorScheme = .dark
@@ -477,11 +483,12 @@ public class LoadedContract : Hashable, Equatable {
     @Transient public var deployment_gas_cost = 0
     @Transient public var state_overrides = StateChanges()
     @Transient public var enable_hot_reload = false
-    
+    public let load_origin : LoadContractOrigin
 
     public init(name: String,
                 bytecode: String,
                 address: String,
+                load_kind: LoadContractOrigin,
                 contract: EthereumContract? = nil,
                 is_loaded_against_state: Bool = false
 //                state_overrides: [StateChange] = []
@@ -491,6 +498,7 @@ public class LoadedContract : Hashable, Equatable {
         self.address = address
         self.contract = contract
         self.is_loaded_against_state = is_loaded_against_state
+        self.load_origin = load_kind
 //        self.state_overrides = state_overrides
     }
     public func hash(into hasher: inout Hasher) {

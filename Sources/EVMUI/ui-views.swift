@@ -622,6 +622,14 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                 fatalError("unhandled theme so far")
             }
             HStack {
+                Toggle("Golang Debugging Msgs", isOn: Binding<Bool>(
+                    get: { set.enable_global_debugging },
+                    set: {
+                        // TODO here do the hook
+                        set.enable_global_debugging = $0
+                    }
+                )).toggleStyle(.checkbox)
+
                 Button {
                     switch set.current_color_scheme {
                     case .light:

@@ -282,7 +282,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .padding()
                             .background()
-                            .tabItem{ Text("Deployment") }.tag(0)
+                            .tabItem{ Text("􁾨 Deployment") }.tag(0)
                             VStack {
                                 Text("TODO Show state of contract (eth balance, nonce, blah) ")
                             }
@@ -348,7 +348,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             }
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .background()
-                            .tabItem { Text("Load Blockchain") }.tag(0)
+                            .tabItem { Text("􁽇 Blockchain") }.tag(0)
                             StateDBDetails(current_head: current_block_header)
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                                 .padding()
@@ -428,7 +428,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                 .frame(maxWidth: .infinity)
                             }
                             
-                        }.tabItem { Text("Execution Table") }.tag(0)
+                        }.tabItem { Text("􀏣 EVM Execution") }.tag(0)
                         VStack {
                             if let contract = contracts.current_selection {
                                 ABIEncode(loaded_contract: contract)
@@ -437,9 +437,9 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             } else {
                                 Text("no contract selected")
                             }
-                        }.tabItem { Text("ABI")}.tag(1)
-                        CallTree().tabItem { Text("CALL tree") }.tag(2)
-                        OPCodeChart().tabItem { Text("OPCode Charts") }.tag(3)
+                        }.tabItem { Text("􀎕 ABI")}.tag(1)
+                        CallTree().tabItem { Text("􁝯 CALL tree") }.tag(2)
+                        OPCodeChart().tabItem { Text("􀐾 OPCode Charts") }.tag(3)
                     }
                     BreakpointView(d: d).frame(maxWidth: .infinity)
                 }.padding(10).frame(maxHeight: .infinity)

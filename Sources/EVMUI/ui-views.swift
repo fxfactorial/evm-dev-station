@@ -82,13 +82,13 @@ struct WatchCompileDeploy: View {
                 compiler.do_hot_reload = true
                 dismiss()
             } label: {
-                Text("Start Hot Reload").frame(maxWidth: .infinity)
+                Text("Start Hot Reload").frame(maxWidth: .infinity, minHeight: 25)
             }
             Button {
                 compiler.reset()
                 dismiss()
             } label: {
-                Text("Cancel").frame(maxWidth: .infinity)
+                Text("Cancel").frame(maxWidth: .infinity, minHeight: 25)
             }
         }.padding(10)
     }
@@ -117,7 +117,7 @@ struct BlockContext : View {
                         TextField("Block Gas Limit", text: $model.gas_limit)
                     }
                 }
-            }.tabItem { Text("HEAD Block") }.tag(0)
+            }.tabItem { Text("􀽽 HEAD Block") }.tag(0)
             ScrollView { VStack {
                 Text("custom something")
             }}.tabItem { Text("Prior Block") }.tag(1)

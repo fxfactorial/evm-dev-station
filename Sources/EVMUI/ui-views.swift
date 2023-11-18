@@ -1344,8 +1344,7 @@ struct BreakpointView: View {
                 HStack {
                     VStack {
                         Text("Current Stack ")
-                        Text("(bottom of list is latest value pushed to stack)")
-                        List(Array(zip(callbackmodel.current_stack.indices, callbackmodel.current_stack)),
+                        List(Array(zip(callbackmodel.current_stack.indices, callbackmodel.current_stack)).reversed(),
                              id: \.1.self,
                              selection: $callbackmodel.selected_stack_item) { index, item in
                             StackListRowView(item: item)

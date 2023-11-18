@@ -1932,82 +1932,63 @@ struct EditState<Driver: EVMDriver> : View {
                 }.frame(maxWidth: 150)
                 VStack {
                     if let st = select {
-                        VStack {
-                            VStack {
-                                HStack {
-                                    Text("Key").frame(width: 120, alignment: .leading)
-                                    TextField("state key", text: Binding<String>(
-                                        get: { st.key },
-                                        set: { st.key = $0 }
-                                    ), axis: .vertical).lineLimit(2, reservesSpace: true)
-                                }
-                                HStack {
-                                    Text("Original Value").frame(width: 120, alignment: .leading)
-                                    TextField("..",
-                                              text: .constant(st.original_value),
-                                              axis: .vertical)
-                                    .textSelection(.enabled)
-                                    .disabled(true)
-                                    .lineLimit(2, reservesSpace: true)
-                                }
-                                HStack {
-                                    Text("Modified Value").frame(width: 120, alignment: .leading)
-                                    TextField("..", text: Binding<String>(
-                                        get: { st.new_value },
-                                        set: { st.new_value = $0 }
-                                    ), axis: .vertical).lineLimit(2, reservesSpace: true)
-                                }
+                        Form {
+                            Section("Storage") {
+                                TextField("Key", text: Binding<String>(
+                                    get: { st.key },
+                                    set: { st.key = $0 }
+                                ), axis: .vertical).lineLimit(2, reservesSpace: true)
+                                TextField("Original Value",
+                                          text: .constant(st.original_value),
+                                          axis: .vertical)
+                                .textSelection(.enabled)
+                                .lineLimit(3, reservesSpace: true)
+                                TextField("Modified Value", text: Binding<String>(
+                                    get: { st.new_value },
+                                    set: { st.new_value = $0 }
+                                ), axis: .vertical).lineLimit(3, reservesSpace: true)
                             }
-                            HStack {
-                                Button {
-                                    driver.write_contract_state(addr: c.address, key: st.key, value: st.new_value)
-                                } label: { Text("Update value to state")}
-                            }
+                            Button {
+                                driver.write_contract_state(addr: c.address, key: st.key, value: st.new_value)
+                            } label: { Text("Save Modified Storage Value") }
                         }
                     } else {
-                        VStack {
-                            HStack {
-                                Text("Helper copy paste for 0")
-                                Text(EMPTY_HASH).textSelection(.enabled)
-                            }
-                            HStack {
+                        Form {
+                            Section("Storage Lookup") {
                                 Button {
                                     driver.read_contract_state(addr: c.address, key: c.state_overrides.temp_key)
-                                } label: { Text("Do State Lookup") }
-                                    .frame(width: 120, alignment: .leading)
-                                TextField("state key", text: $c.state_overrides.temp_key, axis: .vertical)
-                                    .lineLimit(2, reservesSpace: true)
-                            }
-                            HStack {
-                                Text("Value")
-                                    .frame(width: 120, alignment: .leading)
-                                TextField("...",
+                                } label: {
+                                    TextField("Key",
+                                              text: $c.state_overrides.temp_key,
+                                              axis: .vertical)
+                                    .lineLimit(3, reservesSpace: true)
+                                }
+                                TextField("Value",
                                           text: Binding<String>(
                                             get: { c.state_overrides.temp_value },
                                             set: { c.state_overrides.temp_value = $0 }
                                           ), axis: .vertical)
-                                .lineLimit(2, reservesSpace: true)
+                                .lineLimit(3, reservesSpace: true)
                             }
-                            HStack {
-                                Button {
-                                    if new_item_lookup_name.isEmpty {
-                                        return
-                                    }
-                                    let new_record = StateChange(
-                                        nice_name: new_item_lookup_name,
-                                        key: c.state_overrides.temp_key,
-                                        original_value: c.state_overrides.temp_value,
-                                        new_value: ""
-                                    )
-                                    c.state_overrides.overrides.append(new_record)
-                                    c.state_overrides.temp_key = ""
-                                    c.state_overrides.temp_value = ""
-                                    new_item_lookup_name = ""
-                                } label : { Text("Save to list")  }
-                                    .frame(width: 120, alignment: .leading)
-                                TextField("some name", text: $new_item_lookup_name)
-                            }
-                        }.frame(maxHeight: .infinity)
+                            Divider()
+                            Button {
+                                if new_item_lookup_name.isEmpty {
+                                    return
+                                }
+                                let new_record = StateChange(
+                                    nice_name: new_item_lookup_name,
+                                    key: c.state_overrides.temp_key,
+                                    original_value: c.state_overrides.temp_value,
+                                    new_value: ""
+                                )
+                                c.state_overrides.overrides.append(new_record)
+                                c.state_overrides.temp_key = ""
+                                c.state_overrides.temp_value = ""
+                                new_item_lookup_name = ""
+                            } label : {
+                                TextField("Save With Name", text: $new_item_lookup_name).foregroundStyle(.primary)
+                            }.padding([.top], 15)
+                        }.padding(5)
                     }
                 }.frame(maxWidth: .infinity)
             }
@@ -2016,12 +1997,16 @@ struct EditState<Driver: EVMDriver> : View {
 }
 
 
-//#Preview("Edit State") {
-//    EditState(driver: StubEVMDriver(),
-//              c: .constant(sample_contract),
-//              overrides: sample_contract.state_overrides)
-//    .frame(width: 600, height: 300)
-//}
+#Preview("Edit State") {
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try! ModelContainer(for: LoadedContract.self, configurations: config)
+
+    return EditState(driver: StubEVMDriver(),
+              c: .constant(sample_contract),
+              overrides: sample_contract.state_overrides)
+    .modelContainer(container)
+    .frame(width: 600, height: 300)
+}
 
 //#Preview("enabled EIPs") {
 //    KnownEIPs(known_eips: .constant([

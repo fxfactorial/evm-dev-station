@@ -30,14 +30,18 @@ public struct PreferencesView: View {
 
 struct LackingInput: View {
     @Environment(\.dismiss) var dismiss
-    let reason : String
+    @Binding var reason : String
+    
     var body: some View {
         VStack {
             Text("Cant do it because \(reason)")
+                .multilineTextAlignment(.center)
             Button("OK") {
                 dismiss()
             }
-        }.frame(width: 300, height: 250)
+        }
+        .padding(10)
+        .frame(width: 300, height: 250)
     }
 }
 
@@ -85,19 +89,25 @@ struct WatchCompileDeploy: View {
                             }
                         }
                     })
-                    
-                    
-                    
                     TextField("Contract Name", text: $compiler.contract_name)
                     TextField("Deploy to Address", text: $compiler.deploy_to_addr)
                 }
             }
             Divider()
             Button {
-                if compiler.contract_name.isEmpty {
+                // Keep as in order of fields
+                if compiler.watch_source == nil {
+                    bad_input_reason = "need solidity file to watch"
                     present_bad_input_sheet = true
                     return
                 }
+
+                if compiler.contract_name.isEmpty {
+                    bad_input_reason = "Need contract name as is in sol file"
+                    present_bad_input_sheet = true
+                    return
+                }
+
                 compiler.do_hot_reload = true
                 dismiss()
             } label: {
@@ -111,10 +121,11 @@ struct WatchCompileDeploy: View {
             }
         }
         .padding(10)
-        .sheet(isPresented: $present_bad_input_sheet, onDismiss: {
+        .sheet(isPresented: $present_bad_input_sheet, 
+               onDismiss: {
             
         }, content: {
-            LackingInput(reason: bad_input_reason)
+            LackingInput(reason: $bad_input_reason)
         })
     }
 }
@@ -1956,7 +1967,7 @@ struct RunningEVM<Driver: EVMDriver>: View {
 }
 
 
-#Preview("Main App") {
+#Preview("EVM Development Station") {
     EVMDevCenter(driver: StubEVMDriver())
         .frame(width: 1224, height: 860)
         .onAppear {

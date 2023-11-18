@@ -66,19 +66,30 @@ public struct OPCodeFreq {
 
 // solc --combined-json bin,abi --no-cbor-metadata test-contracts/simple.sol
 @Observable public class SolidityCompileHelper {
-    @ObservationIgnored
-    public static let shared = SolidityCompileHelper()
-    @ObservationIgnored
-    private var monitor : FolderMonitor?
-
+    @ObservationIgnored public static let shared = SolidityCompileHelper()
+    @ObservationIgnored private var monitor : FolderMonitor?
+    @ObservationIgnored public var on_compiled_contract : ((String) -> ())?
+    
     public var watch_source : URL?
     public var solc_path = URL(fileURLWithPath: "/usr/local/bin/solc")
     public var jq_path = URL(fileURLWithPath: "/usr/local/bin/jq")
-    public var do_compile = false
+    public var do_hot_reload = false
     public var contract_name = ""
-
+    public var deploy_to_addr = ""
+    public var current_bytecode = ""
+    public var current_abi = ""
+    
+    public func reset() {
+        watch_source = nil
+        do_hot_reload = false
+        contract_name = ""
+        deploy_to_addr = ""
+    }
+    
     public func start_folder_monitor() {
+        let name = contract_name
         if let p = watch_source {
+            let path = p.path()
             if monitor == nil {
                 // only need one of them derp derp
                 monitor = FolderMonitor(url: p)
@@ -89,19 +100,33 @@ public struct OPCodeFreq {
                     solc_task.standardOutput = outputPipe
                     solc_task.standardError = errorPipe
                     solc_task.executableURL = self.solc_path
+                    let path = p.path()
                     solc_task.arguments = [
                         "--combined-json", "bin,abi",
                         "--no-cbor-metadata",
-                        p.absoluteString
+                        path
                     ]
+
+                    // print(solc_task.arguments)
+
                     try? solc_task.run()
-                    let outputData = try? outputPipe.fileHandleForReading.readToEnd()!
-                    let errorData = try? errorPipe.fileHandleForReading.readToEnd()!
-                    let output = String(decoding: outputData!, as: UTF8.self)
-                    let error = String(decoding: errorData!, as: UTF8.self)
+                    guard let outputData = try? outputPipe.fileHandleForReading.readToEnd() else {
+                        // probably an error
+                        guard let error_data = try? errorPipe.fileHandleForReading.readToEnd() else {
+                            return
+                        }
+                        let error_reason = String(decoding: error_data, as: UTF8.self)
+                        RuntimeError.shared.error_reason = error_reason
+                        RuntimeError.shared.show_error = true
+                        return
+                    }
+                    // let output = String(decoding: outputData!, as: UTF8.self)
                     // TODO do something with it
-                    _ = error
-                    let decoded = try! JSONDecoder().decode(AnyDecodable.self, from: outputData!)
+//                    _ = error
+                    guard let decoded = try? JSONDecoder().decode(AnyDecodable.self, from: outputData) else {
+                        print("why exited b")
+                        return
+                    }
                     let contracts = decoded.value as! Dictionary<String, AnyDecodable>
                     let comps = p.pathComponents
                     let dynamic_key = "\(comps[comps.count - 2])/\(comps.last!):\(self.contract_name)"
@@ -112,19 +137,19 @@ public struct OPCodeFreq {
                     let jq_output = Pipe()
                     let jq_task = Process()
                     let query = ".contracts[\"\(dynamic_key)\"].abi"
-                    try! jq_input.fileHandleForWriting.write(contentsOf: outputData!)
+                    try? jq_input.fileHandleForWriting.write(contentsOf: outputData)
                     jq_task.standardInput = jq_input
                     jq_task.standardOutput = jq_output
                     jq_task.executableURL = self.jq_path
                     jq_task.arguments = [query]
                     print(query)
                     try! jq_task.run()
-                    print("after jq ran, now close file")
                     jq_input.fileHandleForWriting.closeFile()
                     let jq_output_collected = try? jq_output.fileHandleForReading.readToEnd()!
                     let jq_output_str = String(decoding: jq_output_collected!, as: UTF8.self)
-                    print("yes it changed, did a compile", bin, query, jq_output_str)
-
+                    self.current_bytecode = bin
+                    self.current_abi = jq_output_str
+                    self.on_compiled_contract?(name)
                 }
                 monitor?.startMonitoring()
             }
@@ -440,7 +465,9 @@ public class LoadedContract : Hashable, Equatable {
     @Transient public var gas_limit_deployment: String = "900000"
     @Transient public var deployment_gas_cost = 0
     @Transient public var state_overrides = StateChanges()
+    @Transient public var enable_hot_reload = false
     
+
     public init(name: String,
                 bytecode: String,
                 address: String,

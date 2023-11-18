@@ -164,15 +164,12 @@ await comm_channel.send(msg1)
 let db_kind_pebble = "pebble"
 let db_kind_leveldb = "leveldb"
 
-var pathdir_pebble = "/Users/edgararoutiounian/repos/mainnet-chaindata/"
-pathdir_pebble = "/Users/edgararoutiounian/repos/mainnet-chaindata-11-11-23/geth/chaindata"
-let pathdir_leveldb = "/Volumes/photos-media-backup/eth-mainnet-backup-11-07-23/chaindata"
-var ancient_dir = "/Volumes/photos-media-backup/eth-mainnet-backups/pebble-based-backup/nov-12-2023-ancientdb/ancientdb"
 
-ancient_dir = ""
+
+let pathdir = "/Users/edgararoutiounian/repos/mainnet-chaindata-11-11-23/geth/chaindata/"
+let ancient_dir = "/Volumes/eth-mainnet-dbs/ancientdb/chain/"
 
 let db_kind = db_kind_pebble
-let pathdir = pathdir_pebble
 let at_block = 18_523_343
 
 let msg2 = try! JSONEncoder().encode(

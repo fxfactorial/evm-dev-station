@@ -9,6 +9,8 @@ import SwiftUI
 import DevStationCommon
 import Charts
 import SwiftData
+// for withObservationTracking but it doesn't work with continuous firing, so dont need it
+//import Observation
 
 public struct PreferencesView: View {
     public init() {
@@ -16,7 +18,7 @@ public struct PreferencesView: View {
     }
     public var body: some View {
         VStack {
-            Text("hi")
+            Text("TODO toggle App logging")
         }
         .frame(width: 500, height: 400)
     }
@@ -32,64 +34,69 @@ struct WatchCompileDeploy: View {
     @State private var present_fileimporter = false
 
     var body: some View {
-        Form {
-            Toggle(isOn: $compiler.do_compile, label: {
-                Text("Watch for changes, compile, deploy")
-            })
-            HStack {
-                Button {
-                    present_fileimporter.toggle()
-                } label : {
-                    Text("Solidity Contract")
+        VStack {
+            Form {
+                Section("Paths to Helper Programs") {
+                    TextField("Solidity Compiler", text: Binding<String>(
+                        get: { compiler.solc_path.path() },
+                        set: { compiler.solc_path = URL(fileURLWithPath: $0) }
+                    ))
+                    TextField("jq utility", text: Binding<String>(
+                        get: { compiler.jq_path.path() },
+                        set: { compiler.jq_path = URL(fileURLWithPath: $0 )}
+                    ))
                 }
-                .fileImporter(isPresented: $present_fileimporter,
-                              allowedContentTypes: [.init(filenameExtension: "sol")!]) { result in
-                    switch result {
-                    case .success(let file_path):
-                        compiler.watch_source = file_path
-                        // gain access to the directory
-                    case .failure(let error):
-                        // how would this even happen?
-                        RuntimeError.shared.error_reason = error.localizedDescription
-                        RuntimeError.shared.show_error = true
-                    }
-                }
+                Divider()
+                Section("Contract Details") {
+                    TextField(text: Binding<String>(
+                        get : { compiler.watch_source?.path() ?? "" },
+                        set: { compiler.watch_source = URL(string: $0) }
+                    ), label: {
+                        Button {
+                            present_fileimporter.toggle()
+                        } label : {
+                            Text("Solidity Contract")
+                        }
+                        .fileImporter(isPresented: $present_fileimporter,
+                                      allowedContentTypes: [.init(filenameExtension: "sol")!]) { result in
+                            switch result {
+                            case .success(let file_path):
+                                compiler.watch_source = file_path
+                                // gain access to the directory
+                            case .failure(let error):
+                                // how would this even happen?
+                                RuntimeError.shared.error_reason = error.localizedDescription
+                                RuntimeError.shared.show_error = true
+                            }
+                        }
+                    })
 
-                TextField("", text: Binding<String>(
-                    get : { compiler.watch_source?.path() ?? "" },
-                    set: { compiler.watch_source = URL(string: $0) }
-                ))
+                    
+                    
+                    TextField("Contract Name", text: $compiler.contract_name)
+                    TextField("Deploy to Address", text: $compiler.deploy_to_addr)
+                }
             }
-            HStack {
-                Text("Solidity Compiler")
-                TextField("", text: Binding<String>(
-                    get: { compiler.solc_path.path() },
-                    set: { compiler.solc_path = URL(fileURLWithPath: $0) }
-                ))
-            }
-            HStack {
-                Text("jq utility")
-                TextField("", text: Binding<String>(
-                    get: { compiler.jq_path.path() },
-                    set: { compiler.jq_path = URL(fileURLWithPath: $0 )}
-                ))
-            }
-            HStack {
-                Text("Contract name")
-                TextField("", text: $compiler.contract_name)
-            }
+            Divider()
             Button {
+                compiler.do_hot_reload = true
                 dismiss()
             } label: {
-                Text("ok")
+                Text("Start Hot Reload").frame(maxWidth: .infinity)
+            }
+            Button {
+                compiler.reset()
+                dismiss()
+            } label: {
+                Text("Cancel").frame(maxWidth: .infinity)
             }
         }.padding(10)
     }
 }
 
-//#Preview("Watch compile deploy") {
-//    WatchCompileDeploy().frame(width: 500, height: 300)
-//}
+#Preview("Watch compile deploy") {
+    WatchCompileDeploy().frame(width: 500, height: 300)
+}
 
 struct BlockContext : View {
     @Bindable private var model = BlockContextModel.shared
@@ -231,6 +238,9 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             VStack {
                                 if let c = contracts.current_selection {
                                     Form {
+                                        // Come back to this field because it doesn't
+                                        // always make sense, aka when we load from chain
+                                        // instead of direct deploy
                                         TextField("Creator Address", text: Binding<String>(
                                             get: { c.deployer_address },
                                             set: { c.deployer_address = $0 }
@@ -398,7 +408,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                     scroller = proxy
                                 }
                                 .onChange(of: execed_ops.execed_operations) {
-                                    print("WHY NOT SCROLLING")
+//                                    print("WHY NOT SCROLLING")
                                     op_selected = execed_ops.execed_operations.last?.id
                                     proxy.scrollTo(op_selected, anchor: .bottom)
 //                                    op_selected = execed_ops.last_record?.id
@@ -493,13 +503,51 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
             }, content: {
                 LoadExistingDB(d:d)
             })
-            .sheet(isPresented: $present_watch_compile_deploy_solidity_sheet, onDismiss: {
-                if SolidityCompileHelper.shared.do_compile {
+            .sheet(isPresented: $present_watch_compile_deploy_solidity_sheet, 
+                   onDismiss: {
+                let name = SolidityCompileHelper.shared.contract_name
+                let already_have = LoadedContracts.shared.contracts.filter({$0.name == name})
+                if already_have.count > 0 {
+                    RuntimeError.shared.error_reason = "Already have contract loaded with name `\(name)`"
+                    RuntimeError.shared.show_error = true
+                    return
+                }
+
+                if SolidityCompileHelper.shared.do_hot_reload {
+                    let contract = LoadedContract(
+                        name: name,
+                        bytecode: "",
+                        address: SolidityCompileHelper.shared.deploy_to_addr
+                    )
+                    contract.enable_hot_reload = true
+                    LoadedContracts.shared.contracts.append(contract)
+                    LoadedContracts.shared.current_selection = contract
+
+                    SolidityCompileHelper.shared.on_compiled_contract = { contract_name in
+                        let code = SolidityCompileHelper.shared.current_bytecode
+                        let abi = SolidityCompileHelper.shared.current_abi
+                        let contract = LoadedContracts.shared.contracts.first(where: { $0.name == contract_name })
+                        // already have it, nothing changed so dont load
+                        if contract?.bytecode == code {
+                            return
+                        }
+                        contract?.bytecode = code
+                        contract?.contract = try? EthereumContract(abi)
+                        let c = contract!
+                        d.create_new_contract(
+                            code: c.bytecode,
+                            creator_addr: c.deployer_address,
+                            contract_nickname: c.name,
+                            gas_amount: c.gas_limit_deployment,
+                            initial_gas: c.eth_balance
+                        )
+                    }
+
                     SolidityCompileHelper.shared.start_folder_monitor()
                 }
             }, content: {
                 WatchCompileDeploy()
-                    .frame(width: 400, height: 300)
+                    .frame(width: 600, height: 450)
             })
             .sheet(isPresented: $present_eips_sheet,
                    onDismiss: {
@@ -508,16 +556,20 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
             .sheet(isPresented: $error_model.show_error,
                    content: {
                 VStack {
-                    TextField(error_model.error_reason, text: $error_model.error_reason)
+                    TextField(error_model.error_reason, 
+                              text: $error_model.error_reason,
+                              axis: .vertical)
                         .textSelection(.enabled)
-                        .disabled(true)
-                        .lineLimit(5, reservesSpace: true)
+                        .disabled(false)
+                        .lineLimit(10, reservesSpace: true)
                     Button {
                         error_model.show_error.toggle()
                     } label: {
-                        Text("dismiss")
+                        Text("Ok")
                     }
-                }.frame(width: 400, height: 300)
+                }
+                .padding()
+                .frame(width: 500, height: 400)
             })
             .sheet(isPresented: $bytecode_add) {
             } content: {
@@ -735,7 +787,8 @@ struct NewContractFromInput: View {
     @State private var contract_name : String = ""
     @State private var contract_bytecode : String = ""
     @State private var contract_abi: String = ""
-    
+    @State private var deploy_to_address: String = ""
+
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
@@ -743,6 +796,7 @@ struct NewContractFromInput: View {
             Section ("Contract") {
                 TextField("Name", text:$contract_name)
                 Divider()
+                TextField("Deploy To Address", text: $deploy_to_address)
                 Section("Contract Bytecode") {
                     TextField("Hex Encoded", text: $contract_bytecode, axis: .vertical)
                         .lineLimit(10, reservesSpace: true)
@@ -759,13 +813,18 @@ struct NewContractFromInput: View {
                 Button {
                     let already_have = LoadedContracts.shared.contracts.filter({$0.name == contract_name})
                     if already_have.count > 0 {
-                        dismiss()
                         RuntimeError.shared.error_reason = "Already have contract loaded with name `\(contract_name)`"
                         RuntimeError.shared.show_error = true
+                        dismiss()
                         return
                     }
-                    
-                    LoadedContracts.shared.contracts.append(sample_contract)
+                    let contract = LoadedContract(
+                        name: contract_name,
+                        bytecode: contract_bytecode,
+                        address: deploy_to_address,
+                        contract: contract_abi.count > 0 ? try? EthereumContract(contract_abi) : nil
+                    )
+                    LoadedContracts.shared.contracts.append(contract)
                     LoadedContracts.shared.current_selection = LoadedContracts.shared.contracts.last
                     dismiss()
                 } label: {

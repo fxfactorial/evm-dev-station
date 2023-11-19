@@ -248,6 +248,15 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                         List(contracts.contracts, id:\.self,
                              selection: $contracts.current_selection) { item in
                             Text(item.name)
+                                .contextMenu(menuItems: {
+                                    Button("delete", role: .destructive) {
+                                        if item.load_origin == .WatchCompileDeploy {
+                                            SolidityCompileHelper.shared.reset()
+                                        }
+                                        contracts.contracts.removeAll(where: { $0.name == item.name })
+                                        contracts.current_selection = nil
+                                    }
+                                })
                         }
                              .frame(maxWidth: 150)
                              .padding([.trailing, .leading])

@@ -575,9 +575,11 @@ struct DevStation : App {
     
     var body : some Scene {
         WindowGroup {
-            let frm = settings_handle.screen_size ?? NSRect(x: 0, y: 0, width: 160, height: 160)
+            let frm = settings_handle.screen_size ?? NSRect(x: 0, y: 0, width: 0, height: 0)
+            let opacity = settings_handle.screen_size == nil ? 0.0 : 1.0
             EVMDevCenter(driver: EVM.shared)
                 .preferredColorScheme(settings_handle.current_color_scheme)
+                .opacity(opacity)
                 .frame(minWidth: frm.width - 400, minHeight: frm.height - 300)
                 .frame(width: frm.width - 200, height: frm.height - 100)
         }.modelContainer(for: [LoadedContract.self])

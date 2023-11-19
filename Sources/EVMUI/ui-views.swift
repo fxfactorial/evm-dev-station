@@ -426,7 +426,11 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                     Text(word.pc).id(word.id)
                                 }
                                 TableColumn("OPNAME") {word in
-                                    Text(word.op_name).id(word.id)
+                                    Text(word.op_name)
+                                        .id(word.id)
+                                        .help(
+                                            Text(OPCODE_TOOLTIP[word.op_name, default:""])
+                                        )
                                 }
                                 TableColumn("OPCODE") {word in
                                     Text(word.opcode).id(word.id)

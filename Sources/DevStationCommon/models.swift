@@ -17,6 +17,7 @@ public enum DeployToAddress : Codable, Hashable {
     public static let shared = GlobalSettings()
     public var current_color_scheme : ColorScheme = .dark
     public var enable_global_debugging = true
+    public var screen_size : NSRect?
 }
 
 @Observable public class LoadChainModel {

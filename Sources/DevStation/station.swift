@@ -6,22 +6,6 @@ import DevStationCommon
 import AsyncAlgorithms
 import SwiftData
 
-@main
-struct DevStation : App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) var app_delegate
-    let settings_handle = GlobalSettings.shared
-
-    var body : some Scene {
-        WindowGroup {
-            Rootview()
-                .preferredColorScheme(settings_handle.current_color_scheme)
-        }.modelContainer(for: [LoadedContract.self])
-        Settings {
-            PreferencesView()
-        }
-    }
-}
-
 final class EVM: EVMDriver {
     
     static let shared = EVM()
@@ -299,16 +283,6 @@ final class EVM: EVMDriver {
     }
 }
 
-struct Rootview : View {
-    var body : some View {
-        VStack {
-            EVMDevCenter(driver: EVM.shared)
-        }
-        .frame(minWidth: 580, idealWidth: 1480, minHeight: 460, idealHeight: 950, alignment: .center)
-        .frame(width: 1480, height: 950)
-    }
-}
-
 @_cdecl("send_error_back")
 public func send_error_back(reply: UnsafeMutablePointer<CChar>) {
     let rpy = String(cString: reply)
@@ -576,6 +550,10 @@ func do_work(rpy: String) {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     var evm_driver: any EVMDriver = EVM.shared
 
+    func applicationWillBecomeActive(_ notification: Notification) {
+        GlobalSettings.shared.screen_size = NSScreen.main?.visibleFrame
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         evm_driver.start_handling_bridge()
         evm_driver.new_evm_singleton()
@@ -588,4 +566,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
 
+}
+
+@main
+struct DevStation : App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var app_delegate
+    let settings_handle = GlobalSettings.shared
+    
+    var body : some Scene {
+        WindowGroup {
+            let frm = settings_handle.screen_size ?? NSRect(x: 0, y: 0, width: 160, height: 160)
+            EVMDevCenter(driver: EVM.shared)
+                .preferredColorScheme(settings_handle.current_color_scheme)
+                .frame(minWidth: frm.width - 400, minHeight: frm.height - 300)
+                .frame(width: frm.width - 200, height: frm.height - 100)
+        }.modelContainer(for: [LoadedContract.self])
+        Settings {
+            PreferencesView()
+        }
+    }
 }

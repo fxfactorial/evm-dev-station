@@ -125,7 +125,6 @@ public struct OPCodeFreq {
                     solc_task.standardOutput = outputPipe
                     solc_task.standardError = errorPipe
                     solc_task.executableURL = self.solc_path
-                    let path = p.path()
                     solc_task.arguments = [
                         "--combined-json", "bin,abi",
                         "--no-cbor-metadata",

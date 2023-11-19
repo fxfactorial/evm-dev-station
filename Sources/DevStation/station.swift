@@ -421,6 +421,7 @@ func do_work(rpy: String) {
           is_loaded_against_state: true
         )
         contract.eth_balance = loaded["eth_bal"]!
+        contract.address = loaded["address"]!
         
         DispatchQueue.main.async {
             LoadedContracts.shared.contracts.append(contract)

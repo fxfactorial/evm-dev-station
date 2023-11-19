@@ -263,17 +263,17 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                         Button {
                             bytecode_add.toggle()
                         } label: {
-                            Text("Add Directly").frame(maxWidth: 150)
+                            Text("Add Directly").frame(width: 150, height: 25)
                         }
                         Button {
                             present_watch_compile_deploy_solidity_sheet.toggle()
                         } label: {
-                            Text("Watch, compile, deploy").frame(width: 150)
+                            Text("Watch, compile, deploy").frame(width: 150, height: 25)
                         }
                         Button {
                             present_load_contract_sheet.toggle()
                         } label: {
-                            Text("Load from chain").frame(maxWidth: 150)
+                            Text("Load from chain").frame(width: 150, height: 25)
                         }
                         .disabled(!chaindb.is_chain_loaded)
                         .help("must first load an existing blockchain database")
@@ -333,25 +333,29 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                         }
                                     ))
                                     TextField("Deployed Address", text: Binding<String>(
-                                        get: { c.address },
+                                        get: {c.address },
                                         set: { _ = $0 }
                                     )).disabled(true)
-                                    TextField("Deployed Gas Cost", text: Binding<String>(
-                                        get: { "\(Int(c.gas_limit_deployment)! - c.deployment_gas_cost)" },
-                                        set: { _ = $0 }
-                                    )).disabled(true)
+                                    if c.load_origin != .FromChain {
+                                        TextField("Deployed Gas Cost", text: Binding<String>(
+                                            get: { "\(Int(c.gas_limit_deployment)! - c.deployment_gas_cost)" },
+                                            set: { _ = $0 }
+                                        )).disabled(true)
+                                    }
                                     HStack {
-                                        Button {
-                                            d.create_new_contract(
-                                                code: c.bytecode,
-                                                creator_addr: c.deployer_address,
-                                                contract_nickname: c.name,
-                                                gas_amount: c.gas_limit_deployment,
-                                                initial_gas: c.eth_balance
-                                            )
-                                        } label: {
-                                            Text("Deploy contract to state")
-                                        }.disabled(c.load_origin == .FromChain || c.bytecode.isEmpty)
+                                        if c.load_origin != .FromChain {
+                                            Button {
+                                                d.create_new_contract(
+                                                    code: c.bytecode,
+                                                    creator_addr: c.deployer_address,
+                                                    contract_nickname: c.name,
+                                                    gas_amount: c.gas_limit_deployment,
+                                                    initial_gas: c.eth_balance
+                                                )
+                                            } label: {
+                                                Text("Deploy contract to state")
+                                            }.disabled(c.bytecode.isEmpty)
+                                        }
                                         if c.load_origin == .WatchCompileDeploy {
                                             Toggle(isOn: $do_hot_reload) {
                                                 Text("Enable Hot Reload")
@@ -396,6 +400,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                         }.tabItem { Text("Bytecode") }.tag(2)
 
                     }
+                    .frame(minWidth: 250)
                     TabView {
                         VStack {
                             BlockContext(current_head: current_block_header)
@@ -404,7 +409,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                 Button {
                                     present_load_db_sheet.toggle()
                                 } label: {
-                                    Text("Load Database")
+                                    Text("Load Database").frame(width: 120, height: 25)
                                 }.disabled(chaindb.is_chain_loaded)
                                 if chaindb.show_loading_db {
                                     RotatingDotAnimation(param: .init(
@@ -421,8 +426,9 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                     d.close_chaindata()
                                     BlockContextModel.shared.reset()
                                 } label: {
-                                    Text("Close Database")
-                                }.disabled(!chaindb.is_chain_loaded)
+                                    Text("Close Database").frame(width: 120, height: 25)
+                                }
+                                .disabled(!chaindb.is_chain_loaded)
                             }.padding([.bottom], 10)
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -634,7 +640,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
             }
         }, content: {
             WatchCompileDeploy()
-                .frame(width: 600, height: 450)
+                .frame(width: 600, height: 400)
         })
         .sheet(isPresented: $present_eips_sheet,
                onDismiss: {

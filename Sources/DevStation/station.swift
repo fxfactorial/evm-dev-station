@@ -398,7 +398,7 @@ func do_work(rpy: String) {
         }
 
     case .CMD_NEW_EVM:
-        print("loaded new evm")
+        _ = 1
     case .CMD_LOAD_CHAIN:
         EVM.shared.load_chainhead()
     case .CMD_ALL_KNOWN_EIPS:
@@ -560,7 +560,8 @@ func do_work(rpy: String) {
             OpcodeCallbackModel.shared.current_caller = caller
             OpcodeCallbackModel.shared.hit_breakpoint = true
         }
-        
+    case .CMD_UPDATE_BALANCE:
+        _ = 1
     default:
         DispatchQueue.main.async {
             RuntimeError.shared.show_error = true

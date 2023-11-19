@@ -9,6 +9,7 @@ import SwiftUI
 import DevStationCommon
 import Charts
 import SwiftData
+import BigInt
 // for withObservationTracking but it doesn't work with continuous firing, so dont need it
 //import Observation
 
@@ -234,6 +235,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     @State private var current_tab_runtime_eval = 0
     @State private var op_selected : ExecutedEVMCode.ID?
     @State private var scroller : ScrollViewProxy?
+    @State private var do_hot_reload = SolidityCompileHelper.shared.do_hot_reload
     
     public var body: some View {
         VSplitView {
@@ -293,11 +295,34 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                             set: { c.eth_balance = $0 }
                                         ))
                                         Button {
-                                            
+                                            d.update_balance(param: BridgeCmdUpdateBalance(
+                                                addr: c.address, name: c.name, bal: c.eth_balance)
+                                            )
                                         } label: {
                                             Text("Update Balance in State")
                                         }
                                     }
+                                    TextField("Eth Balance Readable", text: Binding<String>(
+                                        get: {
+                                            if !c.eth_balance.isEmpty && c.eth_balance != "0" {
+                                                func divide(_ lhs: BigInt, _ rhs: BigInt) -> Decimal {
+                                                    let (quotient, remainder) =  lhs.quotientAndRemainder(dividingBy: rhs)
+                                                    return Decimal(string: String(quotient))! + Decimal(string: String(remainder))! / Decimal(string: String(rhs))!
+                                                }
+                                                let eighteen = BigInt(stringLiteral: "1000000000000000000")
+                                                // TODO wrap in try/catch
+                                                let eth = BigInt(stringLiteral: c.eth_balance)
+//                                                let (quo, rem) = eth.quotientAndRemainder(dividingBy: eighteen)
+                                                let result = divide(eth, eighteen)
+                                                return "\(result)"
+                                            } else {
+                                                return c.eth_balance
+                                            }
+                                        },
+                                        set: {
+                                            _ = $0
+                                        }
+                                    ))
                                     TextField("Deployed Address", text: Binding<String>(
                                         get: { c.address },
                                         set: { _ = $0 }
@@ -306,18 +331,24 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                         get: { "\(Int(c.gas_limit_deployment)! - c.deployment_gas_cost)" },
                                         set: { _ = $0 }
                                     )).disabled(true)
-                                    
-                                    Button {
-                                        d.create_new_contract(
-                                            code: c.bytecode,
-                                            creator_addr: c.deployer_address,
-                                            contract_nickname: c.name,
-                                            gas_amount: c.gas_limit_deployment,
-                                            initial_gas: c.eth_balance
-                                        )
-                                    } label: {
-                                        Text("Deploy contract to state")
-                                    }.disabled(c.load_origin == .FromChain)
+                                    HStack {
+                                        Button {
+                                            d.create_new_contract(
+                                                code: c.bytecode,
+                                                creator_addr: c.deployer_address,
+                                                contract_nickname: c.name,
+                                                gas_amount: c.gas_limit_deployment,
+                                                initial_gas: c.eth_balance
+                                            )
+                                        } label: {
+                                            Text("Deploy contract to state")
+                                        }.disabled(c.load_origin == .FromChain || c.bytecode.isEmpty)
+                                        if c.load_origin == .WatchCompileDeploy {
+                                            Toggle(isOn: $do_hot_reload) {
+                                                Text("Enable Hot Reload")
+                                            }
+                                        }
+                                    }
                                 }
                             } else {
                                 Text("select a contract from sidebar ")
@@ -643,7 +674,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                 Toggle("Golang Debugging Msgs", isOn: Binding<Bool>(
                     get: { set.enable_global_debugging },
                     set: {
-                        // TODO here do the hook
+                        d.toggle_logging(param: BridgeCmdLogger(log_msg_in: $0, log_msg_out: $0))
                         set.enable_global_debugging = $0
                     }
                 )).toggleStyle(.checkbox)
@@ -1944,7 +1975,7 @@ struct RunningEVM<Driver: EVMDriver>: View {
                     Button {
                         ExecutedOperations.shared.reset()
                         EVMRunStateControls.shared.reset()
-//                        OpcodeCallbackModel.shared.reset()
+                        OpcodeCallbackModel.shared.reset()
 //                        RuntimeError.shared.reset()
                         d.enable_opcode_call_callback(yes_no: false)
                         d.enable_step_each_op(yes_no: false)

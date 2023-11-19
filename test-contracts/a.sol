@@ -28,6 +28,10 @@ contract EntryPoint {
     return IERC20(USDC).balanceOf(address(this));
   }
 
+  function check_my_eth_bal() external view returns (uint256) {
+    return address(this).balance;
+  }
+
   function do_quote() external view returns (uint256) {
     uint256 how_much_out = V3Quoter.quoteExactInputSingle(
       WETH,

@@ -91,7 +91,7 @@ public struct OPCodeFreq {
     public var watch_source : URL?
     public var solc_path = URL(fileURLWithPath: "/usr/local/bin/solc")
     public var jq_path = URL(fileURLWithPath: "/usr/local/bin/jq")
-    public var do_hot_reload = false
+    public var do_hot_reload = true
     public var contract_name = ""
     public var deploy_to_addr = ""
     public var current_bytecode = ""
@@ -102,6 +102,8 @@ public struct OPCodeFreq {
         do_hot_reload = false
         contract_name = ""
         deploy_to_addr = ""
+        current_abi = ""
+        current_bytecode = ""
     }
     
     public func start_folder_monitor() {
@@ -112,6 +114,10 @@ public struct OPCodeFreq {
                 // only need one of them derp derp
                 monitor = FolderMonitor(url: p)
                 monitor?.folderDidChange = {
+                    if !self.do_hot_reload {
+                        return
+                    }
+
                     let outputPipe = Pipe()
                     let errorPipe = Pipe()
                     let solc_task = Process()

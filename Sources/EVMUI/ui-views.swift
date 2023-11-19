@@ -360,12 +360,17 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                         .background()
                         .tabItem{ Text("􁾨 Deployment") }.tag(0)
                         VStack {
-                            Text("TODO Show state of contract (eth balance, nonce, blah) ")
+                            if let c = contracts.current_selection {
+                                EditState(driver: d,
+                                          c: Binding<LoadedContract>(get: {c}, set: { _ in ()}),
+                                          overrides: c.state_overrides
+                                )
+                            } else {
+                                Text("select a contract from sidebar")
+                            }
                         }
                         .padding()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background()
-                        .tabItem{ Text("Contract State") }.tag(1)
+                        .tabItem{ Text("Edit State") }.tag(1)
                         VStack {
                             if let contract = contracts.current_selection {
                                 VStack {
@@ -379,19 +384,8 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             } else {
                                 Text("select a contract from sidebar")
                             }
-                        }.tabItem { Text("Raw Bytecode") }.tag(2)
-                        VStack {
-                            if let c = contracts.current_selection {
-                                EditState(driver: d,
-                                          c: Binding<LoadedContract>(get: {c}, set: { _ in ()}),
-                                          overrides: c.state_overrides
-                                )
-                            } else {
-                                Text("select a contract from sidebar")
-                            }
-                        }
-                        .padding()
-                        .tabItem{ Text("Edit State") }.tag(3)
+                        }.tabItem { Text("Bytecode") }.tag(2)
+
                     }
                     TabView {
                         VStack {

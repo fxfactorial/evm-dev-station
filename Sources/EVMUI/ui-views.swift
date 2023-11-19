@@ -34,8 +34,8 @@ struct LackingInput: View {
     
     var body: some View {
         VStack {
-            Text("Cant do it because \(reason)")
-                .multilineTextAlignment(.center)
+            Text("Cant do it because")
+            Text(reason)
             Button("OK") {
                 dismiss()
             }
@@ -273,21 +273,31 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                         VStack {
                             if let c = contracts.current_selection {
                                 Form {
-                                    // Come back to this field because it doesn't
-                                    // always make sense, aka when we load from chain
-                                    // instead of direct deploy
-                                    TextField("Creator Address", text: Binding<String>(
-                                        get: { c.deployer_address },
-                                        set: { c.deployer_address = $0 }
-                                    ))
-                                    TextField("Gas Limit", text: Binding<String>(
-                                        get: { c.gas_limit_deployment },
-                                        set: { c.gas_limit_deployment = $0 }
-                                    ))
-                                    TextField("Eth Balance", text: Binding<String>(
-                                        get: { c.eth_balance },
-                                        set: { c.eth_balance = $0 }
-                                    ))
+                                    if c.load_origin != .FromChain {
+                                        TextField("Creator Address", text: Binding<String>(
+                                            get: { c.deployer_address },
+                                            set: { c.deployer_address = $0 }
+                                        ))
+                                    } else {
+                                        //
+                                    }
+                                    if c.load_origin != .FromChain {
+                                        TextField("Gas Limit", text: Binding<String>(
+                                            get: { c.gas_limit_deployment },
+                                            set: { c.gas_limit_deployment = $0 }
+                                        ))
+                                    }
+                                    HStack {
+                                        TextField("Eth Balance", text: Binding<String>(
+                                            get: { c.eth_balance },
+                                            set: { c.eth_balance = $0 }
+                                        ))
+                                        Button {
+                                            
+                                        } label: {
+                                            Text("Update Balance in State")
+                                        }
+                                    }
                                     TextField("Deployed Address", text: Binding<String>(
                                         get: { c.address },
                                         set: { _ = $0 }
@@ -307,7 +317,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                         )
                                     } label: {
                                         Text("Deploy contract to state")
-                                    }
+                                    }.disabled(c.load_origin == .FromChain)
                                 }
                             } else {
                                 Text("select a contract from sidebar ")
@@ -553,11 +563,14 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
             }
             
             if SolidityCompileHelper.shared.do_hot_reload {
+                let deploy_kind : DeployToAddress = SolidityCompileHelper.shared.deploy_to_addr.isEmpty
+                ? .CreateNewAddrScheme : .OverrideDeployedTo(SolidityCompileHelper.shared.deploy_to_addr)
+
                 let contract = LoadedContract(
                     name: name,
                     bytecode: "",
-                    address: SolidityCompileHelper.shared.deploy_to_addr,
-                    load_kind: .WatchCompileDeploy
+                    load_kind: .WatchCompileDeploy,
+                    deploy_to_scheme: deploy_kind
                 )
                 contract.enable_hot_reload = true
                 LoadedContracts.shared.contracts.append(contract)
@@ -856,25 +869,26 @@ struct StateDBDetails: View {
 }
 
 struct LoadContractFromInput: View {
-    @State private var contract_name : String = ""
-    @State private var contract_bytecode : String = ""
-    @State private var contract_abi: String = ""
-    @State private var deploy_to_address: String = ""
+    @State private var contract_name = ""
+    @State private var contract_bytecode = ""
+    @State private var contract_abi = ""
+    @State private var deploy_to_address = ""
+    @State private var deployer_address = ""
     @State private var picked_common_abi = ""
     
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
         Form {
-            Section ("Contract") {
+            Section ("Contract Input") {
                 TextField("Name", text:$contract_name)
+                TextField("Hex Encoded Bytecode", text: $contract_bytecode, axis: .vertical)
+                    .lineLimit(5, reservesSpace: true)
                 Divider()
-                TextField("Deploy To Address", text: $deploy_to_address)
-                Section("Contract Bytecode") {
-                    TextField("Hex Encoded", text: $contract_bytecode, axis: .vertical)
-                        .lineLimit(5, reservesSpace: true)
+                Section("Optional Override(s)") {
+                    TextField("Deploy To Address", text: $deploy_to_address)
+                    TextField("Deployer Address", text: $deployer_address)
                 }
-                Divider()
                 Section {
                     TextField("Optional JSON ABI",
                               text: picked_common_abi.isEmpty ? $contract_abi : .constant(CommonABIsModel.shared.abis_raw[picked_common_abi]!),
@@ -882,7 +896,7 @@ struct LoadContractFromInput: View {
                     .lineLimit(5, reservesSpace: true)
                     .scrollDisabled(false)
                 } header: {
-                    Picker("common ABIs", selection: $picked_common_abi) {
+                    Picker("Common ABIs", selection: $picked_common_abi) {
                         ForEach(Array(CommonABIsModel.shared.abis_raw.keys), id: \.self) {
                             Text($0)
                         }
@@ -906,11 +920,12 @@ struct LoadContractFromInput: View {
                         contract_abi = CommonABIsModel.shared.abis_raw[picked_common_abi]!
                     }
                     
+                    let deploy_kind : DeployToAddress = deploy_to_address.isEmpty ? .CreateNewAddrScheme : .OverrideDeployedTo(deploy_to_address)
                     let contract = LoadedContract(
                         name: contract_name,
                         bytecode: contract_bytecode,
-                        address: deploy_to_address,
                         load_kind: .DirectFromUser,
+                        deploy_to_scheme: deploy_kind,
                         contract: contract_abi.count > 0 ? try? EthereumContract(contract_abi) : nil
                     )
                     LoadedContracts.shared.contracts.append(contract)
@@ -935,7 +950,7 @@ struct LoadContractFromInput: View {
             }
         }
         .padding()
-        .frame(width: 600, height: 450)
+        .frame(width: 600, height: 500)
     }
 }
 
@@ -1929,8 +1944,8 @@ struct RunningEVM<Driver: EVMDriver>: View {
                     Button {
                         ExecutedOperations.shared.reset()
                         EVMRunStateControls.shared.reset()
-                        OpcodeCallbackModel.shared.reset()
-                        RuntimeError.shared.reset()
+//                        OpcodeCallbackModel.shared.reset()
+//                        RuntimeError.shared.reset()
                         d.enable_opcode_call_callback(yes_no: false)
                         d.enable_step_each_op(yes_no: false)
                     } label : {

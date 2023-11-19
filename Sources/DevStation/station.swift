@@ -43,6 +43,25 @@ final class EVM: EVMDriver {
         }
     }
     
+    func update_balance(param: BridgeCmdUpdateBalance) {
+        Task {
+            let msg = try! JSONEncoder().encode(
+              EVMBridgeMessage<BridgeCmdUpdateBalance>(c: .CMD_UPDATE_BALANCE, p: param)
+            )
+            await comm_channel.send(msg)
+        }
+    }
+
+    func toggle_logging(param: BridgeCmdLogger) {
+        Task {
+            let msg = try! JSONEncoder().encode(
+              EVMBridgeMessage<BridgeCmdLogger>(c: .CMD_LOGGER_TOGGLE, p: param)
+            )
+            await comm_channel.send(msg)
+        }
+    }
+
+
     func enable_breakpoint_on_opcode(yes_no: Bool, opcode_name: String) {
         Task {
             let msg = try! JSONEncoder().encode(
@@ -422,10 +441,12 @@ func do_work(rpy: String) {
         let contract = LoadedContract(
           name: loaded["nickname"]!,
           bytecode: loaded["code"]!,
-          address: loaded["address"]!,
           load_kind: .FromChain,
-          contract: try? EthereumContract(loaded["abi_json"]!)
+          deploy_to_scheme: .UseExistingOnChain(loaded["address"]!),
+          contract: try? EthereumContract(loaded["abi_json"]!),
+          is_loaded_against_state: true
         )
+        contract.eth_balance = loaded["eth_bal"]!
         
         DispatchQueue.main.async {
             LoadedContracts.shared.contracts.append(contract)

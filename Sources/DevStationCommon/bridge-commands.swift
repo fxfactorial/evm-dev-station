@@ -237,9 +237,27 @@ public struct BridgeCmdLookupTx : Codable {
     public init(hsh : String) {
         self.Hash = hsh
     }
-    
 }
 
+public struct BridgeCmdUpdateBalance : Codable {
+    public let ContractAddr:     String
+    public let ContractNickName: String
+    public let NewBalance:       String
+    public init(addr: String, name: String, bal: String) {
+        self.ContractAddr = addr
+        self.ContractNickName = name
+        self.NewBalance = bal
+    }
+}
+
+public struct BridgeCmdLogger : Codable {
+    public let EnableLogMsgIn:  Bool
+    public let EnableLogMsgOut: Bool
+    public init(log_msg_in: Bool, log_msg_out: Bool) {
+        self.EnableLogMsgIn = log_msg_in
+        self.EnableLogMsgOut = log_msg_out
+    }
+}
 
 public enum EVMCommand : String, Codable {
     case CMD_REPORT_ERROR = "error"
@@ -264,6 +282,8 @@ public enum EVMCommand : String, Codable {
     case CMD_REPORT_MOST_FAR_BACK_STATE_AVAIL = "most_far_back_block_state_have"
     case CMD_LOOKUP_TX_BY_HASH = "lookup_tx_by_hash"
     case CMD_CANCEL_EVM_RUN = "cancel_evm_exec"
+    case CMD_UPDATE_BALANCE = "update_balance_of_account"
+    case CMD_LOGGER_TOGGLE = "logger_enable_disable"
     
     // keep a space
     case RUN_EVM_OP_EXECED = "ran_one_opcode"

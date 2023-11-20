@@ -1,12 +1,25 @@
 build:
 	make -C go-ethereum dev-station
 
-.PHONY: universal
+.PHONY: universal xcframework clean
+
+fat-libraries:
+	make -C go-ethereum dev-station-fat
+
+clean:
+	rm -rf *.a *.xcframework
+
+# https://rhonabwy.com/2023/02/10/creating-an-xcframework/
+xcframework:
+	rm -rf EVMBridgeLibrary.xcframework
+	xcodebuild -create-xcframework \
+-library libevm-bridge.a \
+-headers EVMBridge \
+-output EVMBridgeLibrary.xcframework
 
 # Ask on swift forums why have to do it separately
 # I think becuase the release is a symlink
-universal:
-	make -C go-ethereum dev-station-fat
+universal: fat-binaries xcframework
 	rm -rf .build
 	swift build -c release --arch arm64
 	sleep 5

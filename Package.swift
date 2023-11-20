@@ -7,40 +7,25 @@ let package = Package(
   name: "evm-dev-station",
   platforms: [.macOS(.v14)],
   products: [
-    // this is the wrapper as module for golang code
-    .library(
-      name: "EVMBridge",
-      targets: ["EVMBridge"]),
+    // The package produces these things which "target" aka use the
+    // things in target
     .library(name: "EVMUI", targets: ["EVMUI"]),
     .library(name: "DevStationCommon", targets: ["DevStationCommon"])
   ],
   dependencies: [
-    // .package(url: "https://github.com/Boilertalk/Web3.swift.git", from: "0.8.4")
     .package(url: "https://github.com/attaswift/BigInt.git", from: "5.3.0"),
     .package(url: "https://github.com/krzyzanowskim/CryptoSwift.git", from: "1.5.1"),
     .package(url: "https://github.com/apple/swift-async-algorithms", from: "1.0.0-beta.1")
-    // .package(url: "https://github.com/apple/swift-collections.git", .upToNextMajor(from: "1.0.3"))
   ],
   targets: [
     .target(name: "DevStationCommon",
             dependencies: [
-              // .product(name: "Web3ContractABI", package: "Web3.swift"),
-              // "Web3ContractABI",
               "BigInt",
               "CryptoSwift",
-              // .product(name: "Collections", package: "swift-collections")
+              .product(name: "AsyncAlgorithms", package: "swift-async-algorithms")
             ],
             path: "Sources/DevStationCommon"),
-    .target(
-      name: "EVMBridge",
-      resources: [
-        // technically not even needed!
-        // .copy("../../libevm-bridge.a"),
-        // .process("../../libevm-bridge.a")
-      ],
-      linkerSettings: [.unsafeFlags(["-L."]), .linkedLibrary("evm-bridge")]
-    ),
-    // so that xcode can use this "scheme" and we can use #preview
+    .binaryTarget(name: "EVMBridge", path: "EVMBridgeLibrary.xcframework"),
     .target(
       name:"EVMUI",
       dependencies: ["DevStationCommon"],

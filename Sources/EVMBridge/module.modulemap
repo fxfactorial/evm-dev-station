@@ -1,5 +1,0 @@
-module CEVMBridge {
-  header "libevm-bridge.h"
-  link "evm-bridge"
-  export "*"
-}

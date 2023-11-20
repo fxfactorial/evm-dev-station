@@ -1,0 +1,5 @@
+module EVMBridge {
+  header "libevm-bridge.h"
+  link "evm-bridge"
+  export *
+}

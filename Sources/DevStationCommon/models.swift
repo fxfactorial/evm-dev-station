@@ -189,6 +189,7 @@ public struct OPCodeFreq {
     @ObservationIgnored public static let shared = ExecutedOperations()
     
     public var execed_operations: [ExecutedEVMCode] = []
+    public var current_operation_selected: ExecutedEVMCode.ID?
     public var total_static_gas_cost_so_far = 0
     public var total_dynamic_gas_cost_so_far = 0
     public var total_gas_cost_so_far = 0
@@ -198,6 +199,7 @@ public struct OPCodeFreq {
     @ObservationIgnored public var opcode_freq_temp : [String: OPCodeFreq] = [:]
     
     public func reset() {
+        current_operation_selected = nil
         execed_operations = []
         state_records = []
         call_tree = []

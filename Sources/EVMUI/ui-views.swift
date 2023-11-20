@@ -217,7 +217,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     @AppStorage("show_first_load_help") private var show_first_load_help = true
     private var chaindb = LoadChainModel.shared
     private var evm_run_controls = EVMRunStateControls.shared
-    private var execed_ops = ExecutedOperations.shared
+    @Bindable private var execed_ops = ExecutedOperations.shared
     private var current_block_header = CurrentBlockHeader.shared
     @Bindable private var contracts = LoadedContracts.shared
     @Bindable private var error_model = RuntimeError.shared
@@ -233,10 +233,9 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
     
     @State var eips_used : [EIP] = []
     @State private var current_tab_runtime_eval = 0
-    @State private var op_selected : ExecutedEVMCode.ID?
     @State private var scroller : ScrollViewProxy?
     @State private var do_hot_reload = SolidityCompileHelper.shared.do_hot_reload
-    
+
     public var body: some View {
         VSplitView {
             HStack {
@@ -472,7 +471,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                         }.padding([.leading, .trailing], 10)
                         ScrollViewReader { (proxy: ScrollViewProxy) in
                             Table(of: ExecutedEVMCode.self,
-                                  selection: $op_selected) {
+                                  selection: $execed_ops.current_operation_selected) {
                                 TableColumn("PC") { word in
                                     Text(word.pc).id(word.id)
                                 }
@@ -499,9 +498,10 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             }
                             .onChange(of: execed_ops.execed_operations) {
                                 //                                    print("WHY NOT SCROLLING")
-                                op_selected = execed_ops.execed_operations.last?.id
-                                proxy.scrollTo(op_selected, anchor: .bottom)
-                                //                                    op_selected = execed_ops.last_record?.id
+                                execed_ops.current_operation_selected = execed_ops.execed_operations.last?.id
+                                if let d = execed_ops.current_operation_selected {
+                                    proxy.scrollTo(d, anchor: .bottom)
+                                }
                             }
                             .frame(maxHeight: .infinity)
                             HStack {
@@ -1880,15 +1880,15 @@ struct LoadExistingDB : View {
         }
         .padding()
         .onAppear{
-            if let bm = chaindata_bookmark,
-               let p = restoreFileAccess(with: bm, k: .chaindata) {
-                chain.chaindata_directory = p.path()
-            }
-
-            if let bm = ancientdb_bookmark,
-               let p = restoreFileAccess(with: bm, k: .ancientdb) {
-                chain.ancientdb_dir = p.path()
-            }
+//            if let bm = chaindata_bookmark,
+//               let p = restoreFileAccess(with: bm, k: .chaindata) {
+//                chain.chaindata_directory = p.path()
+//            }
+//
+//            if let bm = ancientdb_bookmark,
+//               let p = restoreFileAccess(with: bm, k: .ancientdb) {
+//                chain.ancientdb_dir = p.path()
+//            }
         }
     }
 }
@@ -2051,7 +2051,7 @@ struct RunningEVM<Driver: EVMDriver>: View {
                         ExecutedOperations.shared.reset()
                         EVMRunStateControls.shared.reset()
                         OpcodeCallbackModel.shared.reset()
-//                        RuntimeError.shared.reset()
+                        RuntimeError.shared.reset()
                         d.enable_opcode_call_callback(yes_no: false)
                         d.enable_step_each_op(yes_no: false)
                     } label : {

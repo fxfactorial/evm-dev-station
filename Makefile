@@ -10,12 +10,13 @@ clean:
 	rm -rf *.a *.xcframework
 
 # https://rhonabwy.com/2023/02/10/creating-an-xcframework/
-xcframework:
+xcframework: fat-libraries
 	rm -rf EVMBridgeLibrary.xcframework
 	xcodebuild -create-xcframework \
 -library libevm-bridge.a \
 -headers EVMBridge \
 -output EVMBridgeLibrary.xcframework
+	rm -f libevm-bridge.a
 
 # Ask on swift forums why have to do it separately
 # I think becuase the release is a symlink

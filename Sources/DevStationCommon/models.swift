@@ -285,6 +285,8 @@ public struct EIP : Identifiable {
         base_gas = ""
         base_gas_tip = ""
         time = ""
+        gas_limit = ""
+        gas_used = ""
     }
 }
 
@@ -377,6 +379,13 @@ public enum DBKind : String {
     public var parent_hash: String = ""
     public var raw_block_header: BlockHeader?
     public init() {}
+    public func reset() {
+        block_time = ""
+        block_number = ""
+        state_root = ""
+        parent_hash = ""
+        raw_block_header = nil
+    }
     
 }
 

@@ -425,6 +425,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                                 Button {
                                     d.close_chaindata()
                                     BlockContextModel.shared.reset()
+                                    CurrentBlockHeader.shared.reset()
                                 } label: {
                                     Text("Close Database").frame(width: 120, height: 25)
                                 }
@@ -590,7 +591,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                 )
             }
         }, content: {
-            LoadExistingDB(d:d)
+            LoadExistingDB(d:d).frame(width: 550, height: 350)
         })
         .sheet(isPresented: $present_watch_compile_deploy_solidity_sheet,
                onDismiss: {
@@ -1749,34 +1750,40 @@ struct LoadExistingDB : View {
     @Environment(\.dismiss) var dismiss
     @State private var options = ["pebble", "leveldb"]
     @State private var selected_option = "pebble"
-    @State private var present_fileimporter = false
-    @State private var present_fileimporter_ancient = false
     @State private var at_block_number = ""
     @Bindable private var chain = LoadChainModel.shared
-    @AppStorage("bookmarkData") var downloadsBookmark: Data?
-    
-    private func promptForWorkingDirectoryPermission() -> URL? {
+    @AppStorage("chaindata") var chaindata_bookmark: Data?
+    @AppStorage("ancientdb") var ancientdb_bookmark: Data?
+
+    enum DirectoryNeed {
+        case chaindata
+        case ancientdb
+    }
+
+    private func promptForWorkingDirectoryPermission(prompt: String) -> URL? {
         let openPanel = NSOpenPanel()
-        openPanel.message = "Choose your directory"
+        openPanel.message = prompt
         openPanel.prompt = "Choose"
         openPanel.allowedContentTypes = [.directory]
         openPanel.allowsOtherFileTypes = false
         openPanel.canChooseFiles = false
         openPanel.canChooseDirectories = true
-        
         let response = openPanel.runModal()
-        print(openPanel.urls) // this contains the chosen folder
+        if response.rawValue == NSApplication.ModalResponse.cancel.rawValue {
+            return nil
+        }
+        // print(openPanel.urls) // this contains the chosen folder
         return openPanel.urls.first
     }
     
-    private func restoreFileAccess(with bookmarkData: Data) -> URL? {
+    private func restoreFileAccess(with bookmarkData: Data, k: DirectoryNeed) -> URL? {
         do {
             var isStale = false
             let url = try URL(resolvingBookmarkData: bookmarkData, options: .withSecurityScope, relativeTo: nil, bookmarkDataIsStale: &isStale)
             if isStale {
                 // bookmarks could become stale as the OS changes
                 print("Bookmark is stale, need to save a new one... ")
-                saveBookmarkData(for: url)
+                saveBookmarkData(for: url, k: k)
             }
             return url
         } catch {
@@ -1785,75 +1792,80 @@ struct LoadExistingDB : View {
         }
     }
     
-    private func saveBookmarkData(for workDir: URL) {
+    private func saveBookmarkData(for workDir: URL, k: DirectoryNeed) {
         do {
             let bookmarkData = try workDir.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
-            downloadsBookmark = bookmarkData
+            switch k {
+            case .chaindata:
+                chaindata_bookmark = bookmarkData
+            case .ancientdb:
+                ancientdb_bookmark = bookmarkData
+            }
         } catch {
             print("Failed to save bookmark data for \(workDir)", error)
         }
     }
     
     var body: some View {
-        VStack {
-            Picker(selection: $selected_option,
-                   label: Text("Database Kind").frame(width: 100, alignment: .center)) {
-                ForEach(options, id: \.self) { option in
-                    Text(option).tag(option)
+        Form {
+            Section("Required") {
+                Picker(selection: $selected_option,
+                       label: Text("Database Kind").frame(width: 100, alignment: .center)) {
+                    ForEach(options, id: \.self) { option in
+                        Text(option).tag(option)
+                    }
                 }
-            }
-                   .tint(.black)
-                   .pickerStyle(.segmented)
-            HStack {
+                       .tint(.black)
+                       .pickerStyle(.segmented)
                 Button {
-                    guard let allowed = promptForWorkingDirectoryPermission() else {
+                    guard let allowed = promptForWorkingDirectoryPermission(prompt: "Chaindata directory") else {
+                        RuntimeError.shared.error_reason = "not allowed to use chaindata directory"
+                        RuntimeError.shared.show_error = true
                         return
                     }
+                    saveBookmarkData(for: allowed, k: .chaindata)
                     let _ = allowed.startAccessingSecurityScopedResource()
-                    present_fileimporter.toggle()
+                    chain.chaindata_directory = allowed.path()
                 } label: {
-                    Text("Chaindata").frame(width: 84, alignment: .center)
+                    TextField("Chaindata", text: $chain.chaindata_directory).help("directory insides --datadir")
                 }
-                .fileImporter(isPresented: $present_fileimporter,
-                              allowedContentTypes: [.directory]) { result in
-                    switch result {
-                    case .success(let directory):
-                        chain.chaindata_directory = directory.path()
-                        // gain access to the directory
-                    case .failure(let error):
-                        // how would this even happen?
-                        RuntimeError.shared.error_reason = error.localizedDescription
+            }
+            Divider()
+            Section("Optional AncientDB") {
+                Button {
+                    guard let allowed = promptForWorkingDirectoryPermission(prompt: "AncientDB directory") else {
+                        RuntimeError.shared.error_reason = "not allowed to use ancientdb directory"
                         RuntimeError.shared.show_error = true
+                        return
                     }
+                    saveBookmarkData(for: allowed, k: .ancientdb)
+                    let _ = allowed.startAccessingSecurityScopedResource()
+                    chain.ancientdb_dir = allowed.path()
+                } label: {
+                    TextField("AncientDB", text: $chain.ancientdb_dir)
                 }
-                TextField("directory", text: $chain.chaindata_directory)
+            }
+            Divider()
+            Section("Optional, defaults to latest if none provided") {
+                TextField("BlockNumber", text: $chain.at_block_number)
+            }
+            Divider()
+            Button {
+                ancientdb_bookmark = nil
+                chaindata_bookmark = nil
+                chain.ancientdb_dir = ""
+                chain.chaindata_directory = ""
+            } label: {
+                Text("Clear Paths").frame(maxWidth: .infinity).frame(height: 30)
             }
             HStack {
                 Button {
-                    present_fileimporter_ancient.toggle()
+                    chain.ancientdb_dir = ""
+                    chain.chaindata_directory = ""
+                    dismiss()
                 } label: {
-                    Text("AncientDB").frame(width: 84, alignment: .center)
+                    Text("Cancel").frame(maxWidth:.infinity).frame(height: 30)
                 }
-                .fileImporter(isPresented: $present_fileimporter_ancient,
-                              allowedContentTypes: [.directory]) { result in
-                    switch result {
-                    case .success(let directory):
-                        chain.ancientdb_dir = directory.path()
-                        // gain access to the directory
-                    case .failure(let error):
-                        // how would this even happen?
-                        RuntimeError.shared.error_reason = error.localizedDescription
-                        RuntimeError.shared.show_error = true
-                    }
-                }
-                TextField("optional directory but might need it", text: $chain.ancientdb_dir)
-            }
-            HStack {
-                Text("BlockNumber").frame(width: 100, alignment: .center)
-                TextField("defaults to latest block if none given", text: $chain.at_block_number)
-            }
-            HStack {
-                Spacer()
                 Button {
                     if selected_option == "pebble" {
                         chain.db_kind = .GethDBPebble
@@ -1862,18 +1874,21 @@ struct LoadExistingDB : View {
                     }
                     dismiss()
                 } label: {
-                    Text("Ok")
+                    Text("Ok").frame(maxWidth: .infinity, maxHeight: 35).frame(height: 30)
                 }
             }
         }
         .padding()
-        .frame(width: 500, height: 300)
         .onAppear{
-            guard let bm = downloadsBookmark else {
-                return
+            if let bm = chaindata_bookmark,
+               let p = restoreFileAccess(with: bm, k: .chaindata) {
+                chain.chaindata_directory = p.path()
             }
 
-            let could = restoreFileAccess(with: bm)
+            if let bm = ancientdb_bookmark,
+               let p = restoreFileAccess(with: bm, k: .ancientdb) {
+                chain.ancientdb_dir = p.path()
+            }
         }
     }
 }

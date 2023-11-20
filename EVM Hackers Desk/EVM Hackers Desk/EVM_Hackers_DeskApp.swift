@@ -371,7 +371,6 @@ func do_work(rpy: String) {
         let loaded = decoded.Payload!.value as! Dictionary<String, String>
         let addr = loaded["addr"]!
         let value = loaded["value"]!
-        let key = loaded["key"]!
 
         DispatchQueue.main.async {
             for c in LoadedContracts.shared.contracts {
@@ -542,7 +541,7 @@ func do_work(rpy: String) {
         let caller = reply["caller"]?.value as! String
         let callee = reply["callee"]?.value as! String
         let args = reply["args"]?.value as! String
-        let value = reply["value"]?.value as! String
+        // let value = reply["value"]?.value as! String
         
         DispatchQueue.main.async {
 //            withAnimation {

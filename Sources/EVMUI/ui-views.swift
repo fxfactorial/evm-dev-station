@@ -1753,6 +1753,46 @@ struct LoadExistingDB : View {
     @State private var present_fileimporter_ancient = false
     @State private var at_block_number = ""
     @Bindable private var chain = LoadChainModel.shared
+    @AppStorage("bookmarkData") var downloadsBookmark: Data?
+    
+    private func promptForWorkingDirectoryPermission() -> URL? {
+        let openPanel = NSOpenPanel()
+        openPanel.message = "Choose your directory"
+        openPanel.prompt = "Choose"
+        openPanel.allowedContentTypes = [.directory]
+        openPanel.allowsOtherFileTypes = false
+        openPanel.canChooseFiles = false
+        openPanel.canChooseDirectories = true
+        
+        let response = openPanel.runModal()
+        print(openPanel.urls) // this contains the chosen folder
+        return openPanel.urls.first
+    }
+    
+    private func restoreFileAccess(with bookmarkData: Data) -> URL? {
+        do {
+            var isStale = false
+            let url = try URL(resolvingBookmarkData: bookmarkData, options: .withSecurityScope, relativeTo: nil, bookmarkDataIsStale: &isStale)
+            if isStale {
+                // bookmarks could become stale as the OS changes
+                print("Bookmark is stale, need to save a new one... ")
+                saveBookmarkData(for: url)
+            }
+            return url
+        } catch {
+            print("Error resolving bookmark:", error)
+            return nil
+        }
+    }
+    
+    private func saveBookmarkData(for workDir: URL) {
+        do {
+            let bookmarkData = try workDir.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
+            downloadsBookmark = bookmarkData
+        } catch {
+            print("Failed to save bookmark data for \(workDir)", error)
+        }
+    }
     
     var body: some View {
         VStack {
@@ -1766,6 +1806,10 @@ struct LoadExistingDB : View {
                    .pickerStyle(.segmented)
             HStack {
                 Button {
+                    guard let allowed = promptForWorkingDirectoryPermission() else {
+                        return
+                    }
+                    let _ = allowed.startAccessingSecurityScopedResource()
                     present_fileimporter.toggle()
                 } label: {
                     Text("Chaindata").frame(width: 84, alignment: .center)
@@ -1824,6 +1868,13 @@ struct LoadExistingDB : View {
         }
         .padding()
         .frame(width: 500, height: 300)
+        .onAppear{
+            guard let bm = downloadsBookmark else {
+                return
+            }
+
+            let could = restoreFileAccess(with: bm)
+        }
     }
 }
 

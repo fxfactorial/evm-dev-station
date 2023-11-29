@@ -53,10 +53,14 @@ public struct ExecutedEVMCode: Identifiable, Hashable {
     public let gas_cost: String
     public let depth : String
     public let refund: String
-    
+    public let stack: [StackItem]
+    public let memory : String
+
     public init(
         pc: String, op_name: String, opcode: String,
-        gas: Int, gas_cost: Int, depth: Int, refund: Int) {
+        gas: Int, gas_cost: Int, depth: Int, refund: Int,
+        stack_at_moment: [StackItem], memory_at_moment: String
+    ) {
         self.pc = pc
         self.op_name = op_name
         self.opcode = opcode
@@ -64,6 +68,8 @@ public struct ExecutedEVMCode: Identifiable, Hashable {
         self.gas_cost = "\(gas_cost)"
         self.depth = "\(depth)"
         self.refund = "\(refund)"
+        self.stack = stack_at_moment
+        self.memory = memory_at_moment
     }
     
     public func hash(into hasher: inout Hasher) {
@@ -348,11 +354,17 @@ extension Item: Hashable {
 //        StackItem(name: "0x02", index: 1, pretty: "0x02"),
 //        StackItem(name: "0x03", index: 2, pretty: "0x03")
     ]
+    // For when changed in row by table selection
+
     public var selected_stack_item: StackItem?
     public var current_memory = ""
     public var current_opcode_hit = ""
     public var use_modified_values = false
 
+    public var current_stack_backup : [StackItem] = []
+    public var current_memory_backup = ""
+    public var current_opcode_backup = ""
+    
     public func reset() {
         hit_breakpoint = false
         current_caller = ""
@@ -363,6 +375,9 @@ extension Item: Hashable {
         current_opcode_hit = ""
         use_modified_values = false
         selected_stack_item = nil
+        current_stack_backup = []
+        current_memory_backup = ""
+        current_opcode_backup = ""
     }
 }
 

@@ -508,11 +508,16 @@ func do_work(rpy: String) {
         let stack_pretty = reply["stack_pretty"]?.value as! [String]
         let stack_rep = stack.enumerated()
           .map({ (idx, name) in StackItem(name: name, index: idx, pretty: stack_pretty[idx] )})
+        let stack_rep_backup = stack.enumerated()
+          .map({ (idx, name) in StackItem(name: name, index: idx, pretty: stack_pretty[idx] )})
+        let memory_hex_backup = reply["memory"]?.value as! String
+        let opcode_backup = reply["opcode"]?.value as! String
 
         DispatchQueue.main.async {
-//            withAnimation {
-//                ExecutedOperations.shared.opcode_freq = ExecutedOperations.shared.opcode_freq_temp
-//            }
+            OpcodeCallbackModel.shared.current_stack_backup = stack_rep_backup
+            OpcodeCallbackModel.shared.current_memory_backup = memory_hex_backup
+            OpcodeCallbackModel.shared.current_opcode_backup = opcode_backup
+
             OpcodeCallbackModel.shared.current_stack = stack_rep
             OpcodeCallbackModel.shared.current_memory = memory_hex
             OpcodeCallbackModel.shared.current_opcode_hit = opcode

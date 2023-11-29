@@ -347,7 +347,12 @@ func do_work(rpy: String) {
             ExecutedOperations.shared.opcode_freq_temp[opcode_name] = OPCodeFreq(name: opcode_name, count: 1, invokers: [caller : 1])
         }
 
-        
+        let memory_hex = execed_op["memory"]?.value as! String
+        let stack = execed_op["stack"]?.value as! [String]
+        let stack_pretty = execed_op["stack_pretty"]?.value as! [String]
+        let stack_rep = stack.enumerated()
+          .map({ (idx, name) in StackItem(name: name, index: idx, pretty: stack_pretty[idx] )})
+
         DispatchQueue.main.async {
             // TODO these values are wrong
             ExecutedOperations.shared.total_static_gas_cost_so_far += gas_cost_static
@@ -359,7 +364,10 @@ func do_work(rpy: String) {
                                          gas: gas_cost_static,
                                          gas_cost: gas_cost_static,
                                          depth: 3,
-                                         refund: 0)
+                                         refund: 0,
+                                         stack_at_moment: stack_rep,
+                                         memory_at_moment: memory_hex
+            )
             ExecutedOperations.shared.execed_operations.append(record)
         }
     case .CMD_CANCEL_EVM_RUN:

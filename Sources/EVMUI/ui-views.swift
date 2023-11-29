@@ -496,6 +496,22 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                             .onAppear {
                                 scroller = proxy
                             }
+                            .onChange(of: execed_ops.current_operation_selected) { before, after in
+//                                print(before, after)
+                                let s = OpcodeCallbackModel.shared
+                                if after == nil {
+                                    // Selection removed, put back whatever was there before
+                                    s.current_stack = s.current_stack_backup
+                                    s.current_memory = s.current_memory_backup
+                                    s.current_opcode_hit = s.current_opcode_backup
+                                } else {
+                                    let op = execed_ops.execed_operations.first(where: { $0.id == after! })!
+                                    s.current_stack = op.stack
+                                    s.current_memory = op.memory
+                                    s.current_opcode_hit = op.op_name
+                                    // Its what we selected, so make that be shown
+                                }
+                            }
                             .onChange(of: execed_ops.execed_operations) {
                                 //                                    print("WHY NOT SCROLLING")
                                 execed_ops.current_operation_selected = execed_ops.execed_operations.last?.id
@@ -1360,10 +1376,6 @@ struct BreakpointView: View {
                                 Task {
                                     let (data, _) = try await URLSession.shared.data(from: url)
                                     let ptvResult = try JSONDecoder().decode(SignatureLookup.self, from: data)
-                                    // print("swift pulled \(ptvResult) against url \(url)")
-                                    //                            guard let query_result = ptvResult.results.first else {
-                                    //                                return
-                                    //                            }
                                     DispatchQueue.main.async {
                                         possible_signature_names = ptvResult.results.map({ $0.textSignature })
                                     }
@@ -1433,10 +1445,11 @@ struct BreakpointView: View {
                     }
                     VStack {
                         HStack {
-                            Text("Opcode suspended on ")
+                            Text("Opcode")
                             Spacer()
                             Text("`\(callbackmodel.current_opcode_hit)`")
                                 .foregroundStyle(.gray)
+                                .font(.system(.headline))
                         }.padding([.trailing, .leading], 10)
                         Text("current memory")
                         TextEditor(text: $callbackmodel.current_memory)
@@ -2107,8 +2120,16 @@ struct RunningEVM<Driver: EVMDriver>: View {
         .frame(width: 1224, height: 860)
         .onAppear {
             let dummy_items : [ExecutedEVMCode] = [
-                .init(pc: "0x07c9", op_name: "DUP2", opcode: "0x81", gas: 20684, gas_cost: 3, depth: 3, refund: 0),
-                .init(pc: "0x07c9", op_name: "JUMP", opcode: "0x56", gas: 20684, gas_cost: 8, depth: 3, refund: 0)
+                .init(pc: "0x07c9", op_name: "DUP2", opcode: "0x81",
+                      gas: 20684, gas_cost: 3, depth: 3, refund: 0,
+                      stack_at_moment: [
+                        StackItem(name: "0x123", index: 0, pretty: "1234"),
+                        StackItem(name: "0x124", index: 1, pretty: "456")
+                      ],
+                      memory_at_moment: "123124234234234234234"),
+                .init(pc: "0x07c9", op_name: "JUMP", opcode: "0x56",
+                      gas: 20684, gas_cost: 8, depth: 3, refund: 0,
+                     stack_at_moment: [], memory_at_moment: "")
             ]
             ExecutedOperations.shared.execed_operations.append(contentsOf: dummy_items)
             LoadedContracts.shared.contracts = [sample_contract]

@@ -2137,26 +2137,74 @@ struct RunningEVM<Driver: EVMDriver>: View {
         .modelContainer(for: [LoadedContract.self])
 }
 
-#Preview("load existing db") {
-    LoadExistingDB(d: StubEVMDriver())
-        .frame(width: 480, height: 380)
-}
+//#Preview("load existing db") {
+//    LoadExistingDB(d: StubEVMDriver())
+//        .frame(width: 480, height: 380)
+//}
+//
+//#Preview("state inspect") {
+//    StateInspector(d: StubEVMDriver())
+//        .onAppear {
+//            
+//        }
+//        .frame(width: 768, height: 480)
+//}
+//
+//#Preview("running EVM") {
+//    RunningEVM(
+//        d: StubEVMDriver(),
+//        target_addr: .constant("")
+//    ).frame(width: 768)
+//}
 
 
-
-#Preview("state inspect") {
-    StateInspector(d: StubEVMDriver())
-        .onAppear {
-            
+extension String {
+    func components(withLength length: Int) -> [String] {
+        return stride(from: 0, to: count, by: length).map {
+            let start = index(startIndex, offsetBy: $0)
+            let end = index(start, offsetBy: length, limitedBy: endIndex) ?? endIndex
+            return String(self[start..<end])
         }
-        .frame(width: 768, height: 480)
+    }
 }
 
-#Preview("running EVM") {
-    RunningEVM(
-        d: StubEVMDriver(),
-        target_addr: .constant("")
-    ).frame(width: 768)
+struct MemoryTable : View {
+    let raw_bytes: String
+    let header_row = ["00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "0a", "0b", "0c", "0d", "0e", "0f"]
+    // every 16 bytes we're doing - so every 32
+    var body : some View {
+        VStack {
+            ForEach(Array(raw_bytes.components(withLength: 32).enumerated()), id: \.1.self) { index, value in
+                let n = index * 16
+                let format = String(format:"%08X", n)
+                if n == 0 {
+                    HStack {
+                        ForEach(header_row, id: \.self) { 
+                            Text($0)
+                                .frame(width: 20)
+                        }
+                    }
+                    .padding([.leading], 35)
+
+                }
+                HStack {
+                    Text(format).frame(width: 80, alignment: .trailing)
+                    ForEach(value.components(withLength: 2), id: \.self) {b in
+                        Text(b)
+                            .frame(width: 20)
+                    }
+                    Spacer()
+                }
+                .padding([.leading], 10)
+            }
+        }
+        
+    }
+}
+
+#Preview("Memory table") {
+    let bytes = "601054507f6000600060006000600060f15af1506001545060006003557f6060005360"
+    return MemoryTable(raw_bytes: bytes).frame(width: 600, height: 400)
 }
 
 struct EditState<Driver: EVMDriver> : View {

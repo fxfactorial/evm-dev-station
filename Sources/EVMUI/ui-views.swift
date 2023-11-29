@@ -2168,6 +2168,18 @@ extension String {
     }
 }
 
+let pattern = "(0x)?([0-9a-f]{2})"
+let regex = try! NSRegularExpression(pattern: pattern, options: .caseInsensitive)
+
+func hexStringtoAscii(_ hexString : String) -> String {
+    let nsString = hexString as NSString
+    let matches = regex.matches(in: hexString, options: [], range: NSMakeRange(0, nsString.length))
+    let characters = matches.map {
+        Character(UnicodeScalar(UInt32(nsString.substring(with: $0.range(at: 2)), radix: 16)!)!)
+    }
+    return String(characters)
+}
+
 struct MemoryTable : View {
     let raw_bytes: String
     let header_row = ["00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "0a", "0b", "0c", "0d", "0e", "0f"]
@@ -2183,9 +2195,11 @@ struct MemoryTable : View {
                             Text($0)
                                 .frame(width: 20)
                         }
+                        Text("[ -- ASCII -- ]")
+                            // .frame(width: 200)
+                            .background(.red)
                     }
-                    .padding([.leading], 35)
-
+                    .padding([.leading], 25)
                 }
                 HStack {
                     Text(format).frame(width: 80, alignment: .trailing)
@@ -2193,7 +2207,13 @@ struct MemoryTable : View {
                         Text(b)
                             .frame(width: 20)
                     }
-                    Spacer()
+                    
+                    if value.count == 32 {
+                        Spacer()
+                    } else {
+                        Spacer()
+                        Text(hexStringtoAscii(value))
+                    }
                 }
                 .padding([.leading], 10)
             }
@@ -2204,7 +2224,7 @@ struct MemoryTable : View {
 
 #Preview("Memory table") {
     let bytes = "601054507f6000600060006000600060f15af1506001545060006003557f6060005360"
-    return MemoryTable(raw_bytes: bytes).frame(width: 600, height: 400)
+    return MemoryTable(raw_bytes: bytes).frame(width: 700, height: 400)
 }
 
 struct EditState<Driver: EVMDriver> : View {

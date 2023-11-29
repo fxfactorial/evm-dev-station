@@ -1434,29 +1434,35 @@ struct BreakpointView: View {
                 //                })
                 .tabItem { Text("􀅮 Call").help("contract calls") }.tag(0)
                 //                          .frame(height: 280)
-                HStack {
+                HSplitView {
                     VStack {
-                        Text("Current Stack ")
+                        Text("Stack").font(.headline)
                         List(Array(zip(callbackmodel.current_stack.indices, callbackmodel.current_stack)).reversed(),
                              id: \.1.self,
                              selection: $callbackmodel.selected_stack_item) { index, item in
                             StackListRowView(item: item)
                         }
                     }
-                    VStack {
-                        HStack {
-                            Text("Opcode")
+                    .frame(minWidth: 150)
+                    .frame(maxWidth: 200)
+                    .padding(5)
+                    VStack(spacing: 0) {
+                        HStack(spacing: 0) {
+                            Text("For Opcode")
                             Spacer()
                             Text("`\(callbackmodel.current_opcode_hit)`")
                                 .foregroundStyle(.gray)
                                 .font(.system(.headline))
                         }.padding([.trailing, .leading], 10)
-                        Text("current memory")
-//                        MemoryTable(raw_bytes: callbackmodel.current_memory)
-                        TextEditor(text: $callbackmodel.current_memory)
-                            .scrollTargetLayout(isEnabled: true)
-                            .font(.system(size: 16))
-                            .disabled(false)
+                        Divider()
+                        Text("Memory").font(.headline)
+                        MemoryTable(raw_bytes: callbackmodel.current_memory)
+//                            .frame(width: 600, height: 400)
+
+//                        TextEditor(text: $callbackmodel.current_memory)
+//                            .scrollTargetLayout(isEnabled: true)
+//                            .font(.system(size: 16))
+//                            .disabled(false)
                         TextField("selected stack item", text: Binding<String>(
                             get: {
                                 callbackmodel.selected_stack_item?.name ?? ""
@@ -2130,7 +2136,10 @@ struct RunningEVM<Driver: EVMDriver>: View {
                       memory_at_moment: "123124234234234234234"),
                 .init(pc: "0x07c9", op_name: "JUMP", opcode: "0x56",
                       gas: 20684, gas_cost: 8, depth: 3, refund: 0,
-                     stack_at_moment: [], memory_at_moment: "")
+                     stack_at_moment: [
+                        StackItem(name: "0x123", index: 0, pretty: "1234"),
+                        StackItem(name: "0x124", index: 1, pretty: "456")
+                     ], memory_at_moment: "123124234234234234234")
             ]
             ExecutedOperations.shared.execed_operations.append(contentsOf: dummy_items)
             LoadedContracts.shared.contracts = [sample_contract]
@@ -2191,50 +2200,55 @@ struct MemoryTable : View {
     // every 16 bytes we're doing - so every 32
     var body : some View {
         ScrollView {
-            ForEach(Array(raw_bytes.components(withLength: 32).enumerated()), id: \.1.self) { index, value in
-                let n = index * 16
-                let format = String(format:"%08X", n)
-                if n == 0 {
-                    HStack {
-                        ForEach(header_row, id: \.self) { 
-                            Text($0)
-                                .frame(width: 20)
+            VStack(spacing: 0) {
+                ForEach(Array(raw_bytes.components(withLength: 32).enumerated()), id: \.0.self) { index, value in
+                    let n = index * 16
+                    let format = String(format:"%08X", n)
+                    if n == 0 {
+                        HStack(spacing: 0) {
+                            Spacer().frame(width: 70)
+                            ForEach(header_row, id: \.self) {
+                                Text($0).frame(width: 20)
+                            }
+                            Spacer()
+                            Text("[ -- ASCII -- ]")
+                            Spacer().frame(width: 60)
                         }
-                        Divider().frame(height: 20)
-                        Text("[ -- ASCII -- ]")
+                        .padding([.leading], 0)
+                        .frame(height: 20)
+                        Divider().padding([.bottom], 10).frame(height: 0)
                     }
-                    .padding([.leading], 55)
-                    Divider()
-                }
-                HStack {
-                    Text(format).frame(width: 80, alignment: .trailing)
-                    Divider().frame(height: 20)
-                    ForEach(value.components(withLength: 2), id: \.self) {b in
-                        Text(b)
-                            .frame(width: 20)
-                    }
-                    if value.count == 32 {
-                        Divider().frame(height: 20)
-                        Text(hexStringtoAscii(value))
-                            .padding([.trailing], 60)
-                            .frame(maxWidth: .infinity)
-                    } else {
-                        Spacer()
-                        Divider().frame(height: 20)
-                        Text(hexStringtoAscii(value))
-                            .padding([.trailing], 120)
+                    HStack(spacing: 0) {
+                        Text(format).frame(width: 70, alignment: .leading)
+                        ForEach(value.components(withLength: 2), id: \.self) {b in
+                            Text(b).frame(width: 20)
+                        }
+                        if value.count == 32 {
+                            let hex = Data(hex: value)
+                            let r = String(bytes: hex, encoding: .ascii)!
+                            Text(r)
+                                .padding([.trailing], 0)
+                                .frame(maxWidth: .infinity)
+                                .kerning(5.0)
+                        } else {
+                            Spacer()
+                            Text(hexStringtoAscii(value))
+                                .padding([.trailing], 0)
+                        }
                     }
                 }
-                .padding([.leading], 10)
             }
         }
-        
+        .contentMargins(0)
     }
 }
 
 #Preview("Memory table") {
-    let bytes = "601054507f6000600060006000600060f15af1506001545060006003557f6060005360"
-    return MemoryTable(raw_bytes: bytes).frame(width: 700, height: 400)
+    let bytes = "608060405234801561000f575f80fd5b5060043610610060575f3560e01c806305ce74f81461006457806362dbc99f1461006e5780638e206d001461009e578063d288a24c146100a8578063da06b49c146100d8578063f4bd3338146100f8575b5f80fd5b61006c610128565b005b610088600480360381019061008391906102cd565b61016e565b6040516100959190610310565b60405180910390f35b6100a66101c2565b005b6100c260048036038101906100bd9190610353565b6101c4565b6040516100cf9190610310565b60405180910390f35b6100e06101de565b6040516100ef9392919061037e565b60405180910390f35b610112600480360381019061010d91906103b3565b610207565b60405161011f9190610310565b60405180910390f35b6002600a1161016c576040517f08c379a00000000000000000000000000000000000000000000000000000000081526004016101639061044b565b60405180910390fd5b565b5f607b60025f8473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f20819055505f607b90506101c8915050919050565b565b5f805f54905082816101d69190610496565b915050919050565b5f805f805f5490505f600154905080826101f89190610496565b82829450945094505050909192565b5f808390505f607b8461021a9190610496565b90505f8054905061023581836102309190610496565b610249565b9150815f8190555081935050505092915050565b5f80600a836102589190610496565b9050600a816102679190610496565b915050919050565b5f80fd5b5f73ffffffffffffffffffffffffffffffffffffffff82169050919050565b5f61029c82610273565b9050919050565b6102ac81610292565b81146102b6575f80fd5b50565b5f813590506102c7816102a3565b92915050565b5f602082840312156102e2576102e161026f565b5b5f6102ef848285016102b9565b91505092915050565b5f819050919050565b61030a816102f8565b82525050565b5f6020820190506103235f830184610301565b92915050565b610332816102f8565b811461033c575f80fd5b50565b5f8135905061034d81610329565b92915050565b5f602082840312156103685761036761026f565b5b5f6103758482850161033f565b91505092915050565b5f6060820190506103915f830186610301565b61039e6020830185610301565b6103ab6040830184610301565b949350505050565b5f80604083850312156103c9576103c861026f565b5b5f6103d6858286016102b9565b92505060206103e78582860161033f565b9150509250929050565b5f82825260208201905092915050565b7f6f6f6f70730000000000000000000000000000000000000000000000000000005f82015250565b5f6104356005836103f1565b915061044082610401565b602082019050919050565b5f6020820190508181035f83015261046281610429565b9050919050565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52601160045260245ffd5b5f6104a0826102f8565b91506104ab836102f8565b92508282019050808211156104c3576104c2610469565b5b92915050560000000000000000000000000000000000000000000000"
+
+//    let hexes = Data(hex: bytes)
+//    let result = String(bytes: hexes, encoding: .ascii)
+    return MemoryTable(raw_bytes: bytes).frame(width: 700, height: 300)
 }
 
 struct EditState<Driver: EVMDriver> : View {

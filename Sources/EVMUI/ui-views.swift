@@ -1452,6 +1452,7 @@ struct BreakpointView: View {
                                 .font(.system(.headline))
                         }.padding([.trailing, .leading], 10)
                         Text("current memory")
+//                        MemoryTable(raw_bytes: callbackmodel.current_memory)
                         TextEditor(text: $callbackmodel.current_memory)
                             .scrollTargetLayout(isEnabled: true)
                             .font(.system(size: 16))
@@ -2175,17 +2176,21 @@ func hexStringtoAscii(_ hexString : String) -> String {
     let nsString = hexString as NSString
     let matches = regex.matches(in: hexString, options: [], range: NSMakeRange(0, nsString.length))
     let characters = matches.map {
-        Character(UnicodeScalar(UInt32(nsString.substring(with: $0.range(at: 2)), radix: 16)!)!)
+        Character(UnicodeScalar(
+            UInt32(nsString.substring(with: $0.range(at: 2)),
+                   radix: 16)!)!)
     }
     return String(characters)
 }
 
 struct MemoryTable : View {
     let raw_bytes: String
-    let header_row = ["00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "0a", "0b", "0c", "0d", "0e", "0f"]
+    let header_row = ["00", "01", "02", "03", "04", "05", 
+                      "06", "07", "08", "09", "0a", "0b",
+                      "0c", "0d", "0e", "0f"]
     // every 16 bytes we're doing - so every 32
     var body : some View {
-        VStack {
+        ScrollView {
             ForEach(Array(raw_bytes.components(withLength: 32).enumerated()), id: \.1.self) { index, value in
                 let n = index * 16
                 let format = String(format:"%08X", n)
@@ -2195,24 +2200,29 @@ struct MemoryTable : View {
                             Text($0)
                                 .frame(width: 20)
                         }
+                        Divider().frame(height: 20)
                         Text("[ -- ASCII -- ]")
-                            // .frame(width: 200)
-                            .background(.red)
                     }
-                    .padding([.leading], 25)
+                    .padding([.leading], 55)
+                    Divider()
                 }
                 HStack {
                     Text(format).frame(width: 80, alignment: .trailing)
+                    Divider().frame(height: 20)
                     ForEach(value.components(withLength: 2), id: \.self) {b in
                         Text(b)
                             .frame(width: 20)
                     }
-                    
                     if value.count == 32 {
-                        Spacer()
+                        Divider().frame(height: 20)
+                        Text(hexStringtoAscii(value))
+                            .padding([.trailing], 60)
+                            .frame(maxWidth: .infinity)
                     } else {
                         Spacer()
+                        Divider().frame(height: 20)
                         Text(hexStringtoAscii(value))
+                            .padding([.trailing], 120)
                     }
                 }
                 .padding([.leading], 10)

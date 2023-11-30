@@ -453,7 +453,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                         LookupTx(d: d).tabItem { Text("Lookup Tx") }.tag(4)
                     }
                 }
-            }.frame(minHeight: 150, maxHeight: 275).padding([.bottom], 10)
+            }.frame(maxWidth: .infinity, minHeight: 150, maxHeight: 275).padding([.bottom], 10)
             HSplitView {
                 TabView(selection: $current_tab_runtime_eval) {
                     VStack {
@@ -548,7 +548,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                     OPCodeChart().tabItem { Text("􀐾 OPCode Charts") }.tag(3)
                 }
                 BreakpointView(d: d).frame(maxWidth: .infinity)
-            }.padding(10).frame(maxHeight: .infinity)
+            }.padding(10).frame(maxWidth: .infinity, maxHeight: .infinity)
             RunningEVM(d: d, target_addr: Binding<String>(
                 get: {
                     if let contract = contracts.current_selection {
@@ -562,7 +562,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                         contracts.current_selection = contract
                     }
                 }
-            ))
+            )).frame(maxWidth: .infinity)
         }
         .frame(maxWidth: .infinity)
         .sheet(isPresented: $present_load_contract_sheet,
@@ -1444,7 +1444,7 @@ struct BreakpointView: View {
                         }
                     }
                     .frame(minWidth: 150)
-                    .frame(maxWidth: 200)
+                    .frame(maxWidth: 300)
                     .padding(5)
                     VStack(spacing: 0) {
                         HStack(spacing: 0) {

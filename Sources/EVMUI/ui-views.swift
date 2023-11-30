@@ -603,6 +603,7 @@ public struct EVMDevCenter<Driver: EVMDriver> : View {
                 d.load_chaindata(
                     chaindb_pathdir: chaindb.chaindata_directory,
                     db_kind: chaindb.db_kind.rawValue,
+                    state_scheme: chaindb.state_scheme.rawValue,
                     ancientdb_pathdir: chaindb.ancientdb_dir
                 )
             }
@@ -1768,7 +1769,9 @@ struct CommonABIs : View {
 struct LoadExistingDB : View {
     let d : EVMDriver
     @Environment(\.dismiss) var dismiss
-    @State private var options = ["pebble", "leveldb"]
+    private let options = ["pebble", "leveldb"]
+    private let state_db_options = ["path", "hash"]
+    @State private var selected_state_db_option = "hash"
     @State private var selected_option = "pebble"
     @State private var at_block_number = ""
     @Bindable private var chain = LoadChainModel.shared
@@ -1837,6 +1840,14 @@ struct LoadExistingDB : View {
                 }
                        .tint(.black)
                        .pickerStyle(.segmented)
+                Picker(selection: $selected_state_db_option,
+                       label: Text("State Scheme").frame(width: 100, alignment: .center)) {
+                    ForEach(state_db_options, id: \.self) { option in
+                        Text(option).tag(option)
+                    }
+                }
+                       .tint(.black)
+                       .pickerStyle(.segmented)
                 Button {
                     guard let allowed = promptForWorkingDirectoryPermission(prompt: "Chaindata directory") else {
                         RuntimeError.shared.error_reason = "not allowed to use chaindata directory"
@@ -1891,6 +1902,12 @@ struct LoadExistingDB : View {
                         chain.db_kind = .GethDBPebble
                     } else {
                         chain.db_kind = .GethDBLevelDB
+                    }
+                    
+                    if selected_state_db_option == "hash" {
+                        chain.state_scheme = .Hash
+                    } else {
+                        chain.state_scheme = .Path
                     }
                     dismiss()
                 } label: {
@@ -2147,10 +2164,10 @@ struct RunningEVM<Driver: EVMDriver>: View {
         .modelContainer(for: [LoadedContract.self])
 }
 
-//#Preview("load existing db") {
-//    LoadExistingDB(d: StubEVMDriver())
-//        .frame(width: 480, height: 380)
-//}
+#Preview("Load Existing db") {
+    LoadExistingDB(d: StubEVMDriver())
+        .frame(width: 480, height: 380)
+}
 //
 //#Preview("state inspect") {
 //    StateInspector(d: StubEVMDriver())

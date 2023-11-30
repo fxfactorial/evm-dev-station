@@ -61,14 +61,17 @@ public struct AnyDecodable : Codable {
 
 public struct BridgeCmdLoadChain : Codable {
     public let DBKind:     String 
+    public let StateScheme: String
     public let Directory:  String
     public let AncientDBDirectory : String
     public init(kind: String,
                 directory: String,
+                state_scheme: String,
                 ancientdb_directory: String = "") {
         self.DBKind = kind
         self.Directory = directory
         self.AncientDBDirectory = ancientdb_directory
+        self.StateScheme = state_scheme
     }
 }
 

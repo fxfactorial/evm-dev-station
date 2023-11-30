@@ -26,6 +26,7 @@ public enum DeployToAddress : Codable, Hashable {
     public var is_chain_loaded = false
     public var show_loading_db = false
     public var db_kind : DBKind = .InMemory
+    public var state_scheme: StateScheme = .Hash
     public var ancientdb_dir = ""
     public var at_block_number = ""
     public func reset() {
@@ -385,6 +386,11 @@ public enum DBKind : String {
     case InMemory = "in memory state"
     case GethDBPebble = "pebble"
     case GethDBLevelDB = "leveldb"
+}
+
+public enum StateScheme : String {
+    case Path = "path"
+    case Hash = "hash"
 }
 
 @Observable public class CurrentBlockHeader {

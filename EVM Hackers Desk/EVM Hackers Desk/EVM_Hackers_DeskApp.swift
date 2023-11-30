@@ -172,12 +172,13 @@ final class EVM: EVMDriver {
         }
     }
 
-    func load_chaindata(chaindb_pathdir: String, db_kind: String, ancientdb_pathdir: String?) {
+    func load_chaindata(chaindb_pathdir: String, db_kind: String, state_scheme: String, ancientdb_pathdir: String?) {
         Task {
             let msg = try! JSONEncoder().encode(
               EVMBridgeMessage(c: .CMD_LOAD_CHAIN,
                                p: BridgeCmdLoadChain(kind: db_kind,
                                                      directory: chaindb_pathdir,
+                                                     state_scheme: state_scheme,
                                                      ancientdb_directory: ancientdb_pathdir == nil ? "" : ancientdb_pathdir!
                                                     )
                               )

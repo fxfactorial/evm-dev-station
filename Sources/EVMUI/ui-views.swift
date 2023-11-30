@@ -1444,7 +1444,7 @@ struct BreakpointView: View {
                             StackListRowView(item: item)
                         }
                     }
-                    .frame(minWidth: 150)
+                    .frame(minWidth: 100)
                     .frame(maxWidth: 300)
                     .padding(5)
                     VStack(spacing: 0) {
@@ -1458,12 +1458,6 @@ struct BreakpointView: View {
                         Divider()
                         Text("Memory").font(.headline)
                         MemoryTable(raw_bytes: callbackmodel.current_memory)
-//                            .frame(width: 600, height: 400)
-
-//                        TextEditor(text: $callbackmodel.current_memory)
-//                            .scrollTargetLayout(isEnabled: true)
-//                            .font(.system(size: 16))
-//                            .disabled(false)
                         TextField("selected stack item", text: Binding<String>(
                             get: {
                                 callbackmodel.selected_stack_item?.name ?? ""
@@ -2209,6 +2203,11 @@ func hexStringtoAscii(_ hexString : String) -> String {
     return String(characters)
 }
 
+struct ByteWrapper: Identifiable {
+    var byte : String
+    let id = UUID()
+}
+
 struct MemoryTable : View {
     let raw_bytes: String
     let header_row = ["00", "01", "02", "03", "04", "05", 
@@ -2216,41 +2215,43 @@ struct MemoryTable : View {
                       "0c", "0d", "0e", "0f"]
     // every 16 bytes we're doing - so every 32
     var body : some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                ForEach(Array(raw_bytes.components(withLength: 32).enumerated()), id: \.0.self) { index, value in
-                    let n = index * 16
-                    let format = String(format:"%08X", n)
-                    if n == 0 {
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                Spacer().frame(width: 70)
+                ForEach(header_row, id: \.self) {
+                    Text($0).frame(width: 20)
+                }
+                Spacer()
+                Text("[ -- ASCII -- ]")
+                Spacer().frame(width: 120)
+            }
+            .padding([.leading], 0)
+            .frame(height: 30)
+            Divider().padding([.bottom], 10).frame(height: 0)
+
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(Array(raw_bytes.components(withLength: 32).enumerated()), id: \.0.self) { index, value in
+                        let n = index * 16
+                        let format = String(format:"%08X", n)
                         HStack(spacing: 0) {
-                            Spacer().frame(width: 70)
-                            ForEach(header_row, id: \.self) {
-                                Text($0).frame(width: 20)
+                            Text(format).frame(width: 70, alignment: .leading).help("\(n)")
+                            let wrapped = value.components(withLength: 2).map { ByteWrapper(byte: $0) }
+                            ForEach(wrapped, id: \.id) {b in
+                                Text(b.byte).frame(width: 20)
                             }
-                            Spacer()
-                            Text("[ -- ASCII -- ]")
-                            Spacer().frame(width: 60)
-                        }
-                        .padding([.leading], 0)
-                        .frame(height: 20)
-                        Divider().padding([.bottom], 10).frame(height: 0)
-                    }
-                    HStack(spacing: 0) {
-                        Text(format).frame(width: 70, alignment: .leading)
-                        ForEach(value.components(withLength: 2), id: \.self) {b in
-                            Text(b).frame(width: 20)
-                        }
-                        if value.count == 32 {
-                            let hex = Data(hex: value)
-                            let r = String(bytes: hex, encoding: .ascii)!
-                            Text(r)
-                                .padding([.trailing], 0)
-                                .frame(maxWidth: .infinity)
-                                .kerning(5.0)
-                        } else {
-                            Spacer()
-                            Text(hexStringtoAscii(value))
-                                .padding([.trailing], 0)
+                            if value.count == 32 {
+                                let hex = Data(hex: value)
+                                let r = String(bytes: hex, encoding: .ascii)!
+                                Text(r)
+                                    .padding([.trailing], 0)
+                                    .frame(maxWidth: .infinity)
+                                    .kerning(8.0)
+                            } else {
+                                Spacer()
+                                Text(hexStringtoAscii(value))
+                                    .padding([.trailing], 0)
+                            }
                         }
                     }
                 }
